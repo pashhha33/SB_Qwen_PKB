@@ -2,10 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.5.0
+version: 0.6.0
 created: 2026-10-22
 updated: 2026-10-22
-metamodel_version: 0.10.0
+metamodel_version: 0.11.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -17,7 +17,7 @@ governing_documents:
   - docs/adr/ADR-008-media-property-type.md
   - docs/adr/ADR-009-relations-model.md
   - docs/adr/ADR-011-enumerations-dates-lifecycle.md
-rule_count: 141
+rule_count: 144
 tags: [validation, registry]
 ---
 
@@ -45,8 +45,8 @@ tags: [validation, registry]
 | H. Даты и интервалы | 11 | `06-time-and-intervals` §6 |
 | I. Тип `person` | **12** | `entities/person.md` §6 |
 | J. Тип `media` (обёртка) | **18** | `entities/media.md` §6 |
-| K. Представления | **7** | `08-views.md` §8 |
-| **Всего** | **141** | |
+| K. Представления и служебный слой | **10** | `08-views.md` §7–§8 |
+| **Всего** | **144** | |
 
 ---
 
@@ -261,7 +261,7 @@ tags: [validation, registry]
 
 ---
 
-## K. Представления
+## K. Представления и служебный слой диагностик
 
 | ID | Формулировка | Уровень | Когда |
 |---|---|---|---|
@@ -272,6 +272,9 @@ tags: [validation, registry]
 | `view.cards.image_property` | Свойство-изображение карточного вида указывает на теневое свойство `{key}_file`, а не на обёртку | warning | 5 |
 | `view.lifecycle.not_deprecated` | Представление не ссылается на свойства со статусом `deprecated` | warning | 5 |
 | `view.generated.marker_intact` | Маркер `# sb-generated: v…` не удалён из сгенерированного файла | info | 5 |
+| `diagnostics.tags_issues_synced` | Служебные метки `sb/error` / `sb/warning` / `sb/info` соответствуют содержимому `sb_issues` | warning | 6 |
+| `diagnostics.service_property.readonly` | Служебное свойство (`service: true`) не изменено пользователем: значение совпадает с результатом последней проверки | warning | 4 |
+| `diagnostics.service_property.declared` | Свойство `sb_issues` объявлено один раз как универсальное служебное | error | 3 |
 
 > [!note] Группа K добавлена заранее
 > Представлений в хранилище ещё нет (этап D), но правила объявлены сейчас, чтобы движок валидации
@@ -311,6 +314,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-22 | 0.6.0 | Группа K расширена тремя правилами служебного слоя диагностик (`diagnostics.*`): синхронность меток и `sb_issues`, защита служебного свойства от ручной правки, объявленность `sb_issues`. Итого **144 правила** | Шаг 8b, DL-168 |
 | 2026-10-22 | 0.5.0 | Добавлена группа **K. Представления** — 7 правил (уровень контроля 5); закрыт пункт «правил представлений пока нет». Итого **141 правило** | Шаг 8b, DL-165, `08-views.md` |
 | 2026-10-22 | 0.4.0 | Добавлено правило `person.role.required` (род занятий обязателен, DL-156) → **134 правила**; суффикс теневого свойства изменён на `_file` (DL-153) |
 | 2026-10-22 | 0.3.0 | Добавлено 31 правило: группа **I. Тип `person`** (11) и группа **J. Тип `media`** (18), плюс 2 правила на `applies_when` (`value_present`, `operation_matches_cardinality`). Итого **133** правила. Введён инвариант **И8** (встраивание файла в теле обёртки). Операция `includes_any` добавлена в `property.applies_when.operation_closed`. Закрыт пункт «правил обёртки пока нет» (DL-088) |

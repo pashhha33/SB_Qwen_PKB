@@ -3,10 +3,10 @@ doc_type: metamodel_section
 section: "04"
 title: "Атрибуты: системные, предметные, типы значений"
 status: actual
-version: 0.5.0
+version: 0.6.0
 created: 2026-10-22
 updated: 2026-10-22
-metamodel_version: 0.8.0
+metamodel_version: 0.11.0
 governing_adr:
   - docs/adr/ADR-006-system-attributes-value-types-media.md
   - docs/adr/ADR-008-media-property-type.md
@@ -154,6 +154,7 @@ definition: Person or organization that created the work.
 | `lifecycle` | Жизненный цикл | enum | нет | `experimental`, `standard`, `deprecated`, `archived` | Из `01` §16 |
 | `default_value` | Значение по умолчанию | любой | нет | — | Подставляется при создании объекта |
 | `definition` | Определение | `text` | нет | — | Смысл поля человеческим языком |
+| `service` | Служебное | `boolean` | нет, по умолчанию `false` | `true` / `false` | Свойство существует в схеме и данных, но **не предлагается для ввода**: его ведёт плагин. В MVP одно такое свойство — `sb_issues` (DL-168, [[08-views\|`08-views.md`]] §7) |
 
 ### Про `required` и `cardinality`: устранение дублирования
 
@@ -535,4 +536,5 @@ display:
 | 2026-10-22 | 0.4.0 | Добавлена оговорка об области действия таблицы системных атрибутов: у экземпляра связи набор сокращён | ADR-009 Р10, ADR-010 | [[../adr/ADR-009-relations-model\|ADR-009]] |
 | 2026-10-22 | 0.3.0 | Добавлен раздел 11: тип значения `media_reference` — семь настроек, поведение контрола с миниатюрами, 8 правил валидации (всего 33). Добавлено поле `link_mode` у свойства | Уточнение пользователя: речь шла о типе **свойства**, а не о типе объекта | [[../adr/ADR-008-media-property-type\|ADR-008]] |
 | 2026-10-22 | 0.4.0 | Добавлен раздел 12: настройки отображения `display.renderer` / `scale_max` / `unit` для типа `number` (DL-123, DL-117) | Требование пользователя: оценка книги звёздами | [[../decisions/decision-log\|DL-123]] |
+| 2026-10-22 | 0.6.0 | У определения свойства добавлено поле **`service`** (по умолчанию `false`): служебное свойство ведёт плагин, в формы ввода оно не попадает. Первое такое свойство — `sb_issues` | Шаг 8b, DL-168 |
 | 2026-10-22 | 0.5.0 | **Восстановлен нормативный раздел `applies_when`** (М1–М7): текст был утерян в песочнице, хотя на него ссылались `book.md`, `rules.md` и `CHECKPOINT.md`. Добавлена операция **`includes_any`** для триггеров с мультивыбором; добавлены правила `property.applies_when.value_present` и `property.applies_when.operation_matches_cardinality`; раздел 11 (нумерация исправлена: пропущенный №10 восстановлен) | Требования пользователя по `person.role` и `media.creation_method` — оба мультивыбор | [[../decisions/decision-log\|DL-128, DL-139]] |
