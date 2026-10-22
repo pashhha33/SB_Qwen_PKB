@@ -2,17 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-<<<<<<< HEAD
 version: 0.4.0
 created: 2026-10-22
 updated: 2026-10-22
 metamodel_version: 0.9.0
-=======
-version: 0.3.0
-created: 2026-10-22
-updated: 2026-10-22
-metamodel_version: 0.8.0
->>>>>>> 834900587491c69294ffbde9efd5362b23d2873b
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -24,11 +17,7 @@ governing_documents:
   - docs/adr/ADR-008-media-property-type.md
   - docs/adr/ADR-009-relations-model.md
   - docs/adr/ADR-011-enumerations-dates-lifecycle.md
-<<<<<<< HEAD
 rule_count: 134
-=======
-rule_count: 133
->>>>>>> 834900587491c69294ffbde9efd5362b23d2873b
 tags: [validation, registry]
 ---
 
@@ -54,15 +43,9 @@ tags: [validation, registry]
 | F. Связи и типы отношений | 33 | `03-relations` §9, ADR-009 |
 | G. Перечисления | 5 | `05-enumerations` §5 |
 | H. Даты и интервалы | 11 | `06-time-and-intervals` §6 |
-<<<<<<< HEAD
 | I. Тип `person` | **12** | `entities/person.md` §6 |
 | J. Тип `media` (обёртка) | **18** | `entities/media.md` §6 |
 | **Всего** | **134** | |
-=======
-| I. Тип `person` | **11** | `entities/person.md` §6 |
-| J. Тип `media` (обёртка) | **18** | `entities/media.md` §6 |
-| **Всего** | **133** | |
->>>>>>> 834900587491c69294ffbde9efd5362b23d2873b
 
 ---
 
@@ -224,12 +207,8 @@ tags: [validation, registry]
 
 | ID | Формулировка | Уровень | Когда |
 |---|---|---|---|
-<<<<<<< HEAD
 | `person.role.required` | У человека указана минимум одна роль (`cardinality: 1..N`, DL-156) | error | 4 |
 | `person.role.enum` | Каждое значение `role` входит в закрытый список `person_role` (34 значения) | error | 4 |
-=======
-| `person.role.enum` | Каждое значение `role` входит в закрытый список `person_role` (33 значения) | error | 4 |
->>>>>>> 834900587491c69294ffbde9efd5362b23d2873b
 | `person.role.suggested` | Значение `role` вне списка групп — разрешено, но условных свойств не даёт | info | 4 |
 | `person.dates.order` | `birth_date` не позже `death_date` | error | 4 |
 | `person.death_not_future` | `death_date` не позже сегодняшней даты | warning | 4 |
@@ -267,11 +246,7 @@ tags: [validation, registry]
 | `media.dimensions.stale` | Кэш `width_px` / `height_px` / `file_size` расходится с файлом | warning | 6 |
 | `media.hash.mismatch` | `file_hash` не совпадает с отпечатком файла (при включённой настройке) | warning | 6 |
 | `media.source_url.format` | `source_url` начинается с `http://` или `https://` | warning | 2 |
-<<<<<<< HEAD
 | `media.referrers.shadow_synced` | Теневое свойство `*_file` у ссылающегося объекта совпадает с `file` обёртки | warning | 6 |
-=======
-| `media.referrers.shadow_synced` | Теневое свойство `*_src` у ссылающегося объекта совпадает с `file` обёртки | warning | 6 |
->>>>>>> 834900587491c69294ffbde9efd5362b23d2873b
 
 **Инвариант И8 (новый, DL-143):** тело заметки-обёртки содержит встраивание
 `![[{file}|{title}]]` как первый элемент. Инвариант — не украшение, а страховка показа:
@@ -318,10 +293,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
-<<<<<<< HEAD
 | 2026-10-22 | 0.4.0 | Добавлено правило `person.role.required` (род занятий обязателен, DL-156) → **134 правила**; суффикс теневого свойства изменён на `_file` (DL-153) |
-=======
->>>>>>> 834900587491c69294ffbde9efd5362b23d2873b
 | 2026-10-22 | 0.3.0 | Добавлено 31 правило: группа **I. Тип `person`** (11) и группа **J. Тип `media`** (18), плюс 2 правила на `applies_when` (`value_present`, `operation_matches_cardinality`). Итого **133** правила. Введён инвариант **И8** (встраивание файла в теле обёртки). Операция `includes_any` добавлена в `property.applies_when.operation_closed`. Закрыт пункт «правил обёртки пока нет» (DL-088) |
 | 2026-10-22 | 0.2.0 | Добавлено 15 правил: 3 на `applies_when` (DL-128), 2 на фасет `genre` (DL-126), 10 на связи `contains`, главы и поля `book` (DL-123…DL-125). Итого **102** правила. Введён инвариант И7 |
 | 2026-10-22 | 0.1.0 | Реестр создан: 85 правил в 8 группах, разметка по уровням контроля целостности и уровням сообщений, таблица перекрывающихся правил, список отсутствующих правил | [[../adr/ADR-011-enumerations-dates-lifecycle\|ADR-011]], шаг 7 |
