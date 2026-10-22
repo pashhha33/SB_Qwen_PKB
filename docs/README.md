@@ -19,14 +19,15 @@ project-root/
 ├── README.md                     # что это за проект, как поставить плагин, как читать документы
 ├── docs/
 │   ├── README.md                 # ← этот файл: навигация и правила ведения документации
+│   ├── CHECKPOINT.md             # контрольная точка: состояние проекта для переноса в новую сессию
 │   ├── inbox/                    # ИСХОДНЫЕ черновики пользователя: не редактируются никогда
 │   │   └── README.md             # состав, актуальность версий, ссылки на анализ
 │   ├── metamodel/                # ЧТО мы описываем: правила устройства базы знаний
 │   │   ├── analysis-01-incoming-drafts.md  # диагноз исходных черновиков (Фаза 1)
 │   │   ├── analysis-contradictions.md      # реестр C/D/U/G с идентификаторами
 │   │   ├── 00-overview.md        # общий вид: философия, принципы, схема целиком (Mermaid)
-│   │   ├── 01-classification.md  # классификация типов: группы, чем отличаются, границы
-│   │   ├── 02-entities.md        # сводная таблица всех типов (индекс)
+│   │   ├── 01-classification.md  # ✅ классификация: taxonomy → facet → category, два теста, tags
+│   │   ├── 02-entities.md        # ✅ реестр всех типов (60 записей) + реестр TYPE_PREFIX
 │   │   ├── entities/             # по одному файлу на тип сущности
 │   │   │   └── <entity_id>.md
 │   │   ├── 03-relations.md       # сводная таблица всех связей (индекс)
@@ -44,7 +45,12 @@ project-root/
 │   │   ├── rules.md              # полный реестр правил валидации с ID и уровнями
 │   │   └── severity-policy.md    # чем error отличается от warning и info, как это показывать
 │   ├── adr/                      # важные и трудноотменяемые решения (разбор вариантов)
-│   │   └── ADR-NNN-<slug>.md
+│   │   ├── ADR-001-identity-and-file-naming.md          # ✅
+│   │   ├── ADR-002-source-of-truth.md                   # ✅
+│   │   ├── ADR-003-bilingual-keys-and-label-layer.md    # ✅
+│   │   ├── ADR-004-first-pass-scope-and-command-driven-authoring.md  # ✅
+│   │   ├── ADR-005-classification-model.md              # ✅
+│   │   └── ADR-NNN-<slug>.md                            # шаблон имени
 │   ├── decisions/
 │   │   └── decision-log.md       # журнал всех договорённостей одной строкой
 │   ├── changelog/
@@ -56,6 +62,7 @@ project-root/
 │   │   ├── mvp-scope.md          # границы MVP: что точно входит и что точно не входит
 │   │   └── readiness-checklist.md# чек-лист «метамодель готова к реализации»
 │   ├── integrations/
+│   │   ├── research-front-matter-title-stability.md   # ✅ исследование стабильности
 │   │   ├── obsidian-bases.md     # по файлу на интеграцию: польза, риск, способ защиты метамодели
 │   │   ├── templater.md
 │   │   ├── dataview.md           # оценка: использовать / делать самим / отказаться
