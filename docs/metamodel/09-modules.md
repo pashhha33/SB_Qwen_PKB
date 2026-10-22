@@ -3,10 +3,10 @@ doc_type: metamodel_section
 section: "09"
 title: "Модули плагина: что реализуем, что откладываем, что не делаем"
 status: proposed
-version: 0.2.0
+version: 0.3.0
 created: 2026-10-22
 updated: 2026-10-22
-metamodel_version: 0.13.0
+metamodel_version: 0.14.0
 step: "8c"
 governing_documents:
   - docs/roadmap/phases.md
@@ -109,6 +109,7 @@ tags: [metamodel, modules, architecture, step8]
 | `validation-runner` | Запуск 154 правил по уровням контроля 1–6, локально и по команде | B | `schema-engine` | `validation/rules` |
 | `diagnostics` | Формат диагностики из 11 полей, сообщения, места показа, журнал `.sb/logs/` | B | `validation-runner` | `validation/severity-policy` |
 | `service-flags` | Служебные метки `sb/error` и свойство `sb_issues`; синхронность обоих механизмов | B | `diagnostics` | `08-views` §7, DL-168 |
+| `link-context-resolver` † | Контекст пустой ссылки: жёсткий (К1, К2, К5) и мягкий (К3, К4); пересечение ограничений | B | `property-definitions`, `relation-index` | [[12-links-and-aliases]] §5.3 |
 
 ### Слой 3. Сервисы предметной области
 
@@ -122,6 +123,8 @@ tags: [metamodel, modules, architecture, step8]
 | `relation-service` | Создание и удаление связей, локальные свойства, каскады, вычисляемая обратная сторона | C | `relation-store`, `relation-index` | ADR-009 |
 | `chapter-service` | Нумерация глав, `order`, правило «Глава {N}» (И7), проверка разрывов | C | `relation-service` | `entities/chapter` |
 | `media-service` | Обёртки: `creation_method`, роли, кэш размеров, инвариант И8 | D | `object-service` | `entities/media` |
+| `unresolved-link-service` † | Создание объекта из пустой ссылки: перехват `vault.on('create')`, окно выбора типа, `title` из текста ссылки, поиск дублей, нормализация ссылки | B | `object-service`, `link-context-resolver` | [[12-links-and-aliases]] §5 |
+| `alias-service` † | Сбор псевдонимов С1–С12: нормализация, дедупликация, фильтр мусора, журнал `.sb/logs/alias-collections.jsonl`, отмена | B | `object-service` | [[12-links-and-aliases]] §6 |
 
 ### Слой 4. Команды и представления
 
@@ -149,11 +152,22 @@ tags: [metamodel, modules, architecture, step8]
 | `gallery-ui` | Галерея медиа и список свободных файлов | D | `media-index` | `08-views` В8, В9 |
 | `list-fallback` | Простой список объектов — деградация для представлений В1–В6 | D | `object-service` | `08-views` §4 |
 | `chapter-nav-processor` | Код-блок `sb-chapter-nav`: кнопки навигации по главам | C | `chapter-service` | DL-129…DL-131 |
+| `alias-index` † | Кэш `.sb/cache/alias-index.json` и `link-index.json`: «название/псевдоним → объекты», «текст ссылки → где встречается»; команда перестроения | B | `alias-service` | [[12-links-and-aliases]] §9.3 |
+| `alias-review-ui` † | Окно разбора псевдонимов: удалить, перенести в другой объект, отменить добавление | D | `alias-service`, `plugin-ui` | [[12-links-and-aliases]] §6.7 |
 
 **Итого: 40 модулей со статусом `mvp`**: слой 0–1 (ядро) — 7, слой 2 (схема и валидация) — 8,
 слой 3 (сервисы) — **8**, слой 4 (команды и представления) — **6**, слой 5 (UI) — 11.
 (Проверено пересчётом строк реестра.)
 По этапам: **A — 8**, **B — 12**, **C — 6**, **D — 12**, **E — 2**.
+
+> [!warning] Пять модулей помечены † и пока **не входят** в итог
+> `link-context-resolver`, `unresolved-link-service`, `alias-service`, `alias-index`,
+> `alias-review-ui` добавлены строками в реестр по разделу [[12-links-and-aliases]] (требование
+> пользователя от 2026-10-22, DL-177), но сам раздел имеет статус `proposed`: ждут ответов на
+> вопросы 12.1–12.4. После утверждения итог станет **45 модулей MVP**
+> (ядро 7, схема 9, сервисы 10, команды и представления 6, UI 13; по этапам A 8 / **B 16** / C 6 /
+> **D 13** / E 2), а число команд — **18** (`sb-create-from-link`, `sb-review-aliases`,
+> `sb-rebuild-alias-index`).
 
 Три модуля добавлены по ответу пользователя «C — что-то добавить» (DL-174). Это **не новые идеи**,
 а закрытие пробелов: `backup-service` требовался мерой защиты ADR-010 (резервные копии `.sb/`),
@@ -249,5 +263,6 @@ tags: [metamodel, modules, architecture, step8]
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-22 | 0.14.0 | В реестр внесены **5 модулей с пометкой †** (раздел [[12-links-and-aliases]], статус `proposed`): `link-context-resolver`, `unresolved-link-service`, `alias-service`, `alias-index`, `alias-review-ui`. В итог 40 не входят до утверждения раздела; после утверждения — 45 | Требование пользователя от 2026-10-22 (DL-177), вопросы 12.1–12.4 |
 | 2026-10-22 | 0.13.0 | Добавлены три модуля (ответ «C», DL-174): `backup-service`, `settings-ui`, `demo-vault` → **40 модулей MVP**; вопрос 9.1 закрыт — UI пишем на **Svelte** (ответ «B», DL-175), добавлен раздел 4.1 с условиями и мерами | Ответы пользователя от 2026-10-22 (C / B / C) |
 | 2026-10-22 | 0.12.0 | Документ создан: 37 модулей MVP в шести слоях, 12 отложенных, 12 нереализуемых, привязка к этапам A–E, 7 правил для модулей, 5 открытых вопросов | Шаг 8c, DL-173 | [[../roadmap/phases\|phases]], [[08-views\|08-views]] |

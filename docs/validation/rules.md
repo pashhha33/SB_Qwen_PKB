@@ -2,10 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.7.0
+version: 0.8.0
 created: 2026-10-22
 updated: 2026-10-22
-metamodel_version: 0.13.0
+metamodel_version: 0.14.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -17,7 +17,8 @@ governing_documents:
   - docs/adr/ADR-008-media-property-type.md
   - docs/adr/ADR-009-relations-model.md
   - docs/adr/ADR-011-enumerations-dates-lifecycle.md
-rule_count: 154
+  - docs/metamodel/12-links-and-aliases.md
+rule_count: 166
 tags: [validation, registry]
 ---
 
@@ -36,7 +37,7 @@ tags: [validation, registry]
 | Группа | Правил | Источник |
 |---|---|---|
 | A. Системные атрибуты объекта | 10 | `04-attributes` §3 |
-| B. Определения свойств | **13** | `04-attributes` §4, §11 |
+| B. Определения свойств | **14** | `04-attributes` §4, §11, `12-links-and-aliases` §9.1 |
 | C. Значения свойств | 5 | `04-attributes` §9 |
 | D. Медиа | 8 | `04-attributes` §11 |
 | E. Классификация | 19 | `01-classification` §6, ADR-005, ADR-007 |
@@ -47,7 +48,8 @@ tags: [validation, registry]
 | J. Тип `media` (обёртка) | **18** | `entities/media.md` §6 |
 | K. Представления и служебный слой | **10** | `08-views.md` §7–§8 |
 | L. Тип `project` | **10** | `entities/project.md` §6 |
-| **Всего** | **154** | |
+| M. Ссылки и псевдонимы † | **11** | [[../metamodel/12-links-and-aliases\|`12-links-and-aliases.md`]] §10 |
+| **Всего** | **166** (из них 12 — группа M и правило B, помеченные †: предварительные) | |
 
 ---
 
@@ -91,6 +93,7 @@ tags: [validation, registry]
 | `property.applies_when.operation_closed` | Операция условия — `equals`, `in_category` или `includes_any` (правило М4) | error | 4 |
 | `property.applies_when.value_present` | Поле `value` условия заполнено и не пусто | error | 2 |
 | `property.applies_when.operation_matches_cardinality` | `includes_any` применяется только к триггеру с множественной кардинальностью | warning | 4 |
+| `property.create_from_link.auto_needs_single_target` † | `create_from_link: auto` задано только свойству, у которого `target_types` содержит ровно один тип | error | 3 |
 
 ## C. Значения свойств
 
@@ -99,6 +102,7 @@ tags: [validation, registry]
 | `value.type_conformance` | Значение соответствует объявленному типу значения | error | 1, 4 |
 | `value.cardinality` | Количество значений соответствует `cardinality` | error | 1, 4 |
 | `value.allowed_values` | Значение входит в `allowed_values`, если список задан | error | 1, 4 |
+| `alias.first_is_title` † | `object.aliases.first_is_title` (группа A) — то же условие, группа M держит его рядом с правилами сбора |
 | `value.reference.exists` | Цель ссылки существует | error | 3 |
 | `value.reference.target_type` | Цель ссылки относится к одному из `target_types` | error | 3 |
 
@@ -300,6 +304,35 @@ tags: [validation, registry]
 
 ---
 
+## M. Ссылки и псевдонимы †
+
+> [!warning] Группа † — предварительная
+> Нормативный раздел [[../metamodel/12-links-and-aliases|`12-links-and-aliases.md`]] имеет статус
+> `proposed`: правила введены по требованию пользователя (DL-177), но состав может измениться
+> после ответов на вопросы 12.1–12.4. В частности, правило `link.canonical.format` зависит от
+> вопроса 12.3 (ставить ли псевдоним в ссылку при создании).
+
+| ID | Формулировка | Уровень | Когда |
+|---|---|---|---|
+| `link.creation.forbidden` | Пустая ссылка в свойстве с `create_from_link: forbid` | warning | 2, 3 |
+| `link.context.conflict` | Пересечение жёстких контекстов свойства и типа отношения пусто | error | 1 |
+| `link.creation.target_type` | Объект, созданный из ссылки в свойстве, относится к `target_types` / `allowed_*` | error | 2, 4 |
+| `link.title.not_empty` | `title` объекта, созданного из пустой ссылки, не пуст после обрезки пробелов | error | 1 |
+| `link.canonical.format` | Ссылка на объект в управляемой заметке имеет вид `[[{TYPE_PREFIX}-{ULID}.md\|…]]` | warning | 3 |
+| `link.target.ambiguous` | Ссылка разрешается в несколько файлов: псевдоним не собирается, объект не создаётся автоматически | warning | 3, 4 |
+| `alias.first_is_title` | `aliases[0] == title` (инвариант И4, дубль для полноты группы) | warning | 1, 3 |
+| `alias.no_duplicates` | В `aliases` нет значений, совпадающих после нормализации (регистр, пробелы, невидимые пробельные символы) | warning | 1, 3 |
+| `alias.not_filename` | Ни один `aliases[i]` не совпадает с именем файла объекта (с расширением и без) | warning | 1, 3 |
+| `alias.min_length` | Все `aliases[i]` не короче настройки `aliasCollection.minLength` | info | 3 |
+| `alias.cross_object_duplicate` | Один и тот же нормализованный псевдоним встречается у двух разных объектов | info | 4, 6 |
+
+**Правило М-1 (не из реестра, а над ним):** ни одно действие раздела 12 не выполняется молча.
+Каждая автоматическая правка (создание объекта из пустой ссылки, нормализация ссылки, добавление
+псевдонима) пишется в журнал `.sb/logs/` и отменяется из интерфейса.
+
+
+---
+
 ## Перекрывающиеся правила
 
 Некоторые правила частично дублируют друг друга. Это осознанно: общее правило даёт базовую защиту,
@@ -332,6 +365,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-22 | 0.8.0 | Добавлена группа **M. Ссылки и псевдонимы** — 11 правил († предварительная), и правило `property.create_from_link.auto_needs_single_target` в группу B. Итого **154 → 166 правил**. Норма — [[../metamodel/12-links-and-aliases\|раздел 12]] (DL-177) |
 | 2026-10-22 | 0.7.0 | Добавлена группа **L. Тип `project`** — 10 правил. Итого **154 правила** |
 | 2026-10-22 | 0.6.0 | Группа K расширена тремя правилами служебного слоя диагностик (`diagnostics.*`): синхронность меток и `sb_issues`, защита служебного свойства от ручной правки, объявленность `sb_issues`. Итого **144 правила** | Шаг 8b, DL-168 |
 | 2026-10-22 | 0.5.0 | Добавлена группа **K. Представления** — 7 правил (уровень контроля 5); закрыт пункт «правил представлений пока нет». Итого **141 правило** | Шаг 8b, DL-165, `08-views.md` |
