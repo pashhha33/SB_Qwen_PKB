@@ -3,7 +3,7 @@ doc_type: metamodel_section
 section: "09"
 title: "Модули плагина: что реализуем, что откладываем, что не делаем"
 status: proposed
-version: 0.3.0
+version: 0.4.0
 created: 2026-10-22
 updated: 2026-10-22
 metamodel_version: 0.14.0
@@ -39,7 +39,7 @@ tags: [metamodel, modules, architecture, step8]
 
 | Причина | Что даёт |
 |---|---|
-| Видно, где тонко | 40 модулей MVP — это оценка объёма; если их станет 60, MVP не доедет до релиза |
+| Видно, где тонко | 45 модулей MVP — это оценка объёма; если их станет 65, MVP не доедет до релиза. Уже сейчас этап B весит 16 модулей — его стоит разбить на B1 (схема и свойства) и B2 (ссылки и псевдонимы) |
 | Можно распределить по этапам | Каждый модуль привязан к этапу A–E, порядок работы становится очевидным |
 | Зависимости видны заранее | Модуль не может зависеть от того, что делается позже |
 | Отказ фиксируется письменно | «Не реализуем» с причиной защищает от возврата к уже отвергнутым идеям |
@@ -83,7 +83,7 @@ tags: [metamodel, modules, architecture, step8]
 `SchemaEngine` **не знает** ни о Bases, ни о декорациях редактора (требование черновика v1.1 §18.5,
 закреплено в `08-views.md` §9). Обратные зависимости запрещены — их ловит тест на импорт.
 
-## 4. Реестр модулей MVP (40)
+## 4. Реестр модулей MVP (45)
 
 ### Слой 0–1. Ядро
 
@@ -106,10 +106,10 @@ tags: [metamodel, modules, architecture, step8]
 | `applies-when` | Условные свойства: `equals`, `in_category`, `includes_any`; правила М1–М7 | B | `property-definitions` | `04-attributes` §11 |
 | `display-renderer` | Показ значений: звёзды, прогресс, единицы измерения | B | `property-definitions` | DL-123 |
 | `date-engine` | Частичные даты, интервалы, шаблоны вывода (17 токенов, 5 пресетов) | B | — | ADR-011, `06-time-and-intervals` |
-| `validation-runner` | Запуск 154 правил по уровням контроля 1–6, локально и по команде | B | `schema-engine` | `validation/rules` |
+| `validation-runner` | Запуск 166 правил по уровням контроля 1–6, локально и по команде | B | `schema-engine` | `validation/rules` |
 | `diagnostics` | Формат диагностики из 11 полей, сообщения, места показа, журнал `.sb/logs/` | B | `validation-runner` | `validation/severity-policy` |
 | `service-flags` | Служебные метки `sb/error` и свойство `sb_issues`; синхронность обоих механизмов | B | `diagnostics` | `08-views` §7, DL-168 |
-| `link-context-resolver` † | Контекст пустой ссылки: жёсткий (К1, К2, К5) и мягкий (К3, К4); пересечение ограничений | B | `property-definitions`, `relation-index` | [[12-links-and-aliases]] §5.3 |
+| `link-context-resolver` | Контекст пустой ссылки: жёсткий (К1, К2, К5) и мягкий (К3, К4); пересечение ограничений | B | `property-definitions`, `relation-index` | [[12-links-and-aliases]] §5.3 |
 
 ### Слой 3. Сервисы предметной области
 
@@ -123,14 +123,14 @@ tags: [metamodel, modules, architecture, step8]
 | `relation-service` | Создание и удаление связей, локальные свойства, каскады, вычисляемая обратная сторона | C | `relation-store`, `relation-index` | ADR-009 |
 | `chapter-service` | Нумерация глав, `order`, правило «Глава {N}» (И7), проверка разрывов | C | `relation-service` | `entities/chapter` |
 | `media-service` | Обёртки: `creation_method`, роли, кэш размеров, инвариант И8 | D | `object-service` | `entities/media` |
-| `unresolved-link-service` † | Создание объекта из пустой ссылки: перехват `vault.on('create')`, окно выбора типа, `title` из текста ссылки, поиск дублей, нормализация ссылки | B | `object-service`, `link-context-resolver` | [[12-links-and-aliases]] §5 |
-| `alias-service` † | Сбор псевдонимов С1–С12: нормализация, дедупликация, фильтр мусора, журнал `.sb/logs/alias-collections.jsonl`, отмена | B | `object-service` | [[12-links-and-aliases]] §6 |
+| `unresolved-link-service` | Создание объекта из пустой ссылки: перехват `vault.on('create')`, окно выбора типа, `title` из текста ссылки, поиск дублей, нормализация ссылки | B | `object-service`, `link-context-resolver` | [[12-links-and-aliases]] §5 |
+| `alias-service` | Сбор псевдонимов С1–С12: нормализация, дедупликация, фильтр мусора, журнал `.sb/logs/alias-collections.jsonl`, отмена | B | `object-service` | [[12-links-and-aliases]] §6 |
 
 ### Слой 4. Команды и представления
 
 | Модуль | Задача | Этап | Зависит от | Норма |
 |---|---|---|---|---|
-| `commands` | Палитра команд: 15 команд MVP | A–E | все сервисы | `mvp-scope` §2.3 |
+| `commands` | Палитра команд: **18 команд MVP** | A–E | все сервисы | `mvp-scope` §2.3 |
 | `settings-ui` | Вкладка настроек: шаблоны дат, суффикс теневых свойств, папки вложений, режим подписей, число резервных копий | E | `plugin-ui` | `phases.md` этап E, ADR-011 (настройки вывода дат) |
 | `demo-vault` | Демо-хранилище и онбординг: примеры `book`, `person`, `chapter`, `media`, `project`, тесты поверх фикстуры | E | `metamodel-bootstrap` | `phases.md` этап E |
 | `bases-adapter` | Изоляция Bases: проверка доступности, деградация, версия Obsidian | D | `obsidian-adapter` | `08-views` §9 |
@@ -152,22 +152,20 @@ tags: [metamodel, modules, architecture, step8]
 | `gallery-ui` | Галерея медиа и список свободных файлов | D | `media-index` | `08-views` В8, В9 |
 | `list-fallback` | Простой список объектов — деградация для представлений В1–В6 | D | `object-service` | `08-views` §4 |
 | `chapter-nav-processor` | Код-блок `sb-chapter-nav`: кнопки навигации по главам | C | `chapter-service` | DL-129…DL-131 |
-| `alias-index` † | Кэш `.sb/cache/alias-index.json` и `link-index.json`: «название/псевдоним → объекты», «текст ссылки → где встречается»; команда перестроения | B | `alias-service` | [[12-links-and-aliases]] §9.3 |
-| `alias-review-ui` † | Окно разбора псевдонимов: удалить, перенести в другой объект, отменить добавление | D | `alias-service`, `plugin-ui` | [[12-links-and-aliases]] §6.7 |
+| `alias-index` | Кэш `.sb/cache/alias-index.json` и `link-index.json`: «название/псевдоним → объекты», «текст ссылки → где встречается»; команда перестроения | B | `alias-service` | [[12-links-and-aliases]] §9.3 |
+| `alias-review-ui` | Окно разбора псевдонимов: удалить, перенести в другой объект, отменить добавление | D | `alias-service`, `plugin-ui` | [[12-links-and-aliases]] §6.7 |
 
-**Итого: 40 модулей со статусом `mvp`**: слой 0–1 (ядро) — 7, слой 2 (схема и валидация) — 8,
-слой 3 (сервисы) — **8**, слой 4 (команды и представления) — **6**, слой 5 (UI) — 11.
-(Проверено пересчётом строк реестра.)
-По этапам: **A — 8**, **B — 12**, **C — 6**, **D — 12**, **E — 2**.
+**Итого: 45 модулей со статусом `mvp`**: слой 0–1 (ядро) — 7, слой 2 (схема и валидация) — **9**,
+слой 3 (сервисы) — **10**, слой 4 (команды и представления) — **6**, слой 5 (UI) — **13**.
+(Проверено пересчётом строк реестра: 7 + 9 + 10 + 6 + 13 = 45.)
+По этапам: **A — 8**, **B — 16**, **C — 6**, **D — 13**, **E — 2**.
 
-> [!warning] Пять модулей помечены † и пока **не входят** в итог
+> [!note] Пять модулей добавлены разделом 12 (DL-177…DL-188)
 > `link-context-resolver`, `unresolved-link-service`, `alias-service`, `alias-index`,
-> `alias-review-ui` добавлены строками в реестр по разделу [[12-links-and-aliases]] (требование
-> пользователя от 2026-10-22, DL-177), но сам раздел имеет статус `proposed`: ждут ответов на
-> вопросы 12.1–12.4. После утверждения итог станет **45 модулей MVP**
-> (ядро 7, схема 9, сервисы 10, команды и представления 6, UI 13; по этапам A 8 / **B 16** / C 6 /
-> **D 13** / E 2), а число команд — **18** (`sb-create-from-link`, `sb-review-aliases`,
-> `sb-rebuild-alias-index`).
+> `alias-review-ui` — норма [[12-links-and-aliases]] (статус **`accepted`** после ответов
+> Б / А / А / А). Итог вырос **40 → 45**, число команд — **15 → 18** (`sb-create-from-link`,
+> `sb-review-aliases`, `sb-rebuild-alias-index`). Этап B стал самым тяжёлым (16 модулей):
+> при планировании его можно разбить на B1 (схема и свойства) и B2 (ссылки и псевдонимы).
 
 Три модуля добавлены по ответу пользователя «C — что-то добавить» (DL-174). Это **не новые идеи**,
 а закрытие пробелов: `backup-service` требовался мерой защиты ADR-010 (резервные копии `.sb/`),
@@ -229,10 +227,10 @@ tags: [metamodel, modules, architecture, step8]
 | Этап | Модули | Критерий готовности этапа |
 |---|---|---|
 | **A** | `obsidian-adapter`, `metamodel-bootstrap`, `markdown-parser`, `type-registry`, `identity`, `label-resolver`, `front-matter-title-adapter`, `commands` (часть) | Бутстрап на пустом хранилище, создание типа и объекта, диагностики |
-| **B** | `property-definitions`, `schema-engine`, `applies-when`, `display-renderer`, `date-engine`, `validation-runner`, `diagnostics`, `service-flags`, `object-service`, `classification-service`, `plugin-ui`, `property-editor` | `book` и `person` целиком, условные свойства, `validate-vault` |
+| **B** | `property-definitions`, `schema-engine`, `applies-when`, `display-renderer`, `date-engine`, `validation-runner`, `diagnostics`, `service-flags`, `object-service`, `classification-service`, `plugin-ui`, `property-editor`, **`link-context-resolver`, `unresolved-link-service`, `alias-service`, `alias-index`** | `book` и `person` целиком, условные свойства, `validate-vault`; **создание объекта из пустой ссылки и сбор псевдонимов** |
 | **C** | `relation-store`, `relation-index`, `relation-service`, `chapter-service`, `chapter-nav-processor` | Книга с главами, навигация, каскады, `.jsonl` |
-| **D** | `media-service`, `media-index`, `media-wizard`, `embed-postprocessor`, `editor-decorations`, `shadow-sync`, `gallery-ui`, `list-fallback`, `object-panel`, `bases-adapter`, `base-generator`, `view-validator` | Обложки в Bases, встраивание обёрток, кнопки, мастер |
-| **E** | `commands` (полный набор), настройки, производительность, документация, тесты | Все 15 команд, установка через BRAT |
+| **D** | `media-service`, `media-index`, `media-wizard`, `embed-postprocessor`, `editor-decorations`, `shadow-sync`, `gallery-ui`, `list-fallback`, `object-panel`, `bases-adapter`, `base-generator`, `view-validator`, **`alias-review-ui`** | Обложки в Bases, встраивание обёрток, кнопки, мастер; **окно разбора псевдонимов** |
+| **E** | `commands` (полный набор), настройки, производительность, документация, тесты | Все **18 команд**, установка через BRAT |
 
 ## 8. Правила для модулей
 
@@ -263,6 +261,7 @@ tags: [metamodel, modules, architecture, step8]
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
-| 2026-10-22 | 0.14.0 | В реестр внесены **5 модулей с пометкой †** (раздел [[12-links-and-aliases]], статус `proposed`): `link-context-resolver`, `unresolved-link-service`, `alias-service`, `alias-index`, `alias-review-ui`. В итог 40 не входят до утверждения раздела; после утверждения — 45 | Требование пользователя от 2026-10-22 (DL-177), вопросы 12.1–12.4 |
+| 2026-10-22 | 0.15.0 | Раздел [[12-links-and-aliases]] **принят** (ответы Б / А / А / А): пять модулей входят в итог → **45 модулей MVP** (ядро 7, схема 9, сервисы 10, команды 6, UI 13; по этапам A 8 / B 16 / C 6 / D 13 / E 2); команд — **18**; пометки † сняты | DL-184…DL-188 |
+| 2026-10-22 | 0.14.0 | В реестр внесены 5 модулей раздела [[12-links-and-aliases]]: `link-context-resolver`, `unresolved-link-service`, `alias-service`, `alias-index`, `alias-review-ui` | Требование пользователя от 2026-10-22 (DL-177) |
 | 2026-10-22 | 0.13.0 | Добавлены три модуля (ответ «C», DL-174): `backup-service`, `settings-ui`, `demo-vault` → **40 модулей MVP**; вопрос 9.1 закрыт — UI пишем на **Svelte** (ответ «B», DL-175), добавлен раздел 4.1 с условиями и мерами | Ответы пользователя от 2026-10-22 (C / B / C) |
 | 2026-10-22 | 0.12.0 | Документ создан: 37 модулей MVP в шести слоях, 12 отложенных, 12 нереализуемых, привязка к этапам A–E, 7 правил для модулей, 5 открытых вопросов | Шаг 8c, DL-173 | [[../roadmap/phases\|phases]], [[08-views\|08-views]] |

@@ -2,7 +2,7 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.8.0
+version: 0.9.0
 created: 2026-10-22
 updated: 2026-10-22
 metamodel_version: 0.14.0
@@ -48,8 +48,8 @@ tags: [validation, registry]
 | J. Тип `media` (обёртка) | **18** | `entities/media.md` §6 |
 | K. Представления и служебный слой | **10** | `08-views.md` §7–§8 |
 | L. Тип `project` | **10** | `entities/project.md` §6 |
-| M. Ссылки и псевдонимы † | **11** | [[../metamodel/12-links-and-aliases\|`12-links-and-aliases.md`]] §10 |
-| **Всего** | **166** (из них 12 — группа M и правило B, помеченные †: предварительные) | |
+| M. Ссылки и псевдонимы | **11** | [[../metamodel/12-links-and-aliases\|`12-links-and-aliases.md`]] §10 |
+| **Всего** | **166** | |
 
 ---
 
@@ -93,7 +93,7 @@ tags: [validation, registry]
 | `property.applies_when.operation_closed` | Операция условия — `equals`, `in_category` или `includes_any` (правило М4) | error | 4 |
 | `property.applies_when.value_present` | Поле `value` условия заполнено и не пусто | error | 2 |
 | `property.applies_when.operation_matches_cardinality` | `includes_any` применяется только к триггеру с множественной кардинальностью | warning | 4 |
-| `property.create_from_link.auto_needs_single_target` † | `create_from_link: auto` задано только свойству, у которого `target_types` содержит ровно один тип | error | 3 |
+| `property.create_from_link.auto_needs_single_target` | `create_from_link: auto` задано только свойству, у которого `target_types` содержит ровно один тип | error | 3 |
 
 ## C. Значения свойств
 
@@ -102,7 +102,7 @@ tags: [validation, registry]
 | `value.type_conformance` | Значение соответствует объявленному типу значения | error | 1, 4 |
 | `value.cardinality` | Количество значений соответствует `cardinality` | error | 1, 4 |
 | `value.allowed_values` | Значение входит в `allowed_values`, если список задан | error | 1, 4 |
-| `alias.first_is_title` † | `object.aliases.first_is_title` (группа A) — то же условие, группа M держит его рядом с правилами сбора |
+| `alias.first_is_title` | `object.aliases.first_is_title` (группа A) — то же условие, группа M держит его рядом с правилами сбора |
 | `value.reference.exists` | Цель ссылки существует | error | 3 |
 | `value.reference.target_type` | Цель ссылки относится к одному из `target_types` | error | 3 |
 
@@ -304,13 +304,13 @@ tags: [validation, registry]
 
 ---
 
-## M. Ссылки и псевдонимы †
+## M. Ссылки и псевдонимы
 
-> [!warning] Группа † — предварительная
-> Нормативный раздел [[../metamodel/12-links-and-aliases|`12-links-and-aliases.md`]] имеет статус
-> `proposed`: правила введены по требованию пользователя (DL-177), но состав может измениться
-> после ответов на вопросы 12.1–12.4. В частности, правило `link.canonical.format` зависит от
-> вопроса 12.3 (ставить ли псевдоним в ссылку при создании).
+> [!info] Норма
+> [[../metamodel/12-links-and-aliases|`12-links-and-aliases.md`]] — статус **`accepted`**
+> (DL-184…DL-188). Правило `link.canonical.format` учитывает решение 12.3: канонической считается
+> ссылка **с** псевдонимом; при настройке `linkCreation.insertAlias: false` проверяется только
+> формат `[[{TYPE_PREFIX}-{ULID}.md…]]`, псевдоним не требуется.
 
 | ID | Формулировка | Уровень | Когда |
 |---|---|---|---|
@@ -326,7 +326,7 @@ tags: [validation, registry]
 | `alias.min_length` | Все `aliases[i]` не короче настройки `aliasCollection.minLength` | info | 3 |
 | `alias.cross_object_duplicate` | Один и тот же нормализованный псевдоним встречается у двух разных объектов | info | 4, 6 |
 
-**Правило М-1 (не из реестра, а над ним):** ни одно действие раздела 12 не выполняется молча.
+**Принцип над группой (не правило):** ни одно действие раздела 12 не выполняется молча.
 Каждая автоматическая правка (создание объекта из пустой ссылки, нормализация ссылки, добавление
 псевдонима) пишется в журнал `.sb/logs/` и отменяется из интерфейса.
 
@@ -365,7 +365,8 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
-| 2026-10-22 | 0.8.0 | Добавлена группа **M. Ссылки и псевдонимы** — 11 правил († предварительная), и правило `property.create_from_link.auto_needs_single_target` в группу B. Итого **154 → 166 правил**. Норма — [[../metamodel/12-links-and-aliases\|раздел 12]] (DL-177) |
+| 2026-10-22 | 0.9.0 | Группа M и правило `property.create_from_link.auto_needs_single_target` **утверждены** вместе с разделом 12 (ответы Б / А / А / А, DL-184…DL-188): пометки † сняты, уточнено поведение `link.canonical.format` при `linkCreation.insertAlias: false`. Итого **166 правил** в 13 группах |
+| 2026-10-22 | 0.8.0 | Добавлена группа **M. Ссылки и псевдонимы** — 11 правил, и правило `property.create_from_link.auto_needs_single_target` в группу B. Итого **154 → 166 правил**. Норма — [[../metamodel/12-links-and-aliases\|раздел 12]] (DL-177) |
 | 2026-10-22 | 0.7.0 | Добавлена группа **L. Тип `project`** — 10 правил. Итого **154 правила** |
 | 2026-10-22 | 0.6.0 | Группа K расширена тремя правилами служебного слоя диагностик (`diagnostics.*`): синхронность меток и `sb_issues`, защита служебного свойства от ручной правки, объявленность `sb_issues`. Итого **144 правила** | Шаг 8b, DL-168 |
 | 2026-10-22 | 0.5.0 | Добавлена группа **K. Представления** — 7 правил (уровень контроля 5); закрыт пункт «правил представлений пока нет». Итого **141 правило** | Шаг 8b, DL-165, `08-views.md` |
