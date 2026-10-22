@@ -2,10 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.6.0
+version: 0.7.0
 created: 2026-10-22
 updated: 2026-10-22
-metamodel_version: 0.11.0
+metamodel_version: 0.13.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -17,7 +17,7 @@ governing_documents:
   - docs/adr/ADR-008-media-property-type.md
   - docs/adr/ADR-009-relations-model.md
   - docs/adr/ADR-011-enumerations-dates-lifecycle.md
-rule_count: 144
+rule_count: 154
 tags: [validation, registry]
 ---
 
@@ -46,7 +46,8 @@ tags: [validation, registry]
 | I. Тип `person` | **12** | `entities/person.md` §6 |
 | J. Тип `media` (обёртка) | **18** | `entities/media.md` §6 |
 | K. Представления и служебный слой | **10** | `08-views.md` §7–§8 |
-| **Всего** | **144** | |
+| L. Тип `project` | **10** | `entities/project.md` §6 |
+| **Всего** | **154** | |
 
 ---
 
@@ -282,6 +283,23 @@ tags: [validation, registry]
 
 ---
 
+## L. Тип `project`
+
+| ID | Формулировка | Уровень | Когда |
+|---|---|---|---|
+| `project.status.enum` | `status` входит в закрытый список `project_status` (5 значений) | error | 4 |
+| `project.status.required` | `status` заполнен | error | 2 |
+| `project.owner.required` | У проекта указан владелец | error | 4 |
+| `project.dates.order` | `started_on` не позже `due_on` | error | 4 |
+| `project.done_date.order` | `done_on` не раньше `started_on` | error | 4 |
+| `project.done_date.required` | При `status: done` заполнено `done_on` | warning | 4 |
+| `project.progress.range` | `progress` — целое от 0 до 100 | error | 3 |
+| `project.progress.done_consistency` | При `status: done` значение `progress` равно 100 или пусто | warning | 4 |
+| `project.dropped.reason` | При `status: dropped` заполнено `abandoned_reason` | warning | 4 |
+| `project.overdue` | При `status: active` и `due_on` раньше сегодняшней даты проект просрочен | warning | 6 |
+
+---
+
 ## Перекрывающиеся правила
 
 Некоторые правила частично дублируют друг друга. Это осознанно: общее правило даёт базовую защиту,
@@ -295,7 +313,7 @@ tags: [validation, registry]
 | `value.reference.target_type` | `category.parent.same_facet`, `relation.allowed_subject_type`, `relation.allowed_object_type`, `assignment.type_allowed` |
 | `enum.value.format` | `property.key.format`, `date.format` |
 | `period.order` | `relation.period.order`, `object.period.order` |
-| `value.allowed_values` | `person.role.enum`, `media.kind.enum`, `media.roles.enum`, `media.creation_method.enum`, `media.origin.enum`, `book.format.enum` |
+| `value.allowed_values` | `person.role.enum`, `project.status.enum`, `media.kind.enum`, `media.roles.enum`, `media.creation_method.enum`, `media.origin.enum`, `book.format.enum` |
 | `value.media.file_exists` | `media.file.exists` (проверяет саму обёртку, а не значение чужого свойства) |
 | `value.cardinality` | не применяется к скрытым условным свойствам (правило М6) |
 
@@ -314,6 +332,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-22 | 0.7.0 | Добавлена группа **L. Тип `project`** — 10 правил. Итого **154 правила** |
 | 2026-10-22 | 0.6.0 | Группа K расширена тремя правилами служебного слоя диагностик (`diagnostics.*`): синхронность меток и `sb_issues`, защита служебного свойства от ручной правки, объявленность `sb_issues`. Итого **144 правила** | Шаг 8b, DL-168 |
 | 2026-10-22 | 0.5.0 | Добавлена группа **K. Представления** — 7 правил (уровень контроля 5); закрыт пункт «правил представлений пока нет». Итого **141 правило** | Шаг 8b, DL-165, `08-views.md` |
 | 2026-10-22 | 0.4.0 | Добавлено правило `person.role.required` (род занятий обязателен, DL-156) → **134 правила**; суффикс теневого свойства изменён на `_file` (DL-153) |

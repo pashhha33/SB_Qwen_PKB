@@ -3,10 +3,10 @@ doc_type: metamodel_section
 section: "02"
 title: "Реестр типов объектов"
 status: actual
-version: 0.6.0
+version: 0.7.0
 created: 2026-10-22
 updated: 2026-10-22
-metamodel_version: 0.10.0
+metamodel_version: 0.13.0
 governing_adr:
   - docs/adr/ADR-004-first-pass-scope-and-command-driven-authoring.md
   - docs/adr/ADR-005-classification-model.md
@@ -201,7 +201,7 @@ tags: [metamodel, entities, registry]
 | Тип из `01` §5 | Предлагаемый `type` | `TYPE_PREFIX` | Родитель | Тест 1 | Решение | Статус |
 |---|---|---|---|---|---|---|
 | Деятельность | `activity` | `ACTIVITY` | — | — | **абстрактный родитель** (предложение) | `core_abstract` |
-| Проект | `project` | `PROJECT` | `activity` | — | тип | `core` |
+| Проект | `project` | `PROJECT` | `activity` | **да**: `status` (перечисление-триггер), `owner`, `due_on`, `progress` | тип | `core`; карточка [[entities/project\|`entities/project.md`]] (DL-176) |
 | Задача | `task` | `TASK` | `activity` | **да**: `due_on`, `status`, `project` | подтип | `phase2` |
 | Цель | `goal` | `GOAL` | `activity` | **да**: `due_on`, `success_criteria` | подтип | `phase2` |
 | Проблема | `problem` | `PROBLEM` | `activity` | **да**: `status`, `solution` | подтип | `phase2` |
@@ -392,6 +392,7 @@ tags: [metamodel, entities, registry]
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-22 | 0.7.0 | Строка типа `project` дополнена: признаки отдельного типа подтверждены (`status` как триггер, `owner`, `due_on`, `progress`), карточка создана | Решение пользователя (ответ «C», DL-176) |
 | 2026-10-22 | 0.6.0 | Запись типа `view` уточнена по итогам шага 8b: в MVP представления — артефакты, а не объекты метамодели; `mechanism` закрыт в составе трёх значений | [[08-views\|`08-views.md`]], DL-164 |
 | 2026-10-22 | 0.5.0 | Суффикс теневого свойства изменён на `_file` (DL-153); составы `person_role` и `media_creation_method` закрыты решениями пользователя (DL-155, DL-157) | Ответы пользователя от 2026-10-22 (A / C / A / B) |
 | 2026-10-22 | 0.4.0 | Блок типа `media` приведён в соответствие с карточкой [[entities/media\|`entities/media.md`]]: состав полей больше не предварительный (DL-088 закрыт), таблица «что в MVP» дополнена четырьмя механизмами поведения обёртки (встраивание, Bases, кнопки, мастер создания); добавлены пункты 13–15 в реестр спорных вопросов | Требования пользователя 2.1–2.4 от 2026-10-22 |
