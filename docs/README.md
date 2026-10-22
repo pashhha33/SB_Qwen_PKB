@@ -29,21 +29,22 @@ project-root/
 │   │   ├── 01-classification.md  # ✅ классификация: taxonomy → facet → category, два теста, tags
 │   │   ├── 02-entities.md        # ✅ реестр всех типов (57 записей) + реестр TYPE_PREFIX
 │   │   ├── entities/             # по одному файлу на тип сущности
-│   │   │   └── <entity_id>.md
-│   │   ├── 03-relations.md       # сводная таблица всех связей (индекс)
-│   │   ├── relations/            # по одному файлу на связь
-│   │   │   └── rel_<a>_<b>.md
+│   │   │   ├── book.md           # ✅ образец формы
+│   │   │   └── person.md         # ✅ образец формы
+│   │   ├── 03-relations.md       # ✅ связи: два способа хранения, реестр типов отношений
+│   │   ├── relations/            # ✅ по одному файлу на связь: authorship, ownership, part_of, related_to
+│   │   │   └── rel_<имя>.md
 │   │   ├── 04-attributes.md      # ✅ системные и предметные поля, 7 типов значений, даты
-│   │   ├── 05-enumerations.md    # enum-ы и справочники (списки допустимых значений)
-│   │   ├── 06-time-and-intervals.md   # даты, интервалы, часовые пояса, формат
+│   │   ├── 05-enumerations.md    # ✅ реестр 15 перечислений, единый стиль значений
+│   │   ├── 06-time-and-intervals.md   # ✅ даты, частичные даты, интервалы, шаблон вывода
 │   │   ├── 07-hierarchy.md       # наследование и абстрактные типы
 │   │   ├── 08-views.md           # представления: граф, таблицы, карточки, канбан, запросы
 │   │   ├── 09-modules.md         # модули: реализуемые / отложенные / нереализуемые + обоснование
 │   │   ├── 10-migration-rules.md # правила миграций (задел на будущее, в MVP не реализуем)
 │   │   └── 11-rdf-extension.md   # как при желании расшириться до RDF/OWL, что для этого заложено
 │   ├── validation/
-│   │   ├── rules.md              # полный реестр правил валидации с ID и уровнями
-│   │   └── severity-policy.md    # чем error отличается от warning и info, как это показывать
+│   │   ├── rules.md              # ✅ единый реестр 87 правил с ID, уровнями и номером уровня контроля
+│   │   └── severity-policy.md    # ✅ политика уровней, 6 уровней контроля, формат диагностики
 │   ├── adr/                      # важные и трудноотменяемые решения (разбор вариантов)
 │   │   ├── ADR-001-identity-and-file-naming.md          # ✅
 │   │   ├── ADR-002-source-of-truth.md                   # ✅
@@ -51,7 +52,11 @@ project-root/
 │   │   ├── ADR-004-first-pass-scope-and-command-driven-authoring.md  # ✅
 │   │   ├── ADR-005-classification-model.md              # ✅
 │   │   ├── ADR-006-system-attributes-value-types-media.md  # ✅
-│   │   ├── ADR-007-facet-independence.md                # ⏳ proposed
+│   │   ├── ADR-007-facet-independence.md                # ✅
+│   │   ├── ADR-008-media-property-type.md               # ✅
+│   │   ├── ADR-009-relations-model.md                   # ✅
+│   │   ├── ADR-010-relation-storage.md                  # ✅
+│   │   ├── ADR-011-enumerations-dates-lifecycle.md      # ✅
 │   │   └── ADR-NNN-<slug>.md                            # шаблон имени
 │   ├── decisions/
 │   │   └── decision-log.md       # журнал всех договорённостей одной строкой
