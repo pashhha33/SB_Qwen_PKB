@@ -2,7 +2,7 @@
 doc_type: decision_log
 title: Decision log — журнал договорённостей
 status: draft
-version: 0.4.0
+version: 0.5.0
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -76,6 +76,21 @@ updated: 2026-10-22
 | DL-053 | 2026-10-22 | Предложено: `book_series` и `film_series` объединить в один тип `series` | ассистент | предложено | — | — | `docs/metamodel/02-entities.md` §4.3 |
 | DL-054 | 2026-10-22 | Предложено: тип `documentation` в модель не вводить — документы проекта живут в `docs/` и не являются объектами базы | ассистент | предложено | — | — | `docs/metamodel/02-entities.md` §3, §8 |
 | DL-055 | 2026-10-22 | Персонаж (`character`) — подтип `person` по тесту 1; префикс исправлен с `CHARACTЕR` (кириллическая Е) на `CHARACTER` | ассистент | предложено | — | — | `docs/metamodel/02-entities.md` §4.8, закрывает U-10 |
+
+| DL-056 | 2026-10-22 | Абстрактные типы `work` и `activity` вводятся в первом проходе как родители `book` и `project`; карточки сокращённые | пользователь | принято | 0.3.0 | [[../adr/ADR-006-system-attributes-value-types-media\|ADR-006]] | `docs/metamodel/02-entities.md` §5 |
+| DL-057 | 2026-10-22 | Стихотворение (`poem`) и Текст песни (`lyrics`) — подтипы, а не категории: у них есть собственные свойства | пользователь | принято | 0.3.0 | [[../adr/ADR-006-system-attributes-value-types-media\|ADR-006]] | `docs/metamodel/02-entities.md` §4.2 |
+| DL-058 | 2026-10-22 | `book_series` и `film_series` объединяются в один тип `series` с префиксом `SERIES_COLLECTION` | пользователь | принято | 0.3.0 | — | `docs/metamodel/02-entities.md` §4.3 |
+| DL-059 | 2026-10-22 | Группа «Источник»: четыре подтипа сохраняются для индикации, дополнительно вводится фасет «Носитель»; добавлено правило валидации согласованности подтипа и значения фасета | пользователь | принято | 0.3.0 | — | `docs/metamodel/02-entities.md` §4.4 |
+| DL-060 | 2026-10-22 | Тип `documentation` в модель не вводится: документы проекта живут в `docs/` и не являются объектами базы знаний | пользователь | принято | 0.3.0 | — | `docs/metamodel/02-entities.md` §3 |
+| DL-061 | 2026-10-22 | Персонаж (`character`) — подтип `person`, этап 2; префикс исправлен с `CHARACTЕR` на `CHARACTER` | ассистент | принято | 0.3.0 | — | `docs/metamodel/02-entities.md` §4.8 |
+| DL-062 | 2026-10-22 | Набор типов значений сокращён до семи: убраны `Список` и `Список ссылок`, добавлен `media_reference`. Множественность задаётся только полем `cardinality` | пользователь | принято | 0.3.0 | [[../adr/ADR-006-system-attributes-value-types-media\|ADR-006]] | `docs/metamodel/04-attributes.md` §2 |
+| DL-063 | 2026-10-22 | Словарь (справочник) выражается существующими средствами: либо перечисление `allowed_values`, либо ссылка на категорию фасета через `target_facet`. Новый механизм не вводится | ассистент | принято | 0.3.0 | [[../adr/ADR-006-system-attributes-value-types-media\|ADR-006]] | `docs/metamodel/04-attributes.md` §5 |
+| DL-064 | 2026-10-22 | Даты хранятся в локальном времени без смещения: `YYYY-MM-DD` и `YYYY-MM-DDTHH:mm`, точность до минут. Представление задаётся настройкой плагина и на хранение не влияет | пользователь | принято | 0.3.0 | [[../adr/ADR-006-system-attributes-value-types-media\|ADR-006]] | `docs/metamodel/04-attributes.md` §6 |
+| DL-065 | 2026-10-22 | Системные атрибуты: закрытый набор из 8 полей (`id`, `type`, `title`, `aliases`, `created_at`, `updated_at`, `categories`, `tags`) и 6 инвариантов И1–И6. `created_at` и `updated_at` обязательны, заполняет плагин | пользователь | принято | 0.3.0 | [[../adr/ADR-006-system-attributes-value-types-media\|ADR-006]] | `docs/metamodel/04-attributes.md` §3 |
+| DL-066 | 2026-10-22 | Введён тип `media` (префикс `MEDIA`) вместо `image_wrapper`: поля `file`, `media_kind`, `role`, `description`. Миниатюры в модалке — через публичный API `getResourcePath()`. Механизм контекстного разрешения v1.1 §10 отложен на этап 2 | пользователь | принято | 0.3.0 | [[../adr/ADR-006-system-attributes-value-types-media\|ADR-006]] | `docs/metamodel/02-entities.md` §4.7 |
+| DL-067 | 2026-10-22 | Ядро расширено до 14 типов: добавлены `media`, `work` (abstract), `activity` (abstract) | ассистент | принято | 0.3.0 | [[../adr/ADR-006-system-attributes-value-types-media\|ADR-006]] | `docs/metamodel/02-entities.md` §2 |
+| DL-068 | 2026-10-22 | Предложено: фасет — самостоятельный объект, `taxonomy` у него необязательна, `allowed_object_types` может задаваться на фасете; категория по-прежнему принадлежит только фасету | пользователь (сомнение) / ассистент (вариант B) | предложено | — | [[../adr/ADR-007-facet-independence\|ADR-007]] | ADR-007, статус `proposed` |
+| DL-069 | 2026-10-22 | Поле `required` у свойства сохраняется, но проверяется на согласованность с `cardinality` (правило `property.required.cardinality_consistency`) | ассистент | предложено | — | — | `docs/metamodel/04-attributes.md` §4 |
 
 ## Отменённые и пересмотренные решения
 

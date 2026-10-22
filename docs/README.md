@@ -27,13 +27,13 @@ project-root/
 │   │   ├── analysis-contradictions.md      # реестр C/D/U/G с идентификаторами
 │   │   ├── 00-overview.md        # общий вид: философия, принципы, схема целиком (Mermaid)
 │   │   ├── 01-classification.md  # ✅ классификация: taxonomy → facet → category, два теста, tags
-│   │   ├── 02-entities.md        # ✅ реестр всех типов (60 записей) + реестр TYPE_PREFIX
+│   │   ├── 02-entities.md        # ✅ реестр всех типов (57 записей) + реестр TYPE_PREFIX
 │   │   ├── entities/             # по одному файлу на тип сущности
 │   │   │   └── <entity_id>.md
 │   │   ├── 03-relations.md       # сводная таблица всех связей (индекс)
 │   │   ├── relations/            # по одному файлу на связь
 │   │   │   └── rel_<a>_<b>.md
-│   │   ├── 04-attributes.md      # общий реестр полей: типы значений, соглашения об именовании
+│   │   ├── 04-attributes.md      # ✅ системные и предметные поля, 7 типов значений, даты
 │   │   ├── 05-enumerations.md    # enum-ы и справочники (списки допустимых значений)
 │   │   ├── 06-time-and-intervals.md   # даты, интервалы, часовые пояса, формат
 │   │   ├── 07-hierarchy.md       # наследование и абстрактные типы
@@ -50,6 +50,8 @@ project-root/
 │   │   ├── ADR-003-bilingual-keys-and-label-layer.md    # ✅
 │   │   ├── ADR-004-first-pass-scope-and-command-driven-authoring.md  # ✅
 │   │   ├── ADR-005-classification-model.md              # ✅
+│   │   ├── ADR-006-system-attributes-value-types-media.md  # ✅
+│   │   ├── ADR-007-facet-independence.md                # ⏳ proposed
 │   │   └── ADR-NNN-<slug>.md                            # шаблон имени
 │   ├── decisions/
 │   │   └── decision-log.md       # журнал всех договорённостей одной строкой
