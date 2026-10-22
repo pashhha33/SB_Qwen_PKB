@@ -2,19 +2,22 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.1.0
+version: 0.4.0
 created: 2026-10-22
 updated: 2026-10-22
-metamodel_version: 0.5.0
+metamodel_version: 0.9.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
   - docs/metamodel/03-relations.md
   - docs/metamodel/05-enumerations.md
   - docs/metamodel/06-time-and-intervals.md
+  - docs/metamodel/entities/person.md
+  - docs/metamodel/entities/media.md
+  - docs/adr/ADR-008-media-property-type.md
   - docs/adr/ADR-009-relations-model.md
   - docs/adr/ADR-011-enumerations-dates-lifecycle.md
-rule_count: 87
+rule_count: 134
 tags: [validation, registry]
 ---
 
@@ -33,14 +36,16 @@ tags: [validation, registry]
 | Группа | Правил | Источник |
 |---|---|---|
 | A. Системные атрибуты объекта | 10 | `04-attributes` §3 |
-| B. Определения свойств | 11 | `04-attributes` §4 |
+| B. Определения свойств | **13** | `04-attributes` §4, §11 |
 | C. Значения свойств | 5 | `04-attributes` §9 |
 | D. Медиа | 8 | `04-attributes` §11 |
 | E. Классификация | 19 | `01-classification` §6, ADR-005, ADR-007 |
 | F. Связи и типы отношений | 33 | `03-relations` §9, ADR-009 |
 | G. Перечисления | 5 | `05-enumerations` §5 |
 | H. Даты и интервалы | 11 | `06-time-and-intervals` §6 |
-| **Всего** | **102** | |
+| I. Тип `person` | **12** | `entities/person.md` §6 |
+| J. Тип `media` (обёртка) | **18** | `entities/media.md` §6 |
+| **Всего** | **134** | |
 
 ---
 
@@ -81,7 +86,9 @@ tags: [validation, registry]
 | `property.target_facet.is_facet` | `target_facet` указывает на объект типа `facet` | error | 3 |
 | `property.applies_when.property_exists` | Свойство, на которое ссылается `applies_when`, существует в том же типе | error | 3 |
 | `property.applies_when.no_chain` | У свойства-условия нет собственного `applies_when` (правило М3) | error | 4 |
-| `property.applies_when.operation_closed` | Операция условия — `equals` или `in_category` (правило М4) | error | 4 |
+| `property.applies_when.operation_closed` | Операция условия — `equals`, `in_category` или `includes_any` (правило М4) | error | 4 |
+| `property.applies_when.value_present` | Поле `value` условия заполнено и не пусто | error | 2 |
+| `property.applies_when.operation_matches_cardinality` | `includes_any` применяется только к триггеру с множественной кардинальностью | warning | 4 |
 
 ## C. Значения свойств
 
@@ -196,6 +203,63 @@ tags: [validation, registry]
 
 ---
 
+## I. Тип `person`
+
+| ID | Формулировка | Уровень | Когда |
+|---|---|---|---|
+| `person.role.required` | У человека указана минимум одна роль (`cardinality: 1..N`, DL-156) | error | 4 |
+| `person.role.enum` | Каждое значение `role` входит в закрытый список `person_role` (34 значения) | error | 4 |
+| `person.role.suggested` | Значение `role` вне списка групп — разрешено, но условных свойств не даёт | info | 4 |
+| `person.dates.order` | `birth_date` не позже `death_date` | error | 4 |
+| `person.death_not_future` | `death_date` не позже сегодняшней даты | warning | 4 |
+| `person.name.conflict` | `birth_name` не совпадает с `title` (иначе поле избыточно) | warning | 4 |
+| `person.pseudonym.in_aliases` | Значения `pen_name` и `also_known_as` присутствуют в `aliases` | warning | 4 |
+| `person.sort_name.format` | `sort_name` соответствует шаблону «Фамилия, Имя» | warning | 2 |
+| `person.links.format` | Значения `links` начинаются с `http://` или `https://` | warning | 2 |
+| `person.portrait.role` | Портрет имеет роль `portrait` или `avatar` | warning | 4 |
+| `person.duplicate_name` | При сохранении найден другой объект `person` с тем же `title` | warning | 4 |
+| `person.doctoral_advisor.not_self` | `doctoral_advisor` не указывает на самого себя | error | 3 |
+
+> [!note] Условные свойства человека
+> Обязательность условных свойств (`known_for`, `instruments`, `medical_specialty` и др.)
+> проверяется **только когда условие `applies_when` выполнено** (правило М6). Скрытое свойство
+> не мешает сохранению: правило `value.cardinality` для него не запускается.
+
+## J. Тип `media` (обёртка медиафайла)
+
+| ID | Формулировка | Уровень | Когда |
+|---|---|---|---|
+| `media.file.required` | `file` заполнен | error | 2 |
+| `media.file.exists` | Файл существует в хранилище | error | 3 |
+| `media.file.is_attachment` | Файл лежит в одной из папок вложений и имеет допустимое расширение | warning | 4 |
+| `media.kind_matches_extension` | `media_kind` соответствует расширению файла | warning | 4 |
+| `media.kind.enum` | `media_kind` входит в закрытый список из 5 значений | error | 4 |
+| `media.roles.enum` | Каждое значение `role` входит в `media_role` (13 значений) | error | 4 |
+| `media.creation_method.enum` | Каждое значение `creation_method` входит в `media_creation_method` (8 значений) | error | 4 |
+| `media.origin.enum` | `origin` входит в `media_origin` (7 значений) | error | 4 |
+| `media.ai.model_required` | При `creation_method: ai_generated` заполнено `ai_model` | warning | 4 |
+| `media.ai.prompt_present` | При `creation_method: ai_generated` заполнен `ai_prompt` | warning | 4 |
+| `media.capture.required_for_photo` | При `creation_method: photo` заполнено хотя бы одно из `captured_at`, `capture_device` | info | 4 |
+| `media.scan.dpi_positive` | `scan_dpi` больше нуля | error | 3 |
+| `media.file.single_wrapper` | Нет двух объектов `media` с одним и тем же `file` | error | 3 |
+| `media.body.embed_synced` | В теле заметки есть встраивание того же файла, что и в `file` (инвариант И8) | warning | 4 |
+| `media.dimensions.stale` | Кэш `width_px` / `height_px` / `file_size` расходится с файлом | warning | 6 |
+| `media.hash.mismatch` | `file_hash` не совпадает с отпечатком файла (при включённой настройке) | warning | 6 |
+| `media.source_url.format` | `source_url` начинается с `http://` или `https://` | warning | 2 |
+| `media.referrers.shadow_synced` | Теневое свойство `*_file` у ссылающегося объекта совпадает с `file` обёртки | warning | 6 |
+
+**Инвариант И8 (новый, DL-143):** тело заметки-обёртки содержит встраивание
+`![[{file}|{title}]]` как первый элемент. Инвариант — не украшение, а страховка показа:
+штатными средствами Obsidian `![[MEDIA-….md]]` раскрывается в изображение даже с выключенным
+плагином. Норма — [[../metamodel/entities/media|карточка `media`]] §7.1.
+
+> [!note] Правила уровня 6 у медиа
+> `media.dimensions.stale`, `media.hash.mismatch` и `media.referrers.shadow_synced` требуют
+> чтения файлов и прохода по ссылающимся объектам, поэтому запускаются **после записи**
+> (уровень контроля 6) или по команде `validate-vault`, но не при каждом сохранении.
+
+---
+
 ## Перекрывающиеся правила
 
 Некоторые правила частично дублируют друг друга. Это осознанно: общее правило даёт базовую защиту,
@@ -209,6 +273,9 @@ tags: [validation, registry]
 | `value.reference.target_type` | `category.parent.same_facet`, `relation.allowed_subject_type`, `relation.allowed_object_type`, `assignment.type_allowed` |
 | `enum.value.format` | `property.key.format`, `date.format` |
 | `period.order` | `relation.period.order`, `object.period.order` |
+| `value.allowed_values` | `person.role.enum`, `media.kind.enum`, `media.roles.enum`, `media.creation_method.enum`, `media.origin.enum`, `book.format.enum` |
+| `value.media.file_exists` | `media.file.exists` (проверяет саму обёртку, а не значение чужого свойства) |
+| `value.cardinality` | не применяется к скрытым условным свойствам (правило М6) |
 
 ## Правила, которых пока нет (появятся позже)
 
@@ -218,12 +285,15 @@ tags: [validation, registry]
 | `view.*` (группа правил представлений) | Шаг 8 | Представления ещё не описаны |
 | `automation.*` | Шаг 8 | Автоматизации ещё не описаны |
 | `object.status.*` (жизненный цикл данных из `01` §15) | Шаг 8 | Перечисление `object_status` не введено в ядро |
-| `media.*` (правила обёртки) | После уточнений пользователя, DL-088 | Состав полей типа `media` предварительный |
+| `person.*` для отношений (`employment`, `pseudonym_of`, `family`) | Этап 2 | Сами отношения ещё не введены |
+| `media.depicts.*`, `media.derived_from.*` | Этап 2 | Связи обёртки с содержимым ещё не введены |
 | Миграционные проверки | Этап 2 | Миграции в MVP не реализуем |
 
 ## История изменений
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-22 | 0.4.0 | Добавлено правило `person.role.required` (род занятий обязателен, DL-156) → **134 правила**; суффикс теневого свойства изменён на `_file` (DL-153) |
+| 2026-10-22 | 0.3.0 | Добавлено 31 правило: группа **I. Тип `person`** (11) и группа **J. Тип `media`** (18), плюс 2 правила на `applies_when` (`value_present`, `operation_matches_cardinality`). Итого **133** правила. Введён инвариант **И8** (встраивание файла в теле обёртки). Операция `includes_any` добавлена в `property.applies_when.operation_closed`. Закрыт пункт «правил обёртки пока нет» (DL-088) |
 | 2026-10-22 | 0.2.0 | Добавлено 15 правил: 3 на `applies_when` (DL-128), 2 на фасет `genre` (DL-126), 10 на связи `contains`, главы и поля `book` (DL-123…DL-125). Итого **102** правила. Введён инвариант И7 |
 | 2026-10-22 | 0.1.0 | Реестр создан: 85 правил в 8 группах, разметка по уровням контроля целостности и уровням сообщений, таблица перекрывающихся правил, список отсутствующих правил | [[../adr/ADR-011-enumerations-dates-lifecycle\|ADR-011]], шаг 7 |
