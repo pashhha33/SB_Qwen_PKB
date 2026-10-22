@@ -3,12 +3,13 @@ doc_type: metamodel_section
 section: "04"
 title: "Атрибуты: системные, предметные, типы значений"
 status: actual
-version: 0.1.0
+version: 0.2.0
 created: 2026-10-22
 updated: 2026-10-22
 metamodel_version: 0.3.0
 governing_adr:
   - docs/adr/ADR-006-system-attributes-value-types-media.md
+  - docs/adr/ADR-008-media-property-type.md
   - docs/adr/ADR-003-bilingual-keys-and-label-layer.md
   - docs/adr/ADR-001-identity-and-file-naming.md
 closes: [C-13, U-05]
@@ -136,6 +137,8 @@ definition: Person or organization that created the work.
 | `value_type` | Тип значения | enum | да | семь значений из раздела 2 | Набор закрыт |
 | `target_types` | Допустимые типы цели | `object_reference` → `object_type` | для `object_reference` и `media_reference` — да | — | Список типов, на которые может указывать свойство |
 | `target_facet` | Фасет-справочник | `object_reference` → `facet` | нет | — | Только если свойство является словарём; см. раздел 5 |
+| `link_mode` | Способ хранения связи | enum | для `object_reference` — да | `direct`, `reified` | `direct` — ссылка хранится в объекте; `reified` — связь хранится как объект `relation`. Норма будет утверждена на шаге 6 |
+| `media_*` | Семь настроек медиа | различный | для `media_reference` — `media_target` обязательно | см. раздел 11 | Допускаются **только** у свойств типа `media_reference` |
 | `cardinality` | Кардинальность | enum | да | `1`, `0..1`, `0..N`, `1..N` | Единственный способ задать множественность |
 | `required` | Обязательно | `boolean` | да | — | Производно от `cardinality`: `1` и `1..N` подразумевают обязательность |
 | `scope` | Область применения | enum | да | `universal`, `family`, `specific` | Объединяет исходные `область_применения` и `уровень` (U-06) |
@@ -307,8 +310,77 @@ definition: Current state of the activity.
 | `media.file.exists` | Файл, указанный в `file`, существует в хранилище | error |
 | `media.file.is_attachment` | Файл является вложением допустимого типа | warning |
 
+## 11. Тип значения `media_reference`: настройки и поведение
+
+Полная норма — [[../adr/ADR-008-media-property-type|ADR-008]]. Здесь — сводка для справочного использования.
+
+**Различие, которое важно не путать:**
+
+| | Тип **объекта** `media` | Тип **значения** `media_reference` |
+|---|---|---|
+| Что это | Запись в базе, представляющая файл и его семантику | Объявление того, какого рода данные хранятся в поле и каким контролом вводятся |
+| Где живёт | Заметка `MEDIA-{ULID}.md` | Определение свойства (`type: property`) |
+| Поля | `file`, `media_kind`, `role`, `description` | `media_target`, `media_kinds`, `media_folders`, `media_extensions`, `media_display`, `media_thumbnail_size`, `media_roles` |
+
+### Настройки свойства типа `media_reference`
+
+| `key` | Подпись | Обязательно | Значения | По умолчанию |
+|---|---|---|---|---|
+| `media_target` | Цель ссылки | **да** | `object`, `file`, `both` | `object` |
+| `media_kinds` | Допустимые виды медиа | нет | подмножество `image`, `audio`, `video`, `document`, `other` | все |
+| `media_folders` | Папки для поиска | нет | пути в хранилище | всё хранилище |
+| `media_extensions` | Допустимые расширения | нет | `jpg`, `png`, `webp`, … | все |
+| `media_display` | Способ показа | нет | `gallery` (карточки с миниатюрами), `list` | `gallery` |
+| `media_thumbnail_size` | Размер миниатюры | нет | `small`, `medium`, `large` | `medium` |
+| `media_roles` | Допустимые роли | нет | подмножество ролей из раздела 5 ADR-006 | все |
+
+Множественность задаётся **только** `cardinality`. Отдельного типа «мультимедиа» нет — это сознательное
+отличие от Metadata Menu, у которого есть `Media` и `MultiMedia` (см. обоснование в ADR-008).
+
+### Пример: обложка с миниатюрами
+
+```yaml
+---
+id: 01J8Z6M4K2Q7V9X3N5B0C1D2F0
+type: property
+title: Cover
+key: cover
+label: Обложка
+value_type: media_reference
+media_target: object
+media_kinds: [image]
+media_roles: [cover]
+media_display: gallery
+media_thumbnail_size: medium
+cardinality: 0..1
+required: false
+---
+```
+
+### Поведение контрола
+
+- Миниатюра формируется через `app.vault.getResourcePath(file)` — **публичный API Obsidian**.
+- Для `audio`, `video`, `document` вместо миниатюры — значок вида медиа.
+- Резервное поведение: файл недоступен → значок и имя, а не пустое место.
+- Работает в **нашей** модалке свойств. В стандартном автодополнении Obsidian миниатюры не появляются:
+  это требует патча `EditorSuggest`, то есть недокументированных механизмов.
+
+### Дополнительные правила валидации
+
+| ID правила | Формулировка | Уровень |
+|---|---|---|
+| `value.media.target_kind` | Значение соответствует `media_target` | error |
+| `value.media.kind_allowed` | Вид медиа входит в `media_kinds` | error |
+| `value.media.role_allowed` | Роль входит в `media_roles` | warning |
+| `value.media.in_folders` | Файл в одной из папок `media_folders` | warning |
+| `value.media.extension_allowed` | Расширение входит в `media_extensions` | error |
+| `value.media.file_exists` | Файл существует в хранилище | error |
+| `property.media.settings_required` | У свойства типа `media_reference` заполнено `media_target` | error |
+| `property.media.settings_consistent` | Поля `media_*` присутствуют только там, где имеют смысл | warning |
+
 ## 10. История изменений
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
 | 2026-10-22 | 0.3.0 | Документ создан: семь типов значений, системные атрибуты с инвариантами, правило «перечисление или словарь», формат дат, соглашение об именовании, 25 правил валидации | Шаг 5 плана; ответы пользователя на вопросы 1–3 | [[../adr/ADR-006-system-attributes-value-types-media\|ADR-006]] |
+| 2026-10-22 | 0.3.0 | Добавлен раздел 11: тип значения `media_reference` — семь настроек, поведение контрола с миниатюрами, 8 правил валидации (всего 33). Добавлено поле `link_mode` у свойства | Уточнение пользователя: речь шла о типе **свойства**, а не о типе объекта | [[../adr/ADR-008-media-property-type\|ADR-008]] |
