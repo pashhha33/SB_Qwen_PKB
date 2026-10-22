@@ -250,7 +250,33 @@ definition: Authorship of a written work.
 | Часть целого | `part_of` | `RELATION_TYPE` | `chapter` → `work`, `episode` → `series` | `directed` | `0..1` / `0..N` | `triple` | `reified` (нужен `order`) | [[relations/rel_part_of]] |
 | Связано с | `related_to` | `RELATION_TYPE` | `knowledge` → `knowledge` | `symmetric` | `0..N` / `0..N` | `triple` | `direct` | [[relations/rel_related_to]] |
 
-### Этап 2
+#### `contains` — «содержит» (DL-125, 2026-10-22)
+
+| Поле | Значение |
+| --- | --- |
+| `relation_type` | `contains` |
+| `direction` | `directed` |
+| `link_mode` | **`reified`** — связь с собственными свойствами (`order`, `role`) |
+| `subject_to_object` | `0..n` (произведение содержит много частей) |
+| `object_to_subject` | **`0..1`** (часть входит не более чем в одно произведение) |
+| `uniqueness_rule` | `triple` |
+| `forward_label` / `reverse_label` | «содержит» / «входит в» |
+| `allowed_subject_types` | `book`, `work`, `media`, `project`, `activity`, `collection` |
+| `allowed_object_types` | `chapter`, `book`, `work`, `media`, `media_asset` |
+| `required` | нет (но у `chapter` фактически обязательна — правило `chapter.contains.required`) |
+
+**Почему `reified`:** главе нужен **порядковый номер** внутри произведения
+(локальное свойство `order`) и, при желании, роль (`role`: «глава»,
+«пролог», «эпилог», «приложение»). Прямой ссылкой это не выразить.
+
+**Обратная сторона — `part_of`.** `contains` и `part_of` — две стороны одной
+семантики. Чтобы не хранить одну связь дважды, **хранится только `contains`**;
+`part_of` объявлена обратной (правило `relation.contains.single_record`): запрос «входит в» разрешается
+чтением той же записи в обратном направлении.
+
+**Карточка:** `relations/rel_contains.md`.
+
+## Этап 2
 
 | Тип отношения | `key` | Зачем | Почему не в MVP |
 |---|---|---|---|

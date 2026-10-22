@@ -3,10 +3,11 @@ doc_type: relation
 relation_id: rel_part_of
 title: "Часть целого"
 status: actual
-version: 0.1.0
+inverse_of: contains
+version: 0.2.0
 created: 2026-10-22
 updated: 2026-10-22
-metamodel_version: 0.4.0
+metamodel_version: 0.6.0
 source_entity: chapter
 target_entity: work
 direction: directed
@@ -18,6 +19,13 @@ tags: [metamodel/relation]
 ---
 
 # rel_part_of. Часть целого
+
+> [!warning] Изменение от 2026-10-22 (DL-125)
+> Введён тип отношения **`contains`** («содержит»), и именно он хранится в
+> `.sb/relations/relations.jsonl`. `part_of` объявлена его **вычисляемой обратной стороной**:
+> отдельной записью она не хранится (правило `relation.contains.single_record`).
+> Карточка остаётся в силе как **эталон описания `reified`-связи** и как источник
+> имён свойств-перевёртышей (`part_of_work`). Подробности — [[rel_contains]].
 
 ## Смысл связи
 Один объект является частью другого: глава — часть книги, эпизод — часть сериала, трек — часть альбома.

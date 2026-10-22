@@ -33,14 +33,14 @@ tags: [validation, registry]
 | Группа | Правил | Источник |
 |---|---|---|
 | A. Системные атрибуты объекта | 10 | `04-attributes` §3 |
-| B. Определения свойств | 8 | `04-attributes` §4 |
+| B. Определения свойств | 11 | `04-attributes` §4 |
 | C. Значения свойств | 5 | `04-attributes` §9 |
 | D. Медиа | 8 | `04-attributes` §11 |
-| E. Классификация | 17 | `01-classification` §6, ADR-005, ADR-007 |
-| F. Связи и типы отношений | 23 | `03-relations` §9, ADR-009 |
+| E. Классификация | 19 | `01-classification` §6, ADR-005, ADR-007 |
+| F. Связи и типы отношений | 33 | `03-relations` §9, ADR-009 |
 | G. Перечисления | 5 | `05-enumerations` §5 |
 | H. Даты и интервалы | 11 | `06-time-and-intervals` §6 |
-| **Всего** | **87** | |
+| **Всего** | **102** | |
 
 ---
 
@@ -64,6 +64,9 @@ tags: [validation, registry]
 > (`.sb/relations/`) действуют только `id`, `type`, `title`, `created_at`, `updated_at` —
 > правила про `aliases`, `categories`, `tags` и имя файла к связям не применяются (Р10 ADR-009).
 
+Инвариант **И7** (новый, DL-124): у `chapter` при пустом `chapter_title` системный `title`
+равен «Глава {N}». Проверяется правилом `chapter.title.fallback`.
+
 ## B. Определения свойств
 
 | ID | Формулировка | Уровень | Когда |
@@ -76,6 +79,9 @@ tags: [validation, registry]
 | `property.required.cardinality_consistency` | Пара `required` и `cardinality` согласована | error | 4 |
 | `property.target_types.for_reference` | У свойства типа `object_reference` и `media_reference` заполнен `target_types` | error | 4 |
 | `property.target_facet.is_facet` | `target_facet` указывает на объект типа `facet` | error | 3 |
+| `property.applies_when.property_exists` | Свойство, на которое ссылается `applies_when`, существует в том же типе | error | 3 |
+| `property.applies_when.no_chain` | У свойства-условия нет собственного `applies_when` (правило М3) | error | 4 |
+| `property.applies_when.operation_closed` | Операция условия — `equals` или `in_category` (правило М4) | error | 4 |
 
 ## C. Значения свойств
 
@@ -121,6 +127,8 @@ tags: [validation, registry]
 | `object_type.parent.no_cycle` | В цепочке родителей типов нет цикла | error | 3 |
 | `object_type.abstract.no_instance` | У абстрактного типа нет экземпляров | error | 4 |
 | `object_type.type_prefix.unique` | `type_prefix` уникален в реестре | error | 2 |
+| `facet.genre.required_for_book` | У `book` назначена минимум одна категория фасета `genre` | error | 4 |
+| `facet.genre.not_form` | Категория фасета `genre` не является одновременно категорией `literary_form` (граница DL-126) | warning | 4 |
 
 ## F. Связи и типы отношений
 
@@ -149,6 +157,16 @@ tags: [validation, registry]
 | `relation_type.uniqueness.enum` | `uniqueness_rule` равен `pair`, `triple` или `none` | error | 4 |
 | `property.link_mode.enum` | `link_mode` равен `direct` или `reified` | error | 4 |
 | `property.link_mode.relation_type` | У свойства с `link_mode: reified` указан тип отношения | error | 4 |
+| `relation.contains.single_record` | `contains` хранится один раз; отдельной записи `part_of` нет | error | 4 |
+| `relation.order.unique_per_subject` | `order` уникален в пределах одного субъекта | error | 4 |
+| `relation.order.no_gap` | В последовательности `order` нет разрывов | warning | 5 |
+| `relation.subject.has_parts` | У произведения-агрегатора есть хотя бы одна часть | info | 5 |
+| `chapter.contains.required` | У главы ровно одна связь `contains`, где она — объект | error | 4 |
+| `chapter.number.positive` | `chapter_number` > 0, если `is_front_matter` не `true` | warning | 4 |
+| `chapter.number.matches_order` | `chapter_number` совпадает с `order` связи `contains` | warning | 4 |
+| `chapter.title.fallback` | При пустом `chapter_title` заголовок равен «Глава {N}» (инвариант И7) | error | 2 |
+| `book.format.enum` | `format` входит в закрытый список из **пяти** значений | error | 4 |
+| `book.rating.range` | `rating` — целое от 1 до 10 | error | 3 |
 
 ## G. Перечисления
 
@@ -196,7 +214,7 @@ tags: [validation, registry]
 
 | Правило | Когда появится | Почему сейчас нет |
 |---|---|---|
-| `relation.part_of.no_cycle` | Шаг 8 или Фаза 5 | Тип `chapter` появится на этапе 2 |
+| `relation.contains.no_cycle` | Этап 2 | Вложенность произведений (серия → книга) появится позже |
 | `view.*` (группа правил представлений) | Шаг 8 | Представления ещё не описаны |
 | `automation.*` | Шаг 8 | Автоматизации ещё не описаны |
 | `object.status.*` (жизненный цикл данных из `01` §15) | Шаг 8 | Перечисление `object_status` не введено в ядро |
@@ -207,4 +225,5 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-22 | 0.2.0 | Добавлено 15 правил: 3 на `applies_when` (DL-128), 2 на фасет `genre` (DL-126), 10 на связи `contains`, главы и поля `book` (DL-123…DL-125). Итого **102** правила. Введён инвариант И7 |
 | 2026-10-22 | 0.1.0 | Реестр создан: 85 правил в 8 группах, разметка по уровням контроля целостности и уровням сообщений, таблица перекрывающихся правил, список отсутствующих правил | [[../adr/ADR-011-enumerations-dates-lifecycle\|ADR-011]], шаг 7 |

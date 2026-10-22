@@ -5,7 +5,7 @@ title: "Человек"
 type_key: person
 type_prefix: PERSON
 aliases: [Люди, person]
-status: sample
+status: actual
 metamodel_version: 0.5.0
 created: 2026-10-22
 updated: 2026-10-22
