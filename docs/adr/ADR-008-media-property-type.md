@@ -305,7 +305,7 @@ required: false
 ## Связанные документы
 
 - [[ADR-006-system-attributes-value-types-media]] — уточняемое решение
-- [[../metamodel/04-attributes]] — нормативное описание, раздел 11
+- [[../metamodel/04-attributes]] — нормативное описание, раздел 10
 - [[ADR-003-bilingual-keys-and-label-layer]] — модалка редактирования свойств показывает `label`
 - [[../integrations/research-front-matter-title-stability]] — почему миниатюры только в нашей модалке
 - Документация Metadata Menu: <https://mdelobelle.github.io/metadatamenu/fields/>
