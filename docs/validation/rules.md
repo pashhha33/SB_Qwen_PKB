@@ -2,10 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.4.0
+version: 0.5.0
 created: 2026-10-22
 updated: 2026-10-22
-metamodel_version: 0.9.0
+metamodel_version: 0.10.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -17,7 +17,7 @@ governing_documents:
   - docs/adr/ADR-008-media-property-type.md
   - docs/adr/ADR-009-relations-model.md
   - docs/adr/ADR-011-enumerations-dates-lifecycle.md
-rule_count: 134
+rule_count: 141
 tags: [validation, registry]
 ---
 
@@ -45,7 +45,8 @@ tags: [validation, registry]
 | H. Даты и интервалы | 11 | `06-time-and-intervals` §6 |
 | I. Тип `person` | **12** | `entities/person.md` §6 |
 | J. Тип `media` (обёртка) | **18** | `entities/media.md` §6 |
-| **Всего** | **134** | |
+| K. Представления | **7** | `08-views.md` §8 |
+| **Всего** | **141** | |
 
 ---
 
@@ -260,6 +261,24 @@ tags: [validation, registry]
 
 ---
 
+## K. Представления
+
+| ID | Формулировка | Уровень | Когда |
+|---|---|---|---|
+| `view.base.parsable` | Файл `.base` существует и разбирается как корректный YAML | error | 5 |
+| `view.target_type.exists` | Целевой тип представления существует и не абстрактный | error | 5 |
+| `view.property.declared` | Каждое свойство в `order` и `filters` объявлено в метамодели | warning | 5 |
+| `view.mechanism.available` | Механизм представления доступен (Bases включён в этой версии Obsidian) | warning | 5 |
+| `view.cards.image_property` | Свойство-изображение карточного вида указывает на теневое свойство `{key}_file`, а не на обёртку | warning | 5 |
+| `view.lifecycle.not_deprecated` | Представление не ссылается на свойства со статусом `deprecated` | warning | 5 |
+| `view.generated.marker_intact` | Маркер `# sb-generated: v…` не удалён из сгенерированного файла | info | 5 |
+
+> [!note] Группа K добавлена заранее
+> Представлений в хранилище ещё нет (этап D), но правила объявлены сейчас, чтобы движок валидации
+> не переделывать на Фазе 5. Норма — [[../metamodel/08-views|`08-views.md`]] §8.
+
+---
+
 ## Перекрывающиеся правила
 
 Некоторые правила частично дублируют друг друга. Это осознанно: общее правило даёт базовую защиту,
@@ -282,7 +301,6 @@ tags: [validation, registry]
 | Правило | Когда появится | Почему сейчас нет |
 |---|---|---|
 | `relation.contains.no_cycle` | Этап 2 | Вложенность произведений (серия → книга) появится позже |
-| `view.*` (группа правил представлений) | Шаг 8 | Представления ещё не описаны |
 | `automation.*` | Шаг 8 | Автоматизации ещё не описаны |
 | `object.status.*` (жизненный цикл данных из `01` §15) | Шаг 8 | Перечисление `object_status` не введено в ядро |
 | `person.*` для отношений (`employment`, `pseudonym_of`, `family`) | Этап 2 | Сами отношения ещё не введены |
@@ -293,6 +311,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-22 | 0.5.0 | Добавлена группа **K. Представления** — 7 правил (уровень контроля 5); закрыт пункт «правил представлений пока нет». Итого **141 правило** | Шаг 8b, DL-165, `08-views.md` |
 | 2026-10-22 | 0.4.0 | Добавлено правило `person.role.required` (род занятий обязателен, DL-156) → **134 правила**; суффикс теневого свойства изменён на `_file` (DL-153) |
 | 2026-10-22 | 0.3.0 | Добавлено 31 правило: группа **I. Тип `person`** (11) и группа **J. Тип `media`** (18), плюс 2 правила на `applies_when` (`value_present`, `operation_matches_cardinality`). Итого **133** правила. Введён инвариант **И8** (встраивание файла в теле обёртки). Операция `includes_any` добавлена в `property.applies_when.operation_closed`. Закрыт пункт «правил обёртки пока нет» (DL-088) |
 | 2026-10-22 | 0.2.0 | Добавлено 15 правил: 3 на `applies_when` (DL-128), 2 на фасет `genre` (DL-126), 10 на связи `contains`, главы и поля `book` (DL-123…DL-125). Итого **102** правила. Введён инвариант И7 |
