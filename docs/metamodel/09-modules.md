@@ -3,7 +3,7 @@ doc_type: metamodel_section
 section: "09"
 title: "Модули плагина: что реализуем, что откладываем, что не делаем"
 status: accepted
-version: 0.5.0
+version: 0.5.1
 created: 2026-10-22
 updated: 2026-10-23
 metamodel_version: 0.15.0
@@ -106,7 +106,7 @@ tags: [metamodel, modules, architecture, step8]
 | `applies-when` | Условные свойства: `equals`, `in_category`, `includes_any`; правила М1–М7 | B | `property-definitions` | `04-attributes` §11 |
 | `display-renderer` | Показ значений: звёзды, прогресс, единицы измерения | B | `property-definitions` | DL-123 |
 | `date-engine` | Частичные даты, интервалы, шаблоны вывода (17 токенов, 5 пресетов) | B | — | ADR-011, `06-time-and-intervals` |
-| `validation-runner` | Запуск 166 правил по уровням контроля 1–6, локально и по команде | B | `schema-engine` | `validation/rules` |
+| `validation-runner` | Запуск правил единого реестра (`validation/rules`) по уровням контроля 1–6, локально и по команде | B | `schema-engine` | `validation/rules` |
 | `diagnostics` | Формат диагностики из 11 полей, сообщения, места показа, журнал `.sb/logs/` | B | `validation-runner` | `validation/severity-policy` |
 | `service-flags` | Служебные метки `sb/error` и свойство `sb_issues`; синхронность обоих механизмов | B | `diagnostics` | `08-views` §7, DL-168 |
 | `link-context-resolver` | Контекст пустой ссылки: жёсткий (К1, К2, К5) и мягкий (К3, К4); пересечение ограничений | B | `property-definitions`, `relation-index` | [[12-links-and-aliases]] §5.3 |
@@ -261,6 +261,7 @@ tags: [metamodel, modules, architecture, step8]
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-23 | 0.22.0 | В строке модуля `validation-runner` захардкоженное «166 правил» заменено ссылкой на единый реестр (живой счётчик — только в `rules.md`; DL-214/216) | Сверка счётчиков | [[../validation/rules]] v0.11.0 |
 | 2026-10-23 | 0.15.0 | Статус документа `proposed` → **`accepted`**; исправлена опечатка в строке истории ниже: принятие раздела 12 случилось в метамодели **0.14.0**, а не 0.15.0 | Под-шаг 8d партия 1, housekeeping | DL-174…DL-176, DL-192 |
 | 2026-10-22 | 0.14.0 | Раздел [[12-links-and-aliases]] **принят** (ответы Б / А / А / А): пять модулей входят в итог → **45 модулей MVP** (ядро 7, схема 9, сервисы 10, команды 6, UI 13; по этапам A 8 / B 16 / C 6 / D 13 / E 2); команд — **18**; пометки † сняты | DL-184…DL-188 |
 | 2026-10-22 | 0.14.0 | В реестр внесены 5 модулей раздела [[12-links-and-aliases]]: `link-context-resolver`, `unresolved-link-service`, `alias-service`, `alias-index`, `alias-review-ui` | Требование пользователя от 2026-10-22 (DL-177) |

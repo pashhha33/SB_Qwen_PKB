@@ -2,7 +2,7 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.10.0
+version: 0.11.0
 created: 2026-10-22
 updated: 2026-10-23
 metamodel_version: 0.14.0
@@ -50,8 +50,8 @@ tags: [validation, registry]
 | K. Представления и служебный слой | **10** | `08-views.md` §7–§8 |
 | L. Тип `project` | **10** | `entities/project.md` §6 |
 | M. Ссылки и псевдонимы | **11** | [[../metamodel/12-links-and-aliases\|`12-links-and-aliases.md`]] §10 |
-| N. Тип `knowledge` | **1** † | `entities/knowledge.md` §6 |
-| **Всего** | **167** († одно предварительное — вопрос K2 карточки `knowledge`) | |
+| N. Тип `knowledge` | **1** | `entities/knowledge.md` §6 |
+| **Всего** | **167** | |
 
 ---
 
@@ -337,13 +337,13 @@ tags: [validation, registry]
 
 ## N. Тип `knowledge`
 
-> [!warning] Группа предварительная (†)
-> Правило внесено вместе с карточкой [[../metamodel/entities/knowledge|`knowledge.md`]] (DL-214)
-> и ждёт ответа на вопрос **K2**: оставить `warning` или не вводить правило вовсе (тогда итог — 166).
+> [!success] Группа утверждена
+> Правило утверждено вместе с закрытием вопроса **K2** карточки
+> [[../metamodel/entities/knowledge|`knowledge.md`]] (ответ «А», DL-215); пометка † снята.
 
 | ID | Формулировка | Уровень | Когда |
 |---|---|---|---|
-| `knowledge.body.not_empty` † | Тело заметки типа `knowledge` не пустое (атомарная заметка без текста бесполезна) | warning | 4 |
+| `knowledge.body.not_empty` | Тело заметки типа `knowledge` не пустое (атомарная заметка без текста бесполезна) | warning | 4 |
 
 Специфичных правил у типа больше нет: язык ключей и значения покрыты группами B/C, кардинальность
 категории фасета «Вид знания» — `assignment.cardinality` (группа E), ссылки — группой F.
@@ -383,6 +383,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-23 | 0.11.0 | Группа N **утверждена** (вопрос K2 карточки `knowledge` закрыт ответом «А», DL-215): пометки † сняты. Итог — **167 правил** в 14 группах (A–N) | [[../metamodel/entities/knowledge\|`knowledge.md`]] §9, DL-215 |
 | 2026-10-23 | 0.10.0 | Добавлена группа **N. Тип `knowledge`** — 1 правило † `knowledge.body.not_empty` (warning), предварительное до ответа на вопрос K2 карточки. Итого **167 правил** в 14 группах (A–N) | [[../metamodel/entities/knowledge\|`knowledge.md`]] §6, DL-214 |
 | 2026-10-22 | 0.9.0 | Группа M и правило `property.create_from_link.auto_needs_single_target` **утверждены** вместе с разделом 12 (ответы Б / А / А / А, DL-184…DL-188): пометки † сняты, уточнено поведение `link.canonical.format` при `linkCreation.insertAlias: false`. Итого **166 правил** в 13 группах |
 | 2026-10-22 | 0.8.0 | Добавлена группа **M. Ссылки и псевдонимы** — 11 правил, и правило `property.create_from_link.auto_needs_single_target` в группу B. Итого **154 → 166 правил**. Норма — [[../metamodel/12-links-and-aliases\|раздел 12]] (DL-177) |

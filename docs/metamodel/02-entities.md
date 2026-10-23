@@ -3,10 +3,10 @@ doc_type: metamodel_section
 section: "02"
 title: "Реестр типов объектов"
 status: actual
-version: 0.9.0
+version: 0.10.0
 created: 2026-10-22
 updated: 2026-10-23
-metamodel_version: 0.21.0
+metamodel_version: 0.22.0
 governing_adr:
   - docs/adr/ADR-004-first-pass-scope-and-command-driven-authoring.md
   - docs/adr/ADR-005-classification-model.md
@@ -86,11 +86,11 @@ tags: [metamodel, entities, registry]
 
 | Тип | `type` | `TYPE_PREFIX` | `parent_type` | Статус | Комментарий |
 |---|---|---|---|---|---|
-| Тип объекта | `object_type` | `OBJECT_TYPE` | — | `core` | Основа самоопределяющейся модели |
-| Свойство | `property` | `PROPERTY` | — | `core` | Описание поля |
+| Тип объекта | `object_type` | `OBJECT_TYPE` | — | `core` | Основа самоопределяющейся модели; карточка [[entities/object_type\|`entities/object_type.md`]] (DL-216) |
+| Свойство | `property` | `PROPERTY` | — | `core` | Описание поля; карточка [[entities/property\|`entities/property.md`]] (DL-216) |
 | Тип свойства | `property_type` | `PROPERTY_TYPE` | — | `core`, `abstract: true` | 8 значений закрыты и заданы кодом (слой 1). **Карточка не создаётся** — см. ADR-004 |
-| Тип отношения | `relation_type` | `RELATION_TYPE` | — | `core` | Задаёт семантику и правила связи |
-| Отношение | `relation` | `RELATION` | — | `core` | Реифицированная связь |
+| Тип отношения | `relation_type` | `RELATION_TYPE` | — | `core` | Задаёт семантику и правила связи; карточка [[entities/relation_type\|`entities/relation_type.md`]] (DL-216) |
+| Отношение | `relation` | `RELATION` | — | `core` | Реифицированная связь; карточка [[entities/relation\|`entities/relation.md`]] (DL-216) |
 | Таксономия | `taxonomy` | `TAXONOMY` | — | `core` | Утверждено ADR-005 |
 | Фасет | `facet` | `FACET` | — | `core` | Утверждено ADR-005 |
 | Категория | `category` | `CATEGORY` | — | `core` | Утверждено ADR-005 |
@@ -399,6 +399,7 @@ tags: [metamodel, entities, registry]
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-23 | 0.22.0 | Строки `object_type`, `property`, `relation_type`, `relation` дополнены ссылками на созданные карточки (системная четвёрка, мера M1) | Вторая партия карточек (DL-216) — 12 из 15 | [[entities/object_type]], [[entities/property]], [[entities/relation_type]], [[entities/relation]] |
 | 2026-10-23 | 0.21.0 | Строки `knowledge`, `work`, `activity` дополнены ссылками на созданные карточки (`entities/knowledge.md` — детальная, `entities/work.md` и `entities/activity.md` — сокращённые) | Порядок «карточки → аудит → шаг 9» (DL-213, DL-214) | [[entities/knowledge]], [[entities/work]], [[entities/activity]] |
 | 2026-10-23 | 0.19.0 | Приведение к DL-124 (устранено отставание): строка `chapter` — префикс **`CHP`**, статус **`core`** (было `CHAPTER`, `phase2`); реестр `TYPE_PREFIX` исправлен так же; сводка пересчитана (13 `core` + 2 `core_abstract` = **ядро 15 типов**, 26 `phase2`); добавлена пометка о полном пересчёте на пункте A9 | Под-шаг 8f, сверка с `entities/chapter.md` и CHECKPOINT §6.8 | DL-124, DL-207 |
 | 2026-10-22 | 0.7.0 | Строка типа `project` дополнена: признаки отдельного типа подтверждены (`status` как триггер, `owner`, `due_on`, `progress`), карточка создана | Решение пользователя (ответ «C», DL-176) |
