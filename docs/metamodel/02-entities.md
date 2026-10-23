@@ -3,10 +3,10 @@ doc_type: metamodel_section
 section: "02"
 title: "Реестр типов объектов"
 status: actual
-version: 0.7.0
+version: 0.8.0
 created: 2026-10-22
-updated: 2026-10-22
-metamodel_version: 0.13.0
+updated: 2026-10-23
+metamodel_version: 0.19.0
 governing_adr:
   - docs/adr/ADR-004-first-pass-scope-and-command-driven-authoring.md
   - docs/adr/ADR-005-classification-model.md
@@ -43,20 +43,27 @@ tags: [metamodel, entities, registry]
 
 | Статус | Количество |
 |---|---|
-| `core` | 12 |
+| `core` | 13 |
 | `core_abstract` | 2 |
-| `phase2` | 27 |
+| `phase2` | 26 |
 | `deferred` | 4 |
 | `to_category` | 7 (подтверждено пользователем) |
 | `needs_decision` | 2 (Франшиза, Галерея) |
 | `out_of_scope` | 2 (`image_wrapper` заменён, `documentation` не вводится) |
 | **Всего записей** | **58** |
 
-Сумма: 12 + 2 + 27 + 4 + 7 + 2 + 2 = 56 типов. Плюс абстрактные родители `source`, `collection`,
+Сумма: 13 + 2 + 26 + 4 + 7 + 2 + 2 = 56 типов. Плюс абстрактные родители `source`, `collection`,
 `audiovisual_work`, `music_work`, учтённые в `phase2`.
 
-**Ядро — 14 типов**: 12 со статусом `core` + 2 `core_abstract`.
-`property_type` входит в 12, но детальной карточки не имеет (ADR-004, ADR-006).
+**Ядро — 15 типов**: 13 со статусом `core` + 2 `core_abstract` (DL-124: `chapter` перенесён
+из `phase2` в ядро, префикс `CHP`). `property_type` входит в реестровые `core`, но в нормативный
+подсчёт «15 типов ядра» не включается: карточки не имеет, набор типов значений закрыт кодом
+(ADR-004, ADR-006).
+
+> [!note] О точности подсчёта (DL-207)
+> Сводка выше ведётся по принятым в проекте правилам подсчёта; посторочный пересчёт реестра
+> `TYPE_PREFIX` даёт расхождение в 1–2 записи (сводка отставала от переносов `media` и `chapter`).
+> Полная сверка запланирована пунктом **A9** чек-листа (итоговый аудит противоречий и реестров).
 
 Из ~40 типов исходной спецификации **семь переквалифицированы в категории** (подтверждено пользователем
 2026-10-22), **два подтверждены как подтипы** вопреки рекомендации (Стихотворение, Текст песни).
@@ -123,7 +130,7 @@ tags: [metamodel, entities, registry]
 |---|---|---|---|---|---|---|---|
 | Книга | `book` | `BOOK` | `work` (предложение) | — | — | тип | `core` |
 | Веб-новела | — | — | — | нет: автор, год, жанр — те же | да | **категория** | `to_category` |
-| Глава | `chapter` | `CHAPTER` | `work` | **да**: `number`, отношение «часть — целое» | — | подтип | `phase2` |
+| Глава | `chapter` | `CHP` | `work` | **да**: `number`, отношение «часть — целое» | — | подтип | **`core`** — введён в ядро DL-124 (префикс `CHP` по карточке [[entities/chapter\|`entities/chapter.md`]]) |
 | Стихотворение | `poem` | `POEM` | `work` | **да**: `form`, `meter` — подтверждено пользователем | — | подтип | `phase2` |
 | Текст песни | `lyrics` | `LYRICS` | `music_work` | **да**: связь с треком — подтверждено пользователем | — | подтип | `phase2` |
 | Фильм | `movie` | `MOVIE` | `audiovisual_work` | **да**: `duration_minutes`, `release_year` | — | подтип | `phase2` |
@@ -319,7 +326,7 @@ tags: [metamodel, entities, registry]
 | `ACTIVITY` | `activity` | core_abstract |
 | `VIEW` | `view` | phase2 |
 | `AUTOMATION` | `automation` | phase2 |
-| `CHAPTER` | `chapter` | phase2 |
+| `CHP` | `chapter` | core |
 | `MOVIE` | `movie` | phase2 |
 | `SERIES` | `series` | phase2 |
 | `EPISODE` | `episode` | phase2 |
@@ -392,6 +399,7 @@ tags: [metamodel, entities, registry]
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-23 | 0.19.0 | Приведение к DL-124 (устранено отставание): строка `chapter` — префикс **`CHP`**, статус **`core`** (было `CHAPTER`, `phase2`); реестр `TYPE_PREFIX` исправлен так же; сводка пересчитана (13 `core` + 2 `core_abstract` = **ядро 15 типов**, 26 `phase2`); добавлена пометка о полном пересчёте на пункте A9 | Под-шаг 8f, сверка с `entities/chapter.md` и CHECKPOINT §6.8 | DL-124, DL-207 |
 | 2026-10-22 | 0.7.0 | Строка типа `project` дополнена: признаки отдельного типа подтверждены (`status` как триггер, `owner`, `due_on`, `progress`), карточка создана | Решение пользователя (ответ «C», DL-176) |
 | 2026-10-22 | 0.6.0 | Запись типа `view` уточнена по итогам шага 8b: в MVP представления — артефакты, а не объекты метамодели; `mechanism` закрыт в составе трёх значений | [[08-views\|`08-views.md`]], DL-164 |
 | 2026-10-22 | 0.5.0 | Суффикс теневого свойства изменён на `_file` (DL-153); составы `person_role` и `media_creation_method` закрыты решениями пользователя (DL-155, DL-157) | Ответы пользователя от 2026-10-22 (A / C / A / B) |
