@@ -9,7 +9,7 @@
 
     "chapter_number": {
       "type": "number",
-      "$comment": "Номер внутри произведения. precision: 1 — настройка показа (04-attributes §12), дробные допустимы (7.5 — интерлюдия без перенумерации хвоста, карточка §10-2); schema тип number, знак и величину не ограничивает: ≤ 0 при is_front_matter: false — warning chapter.number.positive (runner). Уникальность в пределах произведения — runner (relation.order.unique_per_subject). Обязательность условная — см. allOf (DL-230)."
+      "$comment": "Номер внутри произведения. Дробные допустимы (7.5 — интерлюдия без перенумерации хвоста, карточка §10-2); «precision: 1» карточки — ненормативная деталь показа: §12 не определяет precision (находка батча 6, DL-237), схема число знаков не ограничивает; тип number, знак и величину не ограничивает: ≤ 0 при is_front_matter: false — warning chapter.number.positive (runner). Уникальность в пределах произведения — runner (relation.order.unique_per_subject). Обязательность условная — см. allOf (DL-230)."
     },
     "chapter_title": {
       "type": "string",

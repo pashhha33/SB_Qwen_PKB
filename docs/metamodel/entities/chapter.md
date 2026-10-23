@@ -45,7 +45,7 @@
 
 | # | `key` | `value_type` | `required` | `cardinality` | `label` | Настройки |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `chapter_number` | `number` | **да, условно** (не нужен при `is_front_matter: true` — DL-230) | `1` (при `is_front_matter: true` — `0..1`) | Номер | `precision: 1`; `display.renderer: plain` |
+| 1 | `chapter_number` | `number` | **да, условно** (не нужен при `is_front_matter: true` — DL-230) | `1` (при `is_front_matter: true` — `0..1`) | Номер | `display.renderer: plain` (прежнее `precision: 1` — ненормативно: §12 `04-attributes` не определяет `precision`, DL-237) |
 | 2 | `chapter_title` | `text` | нет | `0..1` | Название главы | — |
 | 3 | `is_front_matter` | `boolean` | нет | `0..1` | Вне нумерации | для пролога/эпилога/приложения |
 | 4 | `published_on` | `date` | нет | `0..1` | Дата публикации | для веб-сериалов |

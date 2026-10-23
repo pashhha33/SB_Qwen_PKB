@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "property — определение свойства (слой 2)",
   "description": "Экземпляр property — описание поля («Автор», «Год издания»…): ключ, тип значения, кардинальность, область применения, условие applies_when.",
-  "$comment": "Нормы: ADR-003/006/008, 04-attributes §4, §10, §11, раздел 12; карточка docs/metamodel/entities/property.md. Правила валидации — группы B и C реестра (runner), включая property.required.cardinality_consistency (здесь дополнительно зашита в схему), applies_when.*, media.*, И6 (ключ не переопределяет системный атрибут).",
+  "$comment": "Нормы: ADR-003/006/008/011, 04-attributes §4, §5, §10, §11, §12, раздел 12; карточка docs/metamodel/entities/property.md. Правила валидации — группы B и C реестра (runner), включая property.required.cardinality_consistency (здесь дополнительно зашита в схему), applies_when.*, media.*, И6 (ключ не переопределяет системный атрибут).",
   "type": "object",
   "properties": {
     "type": { "const": "property" },
@@ -58,6 +58,27 @@
     },
     "default_value": {
       "$comment": "04-attributes §4: значение любого типа; подставляется при создании объекта."
+    },
+    "allowed_values": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "$comment": "04-attributes §5 (ADR-011): перечисление — закрытый список значений прямо в определении свойства, английский snake_case. Правила property.allowed_values.format и .unique (error, группа B) зашиты в схему; проверку значений ЭКЗЕМПЛЯРОВ по списку делает runner (value.allowed_values, error). Добавление значения — правка метамодели (create-enum-value — этап 2). Добавлено в батче 6 (DL-237): поле было в норме §4–§5, но отсутствовало в схеме батча 1."
+    },
+    "display": {
+      "type": "object",
+      "properties": {
+        "renderer": {
+          "enum": ["plain", "stars", "progress"],
+          "default": "plain",
+          "$comment": "05-enumerations §3.18 (зарегистрировано в батче 6, DL-237)."
+        },
+        "scale_max": { "type": "number", "exclusiveMinimum": 0, "default": 10 },
+        "unit": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false,
+      "$comment": "04-attributes §12 (DL-123): настройки показа ЧИСЛОВЫХ значений — только отображение, никогда хранение (принципы М1/DL-117: символы шкал и звёзд в данных не хранятся). precision в состав §12 не входит (находка батча 6, DL-237) — additionalProperties: false отклоняет незадокументированные ключи; если округление при показе понадобится, добавляется как MINOR в Фазе 5. Добавлено в батче 6 (DL-237)."
     },
     "definition": { "type": "string" },
     "service": {
@@ -140,6 +161,11 @@
       "$comment": "ADR-011 (DL-107): у deprecated обязательно superseded_by.",
       "if": { "properties": { "lifecycle": { "const": "deprecated" } }, "required": ["lifecycle"] },
       "then": { "required": ["superseded_by"] }
+    },
+    {
+      "$comment": "04-attributes §12: display.* — только у свойств с value_type: number (11-й условный блок; добавлен в батче 6, DL-237).",
+      "if": { "properties": { "value_type": { "not": { "const": "number" } } }, "required": ["value_type"] },
+      "then": { "properties": { "display": false } }
     }
   ]
 }

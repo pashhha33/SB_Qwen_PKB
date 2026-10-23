@@ -32,8 +32,8 @@
       "$ref": "../common/defs.json#/$defs/lifecycle"
     },
     "superseded_by": {
-      "$ref": "../common/defs.json#/$defs/wikilink",
-      "$comment": "ADR-011/DL-107: обязательно при lifecycle: deprecated."
+      "$ref": "../common/defs.json#/$defs/link_object_type",
+      "$comment": "ADR-011/DL-107: обязательно при lifecycle: deprecated; цель — определение замещающего типа (OBJECT_TYPE-….md). Сужено с общего wikilink в батче 6 (DL-237) — по образцу property.superseded_by → link_property."
     },
     "description": { "type": "string" }
   },
