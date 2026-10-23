@@ -2,7 +2,7 @@
 doc_type: docs_index
 title: Структура документации проекта
 status: draft
-version: 0.3.1
+version: 0.3.2
 created: 2026-10-22
 updated: 2026-10-23
 ---
@@ -24,10 +24,11 @@ project-root/
 │   │   └── README.md             # состав, актуальность версий, ссылки на анализ
 │   ├── metamodel/                # ЧТО мы описываем: правила устройства базы знаний
 │   │   ├── analysis-01-incoming-drafts.md  # диагноз исходных черновиков (Фаза 1)
-│   │   ├── analysis-contradictions.md      # реестр C/D/U/G с идентификаторами
+│   │   ├── analysis-01-spec-relevance.md   # ✅ шаг 0: разметка актуальности 19 разделов спецификации 01 (закрывает C-09)
+│   │   ├── analysis-contradictions.md      # реестр C/D/U/G с идентификаторами (A9: 51 из 52 решены, G-05 → шаг 9)
 │   │   ├── 00-overview.md        # ✅ входная точка: общий вид, принципы, схема целиком (Mermaid); actual (DL-212)
 │   │   ├── 01-classification.md  # ✅ классификация: taxonomy → facet → category, два теста, tags
-│   │   ├── 02-entities.md        # ✅ реестр всех типов (58 записей) + реестр TYPE_PREFIX
+│   │   ├── 02-entities.md        # ✅ реестр всех типов (53 записи, пересчёт A9) + реестр TYPE_PREFIX
 │   │   ├── entities/             # ✅ по одному файлу на тип сущности (все 15 карточек ядра, DL-217)
 │   │   │   ├── book.md           # ✅ образец формы
 │   │   │   ├── person.md         # ✅ образец формы
