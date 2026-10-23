@@ -2,7 +2,7 @@
 doc_type: changelog
 title: Changelog — история изменений
 status: draft
-version: 0.24.0
+version: 0.25.0
 created: 2026-10-22
 updated: 2026-10-23
 semver_policy: docs/README.md#версионирование
@@ -20,6 +20,48 @@ semver_policy: docs/README.md#версионирование
 > - **PATCH** (0.1.0 → 0.1.1): исправление опечаток, уточнение формулировок, правки в примерах.
 
 Каждая запись обязана содержать: версию, дату, что изменилось, **почему**, нужна ли миграция, ссылку на ADR/решение.
+
+---
+
+## [0.28.0] — 2026-10-23
+
+**Шаг 9, батч 5**: схема строки `.jsonl` реифицированной связи — **пункт D1 чек-листа
+закрыт по факту** (схемы есть у всех сущностей MVP и самой метамодели). Проверка:
+**14 схем, примеры 29/29 (19 заметок + 10 строк), ad-hoc 21/21** (DL-236).
+
+### Добавлено
+- **`schema/relations/relation-line.schema.json`** — каноническая строка
+  `.sb/relations/relations.jsonl` (ADR-010, `03-relations` §4): все **14 полей ядра
+  обязательны** (`id`, `type: relation`, `title`, `subject`, `relation_type`, `object`,
+  `origin_property`, `role`, `order`, `starts_on`, `ends_on`, `description`,
+  `created_at`, `updated_at`); пустые значения — `null`, **не пропуск ключа**
+  (обоснование строгости: `.sb/relations` — основные данные, плагин — единственный
+  автор (M2), повреждённая строка не применяется (M4)); ссылки — голые ULID;
+  поля этапа 2 (`is_primary`, `source`, `context`) не описаны (неизвестные поля
+  допустимы). Семантика (разрешение ULID, кардинальности, уникальность `triple`/`pair`,
+  специфика `contains`, интервалы) — `validation-runner`.
+- **Прогонщик расширен на `.jsonl`** (`scripts/check-examples.cjs`): построчная валидация
+  `examples/relations/*.jsonl` (valid-* → все строки валидны, invalid-* → все невалидны)
+  + проверка BOM (файловые правила ADR-010).
+- **Примеры строк** (`examples/relations/`): `valid-01-contains.jsonl` (глава `order: 7`,
+  интерлюдия `order: 7.5`, пролог `order: null` — Н2), `valid-02-free-standing.jsonl`
+  (`origin_property: null` — Р3/DL-090), `invalid-01.jsonl` (6 строк, каждая нарушает
+  одно правило) + `README.md` с разбором «строка → правило → схема/runner».
+- **DL-236** в журнал решений.
+
+### Изменено
+- `rel_contains.md`: пример строки приведён к норме §4/ADR-010 — **голые ULID** в
+  `relation_type`/`origin_property` (были key-строки «contains»/«part_of_work»),
+  добавлены обязательные `type`/`title`.
+- `03-relations` v0.3.1: путь схемы строки в §5 приведён к каталогу DL-222 —
+  `schema/relations/relation-line.schema.json` (был `schema/relation.schema.json`).
+- `entities/relation.md`: `schema_ref` в frontmatter, упоминание схемы и примеров в §7.
+- `readiness-checklist` v0.21.0: **D1 отмечен закрытым по факту** (14 схем; абстрактные
+  `work`/`activity` — осознанно без схем: И3, DL-214; `property_type` — `defs.json#value_type`);
+  итоговое подтверждение — в блоке F. Сводка: D — 1/5.
+
+### Миграция
+Не требуется: данных нет; пример `rel_contains` исправлен до появления реальных строк.
 
 ---
 

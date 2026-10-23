@@ -66,8 +66,15 @@
 ## 4. Пример записи
 
 ```json
-{"id":"01J9ZK3M4P5Q6R7S8T9V0W1X2Y","relation_type":"contains","subject":"01J9ZH8A2B3C4D5E6F7G8H9J0K","object":"01J9ZK3M4P5Q6R7S8T9V0W1X2Z","origin_property":"part_of_work","role":"chapter","order":7,"starts_on":null,"ends_on":null,"description":null,"created_at":"2026-10-22T14:05","updated_at":"2026-10-22T14:05"}
+{"id":"01J9ZK3M4P5Q6R7S8T9V0W1X2Y","type":"relation","title":"«Произведение» содержит «Глава 7»","subject":"01J9ZH8A2B3C4D5E6F7G8H9J0K","relation_type":"01J9ZH8A2B3C4D5E6F7G8H9J0R","object":"01J9ZK3M4P5Q6R7S8T9V0W1X2Z","origin_property":"01J9ZK3M4P5Q6R7S8T9V0W1X2P","role":"chapter","order":7,"starts_on":null,"ends_on":null,"description":null,"created_at":"2026-10-22T14:05","updated_at":"2026-10-22T14:05"}
 ```
+
+> [!note] Пример исправлен в батче 5 (DL-236)
+> Приведён к норме `03-relations` §4 и ADR-010: `type` (always `relation`) и `title`
+> обязательны; `relation_type` и `origin_property` — **голые ULID** определений
+> (соответственно типа отношения `contains` и свойства `part_of_work`), а не key-строки.
+> Машиночитаемая схема строки — `schema/relations/relation-line.schema.json`;
+> живые примеры — `examples/relations/`.
 
 ## 5. Правила валидации
 
@@ -90,4 +97,7 @@
 
 ## История изменений
 
+- **2026-10-23:** батч 5 шага 9: пример строки `.jsonl` приведён к норме §4/ADR-010
+  (голые ULID в `relation_type`/`origin_property`, добавлены `type`/`title`) — DL-236;
+  создана схема `schema/relations/relation-line.schema.json`, примеры `examples/relations/`.
 - **2026-10-22:** карточка создана (DL-125).

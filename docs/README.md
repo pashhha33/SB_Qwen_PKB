@@ -2,7 +2,7 @@
 doc_type: docs_index
 title: Структура документации проекта
 status: draft
-version: 0.3.6
+version: 0.3.7
 created: 2026-10-22
 updated: 2026-10-23
 ---
@@ -103,9 +103,10 @@ project-root/
 │   ├── common/defs.json          # ✅ общие $defs: ULID, системная шапка, ссылки, даты, enum-ы
 │   ├── metamodel/                # ✅ схемы слоя 2 (6): object_type, property, relation_type, taxonomy, facet, category
 │   ├── entities/                 # ✅ схемы слоя 3 (батчи 2–4): book, person, media, chapter, project, knowledge — все 6 предметных типов ядра
-│   └── relations/                # схемы строк .jsonl реифицированных связей — батч 5
+│   └── relations/                # ✅ relation-line.schema.json — строка .jsonl реифицированной связи (батч 5, ADR-010)
 ├── examples/                     # живые примеры: заметки в YAML/Markdown, заполненные по метамодели
 │   ├── instances/                # 🔶 примеры экземпляров: instances/<type>/{valid,invalid}-NN-… (object_type; book, person — батч 2; media, chapter — батч 3; knowledge, project — батч 4)
+│   ├── relations/                # ✅ примеры строк .jsonl: valid/invalid + README с разбором (батч 5)
 │   └── templates/                # шаблоны заметок для создания новых (D5 — батч 5)
 ├── scripts/check-examples.cjs    # ✅ прогонщик примеров: npm run check (ajv + js-yaml, DL-227)
 ├── package.json / .gitignore     # ✅ dev-зависимости прогонщика (ajv, js-yaml)

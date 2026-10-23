@@ -4,7 +4,7 @@
  *
  * Что делает:
  *  1. Компилирует все JSON Schema каталога schema/ (Draft 2020-12, ajv).
- *  2. Обходит examples/instances/{type_key}/*.md:
+ *  2. Обходит examples/instances/{type_key}/*.md и examples/relations/*.jsonl (батч 5):
  *     - valid-*.md   — frontmatter обязан пройти схему {type_key};
  *     - invalid-*.md — frontmatter обязан НЕ пройти схему.
  *  3. Печатает отчёт; код возврата 0 — все ожидания совпали, 1 — есть расхождения.
@@ -118,6 +118,61 @@ for (const typeDir of fs.readdirSync(EXAMPLES_ROOT).sort()) {
       // короткая сводка — чем именно пойман (педагогическая ценность D4)
       const summary = (validate.errors || []).slice(0, 3).map((e) => `${e.instancePath || '/'} ${e.message}`).join('; ');
       console.log(`       пойман на: ${summary}`);
+    }
+  }
+}
+
+// --- 4. Строки .jsonl — реифицированные связи (батч 5, DL-236) ----------------
+// Файловые правила ADR-010: одна строка JSON на связь, UTF-8 без BOM, LF.
+const REL_EXAMPLES = path.join(REPO, 'examples', 'relations');
+const REL_SCHEMA = path.join(REPO, 'schema', 'relations', 'relation-line.schema.json');
+if (fs.existsSync(REL_EXAMPLES) && fs.existsSync(REL_SCHEMA)) {
+  const relValidate = ajv.getSchema(pathToFileURL(REL_SCHEMA).href);
+  if (!relValidate) {
+    fail++;
+    problems.push('relation-line.schema.json не скомпилировалась');
+  } else {
+    for (const f of fs.readdirSync(REL_EXAMPLES).filter((x) => x.endsWith('.jsonl')).sort()) {
+      const expectValid = /^valid-/.test(f);
+      const expectInvalid = /^invalid-/.test(f);
+      if (!expectValid && !expectInvalid) {
+        console.log(`?? [relations/${f}] имя не valid-* и не invalid-* — пропущен`);
+        continue;
+      }
+      const content = fs.readFileSync(path.join(REL_EXAMPLES, f), 'utf8');
+      if (content.charCodeAt(0) === 0xfeff) {
+        fail++;
+        problems.push(`relations/${f}: BOM (нарушение файлового правила ADR-010)`);
+        console.log(`FAIL [relations/${f}] BOM в начале файла`);
+      }
+      const lines = content.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      lines.forEach((line, i) => {
+        const where = `relations/${f}:${i + 1}`;
+        let data;
+        try {
+          data = JSON.parse(line);
+        } catch (e) {
+          fail++;
+          problems.push(`${where}: строка не разбирается как JSON`);
+          console.log(`FAIL [${where}] JSON не разбирается: ${e.message}`);
+          return;
+        }
+        const ok = relValidate(data);
+        const good = expectValid ? ok : !ok;
+        good ? pass++ : fail++;
+        console.log(`${good ? 'OK  ' : 'FAIL'} [${where}] ожидали ${expectValid ? 'valid' : 'invalid'}, получили ${ok ? 'valid' : 'invalid'}`);
+        if (!good) {
+          problems.push(`${where}: ожидание не совпало`);
+          if (!ok) {
+            for (const e of (relValidate.errors || []).slice(0, 3)) {
+              console.log(`       ${e.instancePath || '/'} ${e.message}`);
+            }
+          }
+        } else if (expectInvalid && !ok) {
+          const summary = (relValidate.errors || []).slice(0, 2).map((e) => `${e.instancePath || '/'} ${e.message}`).join('; ');
+          console.log(`       пойман на: ${summary}`);
+        }
+      });
     }
   }
 }

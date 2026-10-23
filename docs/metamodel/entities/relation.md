@@ -6,9 +6,10 @@ type_key: relation
 type_prefix: RELATION
 aliases: [Отношения, Связи, relation]
 status: actual
-metamodel_version: 0.22.0
+metamodel_version: 0.28.0
 created: 2026-10-23
 updated: 2026-10-23
+schema_ref: schema/relations/relation-line.schema.json
 classification: core
 group: Системные (метамодель)
 abstract: false
@@ -68,10 +69,14 @@ ULID с префиксом `RELATION`, служебные поля; полной
 
 Этап **C**; модули: `relation-store` (атомарная запись `.jsonl`), `relation-index`
 (граф в памяти), `relation-service` (создание/удаление, локальные свойства, каскады),
-`chapter-service` (нумерация глав, И7).
+`chapter-service` (нумерация глав, И7). Машиночитаемая схема строки —
+`schema/relations/relation-line.schema.json` (батч 5, DL-236): все 14 полей ядра
+обязательно присутствуют, пустые значения — `null` (ADR-010); примеры —
+`examples/relations/`.
 
 ## 8. История изменений
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-23 | 0.28.0 | Батч 5 шага 9: `schema_ref` — схема строки `.jsonl` создана (`schema/relations/relation-line.schema.json`, DL-236); §7 — упоминание схемы и примеров `examples/relations/` | Батч 5 шага 9 | DL-236 |
 | 2026-10-23 | 0.22.0 | Сокращённая карточка создана: систематизация норм `03-relations` §4–§7, ADR-009/010 (`.sb/relations/*.jsonl`, сокращённый набор системных атрибутов, вычисляемая обратная сторона); новых норм не вводит | Вторая партия карточек ядра (DL-213/216) | [[../03-relations]] |

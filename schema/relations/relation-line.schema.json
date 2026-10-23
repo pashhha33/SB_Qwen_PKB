@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "relation line — экземпляр реифицированной связи (строка .sb/relations/relations.jsonl)",
+  "description": "Одна строка JSON на связь (ADR-010): сокращённая системная шапка (Р10) + subject/relation_type/object/origin_property (голые ULID) + локальные свойства role/order/starts_on/ends_on/description. Все поля ядра ОБЯЗАТЕЛЬНО присутствуют; необязательные допускают null («пустые значения — null, а не пропуск ключа»).",
+  "$comment": "Нормы: ADR-009 (Р1–Р13), ADR-010 (M1–M9), 03-relations §4–§5, карточка entities/relation.md, DL-090 (origin_property), DL-125 (contains). Строгость обязательности обоснована: .sb/relations — ОСНОВНЫЕ данные (не производные), плагин — единственный автор (M2), повреждённая строка не применяется (M4) — пропуск ключа трактуется как повреждение канонической формы. Файловые правила (вне схемы, проверяет прогонщик/runner): одна строка JSON на связь, UTF-8 без BOM, LF, порядок строк не значим. Схема ловит ТОЛЬКО форму строки; runner: разрешение subject/object/relation_type/origin_property (существование и типы — relation.allowed_subject_type/allowed_object_type, relation.origin_property.*), кардинальности (relation.cardinality.*), уникальность (relation.uniqueness — triple/pair с учётом обеих сторон), relation.contains.single_record (part_of отдельной записью НЕ хранится — обратная сторона вычисляется, Р11), специфика contains (order, role из перечисления chapter_role — relation_type в строке голый ULID, схема ветвиться по нему не может), интервалы (starts_on ≤ ends_on — сравнение двух строк; ends_on null = «по настоящее время» — info relation.period.open), смысл title. Поля этапа 2 (is_primary, source, context) не описаны — неизвестные поля не ошибка (warning «вне схемы»). В MVP единственный reified-тип — contains: authorship/ownership/related_to — direct (frontmatter), part_of — вычисляемая обратная сторона.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "../common/defs.json#/$defs/ulid",
+      "$comment": "И1: ULID связи, уникален, не переиспользуется."
+    },
+    "type": {
+      "const": "relation",
+      "$comment": "03-relations §4: системный атрибут type у экземпляра связи всегда «relation»; конкретный тип отношения — в поле relation_type."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "$comment": "Обязателен: нужен для собственного типизированного графа (М6 ADR-010) и списка связей; строится плагином (например «„Путь Восхождения“ содержит „Гроза над перевалом“»)."
+    },
+    "subject": {
+      "$ref": "../common/defs.json#/$defs/ulid",
+      "$comment": "Голый id объекта-субъекта (не wikilink — ADR-010). Для contains — целое (книга)."
+    },
+    "relation_type": {
+      "$ref": "../common/defs.json#/$defs/ulid",
+      "$comment": "Голый id ОПРЕДЕЛЕНИЯ типа отношения (объект relation_type), не key-строка: пример в rel_contains.md исправлен в DL-236. Разрешение id → key и проверка direction/allowed_* — runner."
+    },
+    "object": {
+      "$ref": "../common/defs.json#/$defs/ulid",
+      "$comment": "Голый id объекта-объекта. Для contains — часть (глава)."
+    },
+    "origin_property": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/ulid" },
+        { "type": "null" }
+      ],
+      "$comment": "Р3/DL-090: голый id определения свойства с link_mode: reified, породившего связь; null = свободно стоящая связь (показывается в общем блоке связей объекта). Правила relation.origin_property.exists/type_match/reified — runner."
+    },
+    "role": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "$comment": "Р9: уточнение сверх forward_label (свободный текст, например «соавтор»); для contains — значения перечисления chapter_role (chapter/prologue/epilogue/interlude/appendix/part) — проверяет runner (схема не знает, какой ULID в relation_type)."
+    },
+    "order": {
+      "type": ["number", "null"],
+      "$comment": "Порядок части (обычно = chapter_number; дробные допустимы — интерлюдия 7.5). Для contains нужен (DL-125); у частей вне нумерации (Н2, role prologue/epilogue/appendix) — null (предложение DL-236). Уникальность в пределах subject и разрывы — runner (relation.order.unique_per_subject/no_gap)."
+    },
+    "starts_on": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/date" },
+        { "type": "null" }
+      ],
+      "$comment": "Начало периода; частичные даты допустимы. У contains не используется (rel_contains) — null."
+    },
+    "ends_on": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/date" },
+        { "type": "null" }
+      ],
+      "$comment": "null = «по настоящее время» — норма (ADR-011, info relation.period.open). starts_on ≤ ends_on — runner."
+    },
+    "description": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "$comment": "Р9: ОДНА строка пояснения, не заметка; собственного текста у связи нет."
+    },
+    "created_at": { "$ref": "../common/defs.json#/$defs/datetime" },
+    "updated_at": { "$ref": "../common/defs.json#/$defs/datetime" }
+  },
+  "required": [
+    "id", "type", "title", "subject", "relation_type", "object",
+    "origin_property", "role", "order", "starts_on", "ends_on", "description",
+    "created_at", "updated_at"
+  ]
+}
