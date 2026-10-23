@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "object_type — определение типа объекта (слой 2)",
+  "description": "Экземпляр object_type — описание типа («Книга», «Человек»…). Самоопределяемость модели: тип — такой же объект базы (ADR-004).",
+  "$comment": "Нормы: ADR-003/004/011, 01-classification §4–§5, 07-hierarchy; карточка docs/metamodel/entities/object_type.md. Правила валидации — группы A и B реестра (runner): object_type.parent.exists, object_type.parent.no_cycle, object_type.abstract.no_instance, object_type.type_prefix.unique, object.type.not_abstract.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "object_type" },
+    "type_key": {
+      "$ref": "../common/defs.json#/$defs/type_key",
+      "$comment": "Уникален в реестре (правило runner'а object_type.type_key.unique)."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "$comment": "Русская подпись (ADR-003): меняется свободно, key стабилен."
+    },
+    "type_prefix": {
+      "$ref": "../common/defs.json#/$defs/type_prefix"
+    },
+    "abstract": {
+      "type": "boolean",
+      "$comment": "01-classification §4: true = экземпляр создать нельзя (И3); правило object_type.abstract.no_instance."
+    },
+    "parent_type": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_object_type" },
+      "maxItems": 1,
+      "$comment": "Только непосредственный родитель (01-classification §5, 07-hierarchy §4): предки вычисляются. Пусто = корень. Циклы — правило runner'а object_type.parent.no_cycle."
+    },
+    "lifecycle": {
+      "$ref": "../common/defs.json#/$defs/lifecycle"
+    },
+    "superseded_by": {
+      "$ref": "../common/defs.json#/$defs/wikilink",
+      "$comment": "ADR-011/DL-107: обязательно при lifecycle: deprecated."
+    },
+    "description": { "type": "string" }
+  },
+  "required": ["type_key", "label", "type_prefix", "abstract"],
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" },
+    {
+      "if": { "properties": { "lifecycle": { "const": "deprecated" } }, "required": ["lifecycle"] },
+      "then": { "required": ["superseded_by"] },
+      "$comment": "ADR-011 (DL-107): у deprecated обязательно superseded_by."
+    }
+  ]
+}

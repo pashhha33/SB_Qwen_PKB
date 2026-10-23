@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "taxonomy — таксономия (слой 2)",
+  "description": "Необязательная группировка фасетов в согласованную систему классификации (ADR-007): область применения и значения по умолчанию для входящих фасетов.",
+  "$comment": "Нормы: ADR-005/007, 01-classification §2.1; карточка docs/metamodel/entities/taxonomy.md. Правила — группа E реестра (runner): taxonomy.facets.min_one (здесь также minItems), assignment.type_allowed. П8: категории не ссылаются на таксономию напрямую.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "taxonomy" },
+    "facets": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_facet" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "$comment": "Минимум один фасет (taxonomy.facets.min_one, error). Принадлежность хранится и на фасете (facet.taxonomy) — согласованность проверяет runner."
+    },
+    "allowed_object_types": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_object_type" },
+      "$comment": "Пусто/отсутствует = ограничений нет. Служит значением по умолчанию для входящих фасетов; семантика потомков — 07-hierarchy §5/§7 (DL-208/209)."
+    },
+    "hierarchy_mode": {
+      "enum": ["strict", "polyhierarchical"],
+      "$comment": "Значение по умолчанию для фасетов (05-enumerations §3.5)."
+    },
+    "assignment_cardinality": {
+      "$ref": "../common/defs.json#/$defs/cardinality",
+      "$comment": "Значение по умолчанию для фасетов."
+    },
+    "root_requirement_min": {
+      "type": "integer",
+      "minimum": 0,
+      "$comment": "Значение по умолчанию для фасетов."
+    },
+    "root_requirement_max": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "$comment": "null = без ограничения."
+    },
+    "description": { "type": "string" }
+  },
+  "required": ["facets"],
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "relation_type — определение типа отношения (слой 2)",
+  "description": "Экземпляр relation_type — семантика связи («авторство», «владение», «содержит»): метки сторон, направление, двусторонняя кардинальность, правило уникальности, допустимые и предпочтительные типы сторон.",
+  "$comment": "Нормы: ADR-009, 03-relations §3, §8; 05-enumerations §3.6–§3.7; карточка docs/metamodel/entities/relation_type.md. Правила — группа F реестра (runner): relation_type.symmetric.labels_equal (warning), suggested ⊆ allowed, существование типов. Семантика потомков в allowed_*/suggested_* — 07-hierarchy §5/§7 (DL-208/209): тип покрывает всех потомков, абстрактный = «любой неабстрактный потомок».",
+  "type": "object",
+  "properties": {
+    "type": { "const": "relation_type" },
+    "key": { "$ref": "../common/defs.json#/$defs/type_key" },
+    "label": { "type": "string", "minLength": 1 },
+    "forward_label": {
+      "type": "string",
+      "minLength": 1,
+      "$comment": "Как связь читается субъект → объект («автор»). Свободный русский текст; автообразование из reverse отклонено (ADR-009)."
+    },
+    "reverse_label": {
+      "type": "string",
+      "minLength": 1,
+      "$comment": "Как связь читается объект → субъект («автор произведения»)."
+    },
+    "direction": {
+      "enum": ["directed", "symmetric"],
+      "default": "directed",
+      "$comment": "05-enumerations §3.6: symmetric — хранится один раз, обратная сторона вычисляется; у симметричного метки обязаны совпадать (warning, runner)."
+    },
+    "subject_to_object": {
+      "$ref": "../common/defs.json#/$defs/cardinality",
+      "$comment": "Сколько объектов у одного субъекта (U-01: двусторонняя кардинальность)."
+    },
+    "object_to_subject": {
+      "$ref": "../common/defs.json#/$defs/cardinality",
+      "$comment": "Сколько субъектов у одного объекта."
+    },
+    "uniqueness_rule": {
+      "enum": ["pair", "triple", "none"],
+      "default": "triple",
+      "$comment": "05-enumerations §3.7 (U-02, DL-080): что считается дублем связи."
+    },
+    "allowed_subject_types": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_object_type" },
+      "$comment": "Жёсткое ограничение (error). Пусто = ограничений нет."
+    },
+    "allowed_object_types": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_object_type" }
+    },
+    "suggested_subject_types": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_object_type" },
+      "$comment": "Подсказка порядка и предвыбор в UI (U-04); подмножество allowed_* — правило runner'а."
+    },
+    "suggested_object_types": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_object_type" }
+    },
+    "definition": { "type": "string" }
+  },
+  "required": [
+    "key", "label", "forward_label", "reverse_label",
+    "direction", "subject_to_object", "object_to_subject", "uniqueness_rule"
+  ],
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" }
+  ]
+}

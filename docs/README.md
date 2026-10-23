@@ -2,7 +2,7 @@
 doc_type: docs_index
 title: Структура документации проекта
 status: draft
-version: 0.3.2
+version: 0.3.3
 created: 2026-10-22
 updated: 2026-10-23
 ---
@@ -99,12 +99,14 @@ project-root/
 │       ├── glossary-template.md
 │       ├── validation-rule-template.md
 │       └── integration-template.md
-├── schema/                       # машиночитаемые описания: JSON Schema по типам и связям
-│   ├── metamodel.schema.json     # схема самой метамодели (описание типов типов)
-│   └── entities/<entity_id>.schema.json
+├── schema/                       # машиночитаемые описания: JSON Schema, Draft 2020-12 (DL-222)
+│   ├── common/defs.json          # ✅ общие $defs: ULID, системная шапка, ссылки, даты, enum-ы
+│   ├── metamodel/                # ✅ схемы слоя 2 (6): object_type, property, relation_type, taxonomy, facet, category
+│   ├── entities/                 # схемы слоя 3: <entity_id>.schema.json — батч 2+ (book, person, …)
+│   └── relations/                # схемы строк .jsonl реифицированных связей — батч 5
 ├── examples/                     # живые примеры: заметки в YAML/Markdown, заполненные по метамодели
-│   ├── instances/                # примеры экземпляров (корректные и некорректные)
-│   └── templates/                # шаблоны заметок для создания новых
+│   ├── instances/                # 🔶 примеры экземпляров: instances/<type>/valid-NN-… (батч 1: object_type)
+│   └── templates/                # шаблоны заметок для создания новых (D5 — батч 5)
 └── src/                          # код плагина (Фаза 5)
 ```
 

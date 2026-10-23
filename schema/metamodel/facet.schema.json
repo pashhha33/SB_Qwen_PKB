@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "facet — фасет классификации (слой 2)",
+  "description": "Отдельное измерение классификации и носитель правил (ADR-005/007): режим иерархии, кардинальность назначения, требование к корням, область применения. Самостоятельный объект: таксономия необязательна.",
+  "$comment": "Нормы: ADR-005/007, 01-classification §2.2; карточка docs/metamodel/entities/facet.md. Правила — группа E реестра (runner): facet.taxonomy.exists, facet.allowed_types.conflict (подмножество таксономии, warning), facet.root_requirement, assignment.type_allowed, assignment.cardinality. Наследование умолчаний «фасет → таксономия → таблица §2.2» вычисляет runner, не схема.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "facet" },
+    "taxonomy": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_taxonomy" },
+        {
+          "type": "array",
+          "items": { "$ref": "../common/defs.json#/$defs/link_taxonomy" },
+          "maxItems": 1,
+          "$comment": "Пустой список = независимый фасет (пример «Тема», ADR-007); форма taxonomy: [] встречается в примерах 01-classification §2.2."
+        }
+      ],
+      "$comment": "0..1: фасет входит не более чем в одну таксономию."
+    },
+    "allowed_object_types": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_object_type" },
+      "$comment": "Пусто = наследуется от таксономии, иначе ограничений нет; семантика потомков — DL-208/209."
+    },
+    "hierarchy_mode": {
+      "enum": ["strict", "polyhierarchical"],
+      "default": "strict",
+      "$comment": "05-enumerations §3.5."
+    },
+    "assignment_cardinality": {
+      "$ref": "../common/defs.json#/$defs/cardinality",
+      "$comment": "Сколько категорий фасета можно назначить одному объекту; значение по умолчанию 0..N. Именно это поле задаёт обязательность категорий (закрытие C-05)."
+    },
+    "root_requirement_min": { "type": "integer", "minimum": 0, "default": 0 },
+    "root_requirement_max": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "default": null,
+      "$comment": "null = без ограничения."
+    },
+    "description": { "type": "string" }
+  },
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" }
+  ]
+}

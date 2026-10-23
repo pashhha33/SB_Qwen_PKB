@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "property — определение свойства (слой 2)",
+  "description": "Экземпляр property — описание поля («Автор», «Год издания»…): ключ, тип значения, кардинальность, область применения, условие applies_when.",
+  "$comment": "Нормы: ADR-003/006/008, 04-attributes §4, §10, §11, раздел 12; карточка docs/metamodel/entities/property.md. Правила валидации — группы B и C реестра (runner), включая property.required.cardinality_consistency (здесь дополнительно зашита в схему), applies_when.*, media.*, И6 (ключ не переопределяет системный атрибут).",
+  "type": "object",
+  "properties": {
+    "type": { "const": "property" },
+    "key": { "$ref": "../common/defs.json#/$defs/type_key" },
+    "label": { "type": "string", "minLength": 1 },
+    "value_type": { "$ref": "../common/defs.json#/$defs/value_type" },
+    "target_types": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_object_type" },
+      "minItems": 1,
+      "$comment": "Обязательно для object_reference и media_reference (04-attributes §4)."
+    },
+    "target_facet": {
+      "$ref": "../common/defs.json#/$defs/link_facet",
+      "$comment": "Только для свойства-словаря (04-attributes §5): значения — категории фасета."
+    },
+    "link_mode": {
+      "enum": ["direct", "reified"],
+      "$comment": "Обязательно для object_reference (ADR-009/010): способ хранения связи объявляется в свойстве, не в типе отношения."
+    },
+    "media_target": { "enum": ["object", "file", "both"] },
+    "media_kinds": {
+      "type": "array",
+      "items": { "enum": ["image", "audio", "video", "document", "other"] },
+      "uniqueItems": true
+    },
+    "media_folders": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "media_extensions": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9]+$" },
+      "uniqueItems": true
+    },
+    "media_display": { "enum": ["gallery", "list"] },
+    "media_thumbnail_size": { "enum": ["small", "medium", "large"] },
+    "media_roles": {
+      "type": "array",
+      "items": {
+        "enum": ["cover", "banner", "logo", "portrait", "avatar", "preview", "background", "other", "illustration", "photo", "screenshot", "diagram", "attachment"]
+      },
+      "uniqueItems": true,
+      "$comment": "05-enumerations §3.10: 13 значений media_role (8 из v1.0 §12 + 5 по DL-142)."
+    },
+    "cardinality": { "$ref": "../common/defs.json#/$defs/cardinality" },
+    "required": {
+      "type": "boolean",
+      "$comment": "Производно от cardinality (04-attributes §4): 1 и 1..N → true; 0..1 и 0..N → false. Согласованность зашита в allOf ниже и продублирована правилом runner'а property.required.cardinality_consistency."
+    },
+    "scope": { "$ref": "../common/defs.json#/$defs/scope" },
+    "lifecycle": { "$ref": "../common/defs.json#/$defs/lifecycle" },
+    "superseded_by": {
+      "$ref": "../common/defs.json#/$defs/link_property",
+      "$comment": "ADR-011/DL-107: обязательно при lifecycle: deprecated."
+    },
+    "default_value": {
+      "$comment": "04-attributes §4: значение любого типа; подставляется при создании объекта."
+    },
+    "definition": { "type": "string" },
+    "service": {
+      "type": "boolean",
+      "default": false,
+      "$comment": "DL-168: служебное свойство ведёт плагин (в MVP одно — sb_issues); не предлагается для ввода."
+    },
+    "create_from_link": {
+      "enum": ["ask", "forbid", "auto"],
+      "default": "ask",
+      "$comment": "Раздел 12 §5.4 (DL-187): только для object_reference и media_reference."
+    },
+    "applies_when": { "$ref": "../common/defs.json#/$defs/applies_when" }
+  },
+  "required": ["key", "label", "value_type", "cardinality", "required", "scope"],
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" },
+    {
+      "$comment": "object_reference → target_types и link_mode обязательны.",
+      "if": { "properties": { "value_type": { "const": "object_reference" } }, "required": ["value_type"] },
+      "then": { "required": ["target_types", "link_mode"] }
+    },
+    {
+      "$comment": "media_reference → target_types и media_target обязательны (04-attributes §10).",
+      "if": { "properties": { "value_type": { "const": "media_reference" } }, "required": ["value_type"] },
+      "then": { "required": ["target_types", "media_target"] }
+    },
+    {
+      "$comment": "Не object_reference/media_reference → create_from_link запрещён (раздел 12 §5.4).",
+      "if": {
+        "properties": { "value_type": { "not": { "enum": ["object_reference", "media_reference"] } } },
+        "required": ["value_type"]
+      },
+      "then": { "properties": { "create_from_link": false } }
+    },
+    {
+      "$comment": "media_* допускаются ТОЛЬКО у media_reference (04-attributes §10).",
+      "if": {
+        "properties": { "value_type": { "not": { "const": "media_reference" } } },
+        "required": ["value_type"]
+      },
+      "then": {
+        "properties": {
+          "media_target": false,
+          "media_kinds": false,
+          "media_folders": false,
+          "media_extensions": false,
+          "media_display": false,
+          "media_thumbnail_size": false,
+          "media_roles": false
+        }
+      }
+    },
+    {
+      "$comment": "boolean → cardinality только 1 или 0..1 (04-attributes §2).",
+      "if": { "properties": { "value_type": { "const": "boolean" } }, "required": ["value_type"] },
+      "then": { "properties": { "cardinality": { "enum": ["1", "0..1"] } } }
+    },
+    {
+      "$comment": "cardinality 1 → required true.",
+      "if": { "properties": { "cardinality": { "const": "1" } }, "required": ["cardinality"] },
+      "then": { "properties": { "required": { "const": true } } }
+    },
+    {
+      "$comment": "cardinality 1..N → required true.",
+      "if": { "properties": { "cardinality": { "const": "1..N" } }, "required": ["cardinality"] },
+      "then": { "properties": { "required": { "const": true } } }
+    },
+    {
+      "$comment": "cardinality 0..1 → required false.",
+      "if": { "properties": { "cardinality": { "const": "0..1" } }, "required": ["cardinality"] },
+      "then": { "properties": { "required": { "const": false } } }
+    },
+    {
+      "$comment": "cardinality 0..N → required false.",
+      "if": { "properties": { "cardinality": { "const": "0..N" } }, "required": ["cardinality"] },
+      "then": { "properties": { "required": { "const": false } } }
+    },
+    {
+      "$comment": "ADR-011 (DL-107): у deprecated обязательно superseded_by.",
+      "if": { "properties": { "lifecycle": { "const": "deprecated" } }, "required": ["lifecycle"] },
+      "then": { "required": ["superseded_by"] }
+    }
+  ]
+}

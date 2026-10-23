@@ -2,7 +2,7 @@
 doc_type: checklist
 title: Чек-лист «Метамодель готова к реализации плагина»
 status: draft
-version: 0.20.0
+version: 0.20.1
 created: 2026-10-22
 updated: 2026-10-23
 gate: переход от Фазы 4 к Фазе 5 разрешён только при 100% выполнения блоков A и B
@@ -64,7 +64,7 @@ gate: переход от Фазы 4 к Фазе 5 разрешён только
 ## D. Машиночитаемые артефакты
 
 - [ ] D1. JSON Schema создана для каждой сущности MVP и для самой метамодели
-      → `schema/metamodel.schema.json`, `schema/entities/*.schema.json`
+      → `schema/metamodel.schema.json`, `schema/entities/*.schema.json` *(в работе: соглашения приняты А/А/А — DL-222; **батч 1 готов** — `schema/common/defs.json` + 6 схем метамодели, ajv 27/27, DL-223; далее слой 3 партиями)*
 - [ ] D2. TypeScript-типы соответствуют JSON Schema (без расхождений)
       → `src/types/*` (или черновик в `schema/`)
 - [ ] D3. Минимум 3 примера корректных экземпляров на каждый тип MVP

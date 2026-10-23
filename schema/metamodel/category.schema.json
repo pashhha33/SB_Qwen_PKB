@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "category — категория классификации (слой 2)",
+  "description": "Конкретное значение внутри ровно одного фасета («Научная фантастика», «Космическая опера»). Иерархия — через непосредственного родителя; корень: parent: [].",
+  "$comment": "Нормы: ADR-005/007, 01-classification §2.3–§2.4, §3; карточка docs/metamodel/entities/category.md. Правила — группа E реестра (runner): category.facet.required/single, category.parent.exists/same_facet/no_cycle/strict_mode (в strict-фасете не более одного родителя — здесь НЕ зашито: режим фасета виден только межобъектно), category.taxonomy_direct.forbidden (П8 — поле taxonomy у категории запрещено: ниже additionalProps-запрет через not).",
+  "type": "object",
+  "properties": {
+    "type": { "const": "category" },
+    "facet": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_facet" },
+        {
+          "type": "array",
+          "items": { "$ref": "../common/defs.json#/$defs/link_facet" },
+          "minItems": 1,
+          "maxItems": 1
+        }
+      ],
+      "$comment": "Ровно один фасет (category.facet.required, category.facet.single — error)."
+    },
+    "parent": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_category" },
+      "uniqueItems": true,
+      "$comment": "Непосредственные родители того же фасета; предки вычисляются; корень — пустой список. Несколько родителей допустимы только в polyhierarchical-фасете (правило runner'а category.parent.strict_mode)."
+    },
+    "description": { "type": "string" }
+  },
+  "required": ["facet"],
+  "not": {
+    "required": ["taxonomy"],
+    "$comment": "П8 (ADR-007): категория не ссылается на таксономию напрямую — category.taxonomy_direct.forbidden (error)."
+  },
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" }
+  ]
+}
