@@ -3,10 +3,10 @@ doc_type: metamodel_section
 section: "02"
 title: "Реестр типов объектов"
 status: actual
-version: 0.8.0
+version: 0.9.0
 created: 2026-10-22
 updated: 2026-10-23
-metamodel_version: 0.19.0
+metamodel_version: 0.21.0
 governing_adr:
   - docs/adr/ADR-004-first-pass-scope-and-command-driven-authoring.md
   - docs/adr/ADR-005-classification-model.md
@@ -110,7 +110,7 @@ tags: [metamodel, entities, registry]
 
 | Тип из `01` §5 | Предлагаемый `type` | `TYPE_PREFIX` | Родитель | Тест 1: свои поля? | Тест 2: открытое множество? | Решение | Статус |
 |---|---|---|---|---|---|---|---|
-| Знание | `knowledge` | `KNOWLEDGE` | — | — | — | тип | `core` |
+| Знание | `knowledge` | `KNOWLEDGE` | — | — | — | тип | `core`; карточка [[entities/knowledge\|`entities/knowledge.md`]] (DL-214) |
 | Концепция | — | — | — | нет: описание, источник, связанные концепции есть у `knowledge` | да | **категория** | `to_category` |
 | Идея | — | — | — | нет | да | **категория** | `to_category` |
 | Гипотеза | — | — | — | нет: подтверждено пользователем | да | **категория** | `to_category` |
@@ -266,8 +266,8 @@ tags: [metamodel, entities, registry]
 
 | Абстрактный тип | `type` | `TYPE_PREFIX` | Наследники | Статус |
 |---|---|---|---|---|
-| Произведение | `work` | `WORK` | `book`; позже `chapter`, `poem`, `movie`, `episode`, `music_track`, `music_album`, `video_game` | **`core_abstract`** — утверждено |
-| Деятельность | `activity` | `ACTIVITY` | `project`; позже `task`, `goal`, `problem` | **`core_abstract`** — утверждено |
+| Произведение | `work` | `WORK` | `book`; позже `chapter`, `poem`, `movie`, `episode`, `music_track`, `music_album`, `video_game` | **`core_abstract`** — утверждено; карточка [[entities/work\|`entities/work.md`]] (DL-214) |
+| Деятельность | `activity` | `ACTIVITY` | `project`; позже `task`, `goal`, `problem` | **`core_abstract`** — утверждено; карточка [[entities/activity\|`entities/activity.md`]] (DL-214) |
 | Коллекция | `collection` | `COLLECTION` | позже `series`, `gallery` | `phase2`, `abstract: true` |
 | Источник | `source` | `SOURCE` | позже `article`, `web_page`, `video_source`, `audio_source` | `phase2`, `abstract: true` |
 | Аудиовизуальное произведение | `audiovisual_work` | `AUDIOVISUAL_WORK` | позже `movie`, `series`, `episode` | `phase2`, `abstract: true` |
@@ -399,6 +399,7 @@ tags: [metamodel, entities, registry]
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-23 | 0.21.0 | Строки `knowledge`, `work`, `activity` дополнены ссылками на созданные карточки (`entities/knowledge.md` — детальная, `entities/work.md` и `entities/activity.md` — сокращённые) | Порядок «карточки → аудит → шаг 9» (DL-213, DL-214) | [[entities/knowledge]], [[entities/work]], [[entities/activity]] |
 | 2026-10-23 | 0.19.0 | Приведение к DL-124 (устранено отставание): строка `chapter` — префикс **`CHP`**, статус **`core`** (было `CHAPTER`, `phase2`); реестр `TYPE_PREFIX` исправлен так же; сводка пересчитана (13 `core` + 2 `core_abstract` = **ядро 15 типов**, 26 `phase2`); добавлена пометка о полном пересчёте на пункте A9 | Под-шаг 8f, сверка с `entities/chapter.md` и CHECKPOINT §6.8 | DL-124, DL-207 |
 | 2026-10-22 | 0.7.0 | Строка типа `project` дополнена: признаки отдельного типа подтверждены (`status` как триггер, `owner`, `due_on`, `progress`), карточка создана | Решение пользователя (ответ «C», DL-176) |
 | 2026-10-22 | 0.6.0 | Запись типа `view` уточнена по итогам шага 8b: в MVP представления — артефакты, а не объекты метамодели; `mechanism` закрыт в составе трёх значений | [[08-views\|`08-views.md`]], DL-164 |

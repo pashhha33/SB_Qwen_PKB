@@ -264,7 +264,7 @@ tags: [metamodel, migrations, step8]
 | `migration-engine`, снимки миграций, команды `sb-migrate-preview` / `sb-migrate-apply` / `sb-migrate-undo` | **Этап 2** (`09-modules.md` §5); к моменту появления данных формат уже согласован |
 | Команды в реестр MVP (18) | **Не добавляются** — состав команд MVP не меняется |
 
-Правил валидации в реестр (166) **не добавляем**: строка «Миграционные проверки — этап 2»
+Правил валидации в реестр **не добавляем**: строка «Миграционные проверки — этап 2»
 уже есть в `rules.md` («правила, которых пока нет»). Состав будущей группы (черновик,
 появится с движком): `migration.record.valid`, `migration.backup.exists_before_apply`,
 `migration.journal.append_only`, `migration.enum_map.total`, `migration.undo.protected`,

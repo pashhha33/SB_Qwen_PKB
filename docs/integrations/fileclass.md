@@ -60,7 +60,7 @@ tags: [integration]
 | Схема — заметка в выделенной папке (`Class files folder`) | ADR-002: определения метамодели — Markdown в `Metamodel/` |
 | Только frontmatter, запись через `processFrontMatter` | ADR-002: чтение/запись только через API Obsidian |
 | Формы управляемого ввода (модалка, Properties, меню) | Наша модалка свойств и панель объекта (В7); `MetadataEditor.register` — после прототипа (ADR-003) |
-| Обязательные поля + валидация на ноту | 166 правил, 6 уровней контроля (`rules.md`, `severity-policy.md`) |
+| Обязательные поля + валидация на ноту | Единый реестр правил валидации (группы A–N), 6 уровней контроля (`rules.md`, `severity-policy.md`) |
 | Генерация `.base` с односторонней синхронизацией | `base-generator`: генерация в `Views/`, маркер `# sb-generated: v1`, перегенерация только с вопросом (DL-169/170) |
 | Мягкая деградация без Bases | Пути деградации В1–В12, `bases-adapter` |
 | Медиа-поля (Media/MultiMedia) | ADR-008: `media_reference` (осознанное отличие: множественность — только `cardinality`) |
