@@ -171,10 +171,16 @@
     "business_positions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "office_held": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "military_rank": { "type": "string" },
-    "conflicts": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    "conflicts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+
+    "portrait_file": {
+      "$ref": "../common/defs.json#/$defs/file_link",
+      "$comment": "Теневое свойство (DL-144/153, суффикс _file): пишет только плагин (shadow-sync) из file обёртки, на которую указывает portrait; рассинхрон — warning media.referrers.shadow_synced. Назначение: портрет в карточках Bases."
+    }
   },
   "required": ["role"],
   "allOf": [
-    { "$ref": "../common/defs.json#/$defs/system_core" }
+    { "$ref": "../common/defs.json#/$defs/system_core" },
+    { "$ref": "../common/defs.json#/$defs/service_props" }
   ]
 }

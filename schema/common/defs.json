@@ -70,6 +70,31 @@
       "type": "string",
       "pattern": "^\\[\\[KNOWLEDGE-[0-9A-HJKMNP-TV-Z]{26}\\.md(#[^\\[\\]|]+)?(\\|[^\\[\\]]+)?\\]\\]$"
     },
+    "file_link": {
+      "type": "string",
+      "allOf": [
+        { "pattern": "^\\[\\[[^\\[\\]|#]+(\\|[^\\[\\]]+)?\\]\\]$" },
+        {
+          "not": { "pattern": "^\\[\\[[A-Z][A-Z0-9-]*-[0-9A-HJKMNP-TV-Z]{26}\\.md(#[^\\[\\]|]+)?(\\|[^\\[\\]]+)?\\]\\]$" },
+          "$comment": "Ссылка на заметку в канонической форме ({TYPE_PREFIX}-{ULID}.md) файлом не является: file обёртки и теневые *_file указывают на вложения, а не на другие объекты (и не на другие обёртки — для этого есть link_media)."
+        }
+      ],
+      "$comment": "Батч 3 (DL-229): wikilink на ФАЙЛ-вложение: [[Attachments/cover.jpg]], необязательный псевдоним после |. Существование файла, папка вложений и расширение — runner (media.file.exists — error; media.file.is_attachment — warning): список папок/расширений настраивается, в схему не зашивается."
+    },
+    "service_props": {
+      "type": "object",
+      "properties": {
+        "sb_issues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.]*: (error|warning|info)$"
+          },
+          "$comment": "DL-168: служебное свойство (service: true) — список проблем записи, формат значения «{rule_id}: {severity}»; пишется и снимается validation-runner'ом синхронно со служебными метками sb/error|sb/warning|sb/info (группа K). Для ввода не предлагается."
+        }
+      },
+      "$comment": "Батч 3 (DL-229): служебные поля, которые ведёт плагин; подключаются allOf'ом вместе с system_core в схемах слоя 3, чтобы генерация TS-типов (D2) их видела."
+    },
     "datetime": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2})?$",

@@ -100,8 +100,8 @@
     "release_cadence": { "type": "string" },
     "last_chapter_on": { "$ref": "../common/defs.json#/$defs/date" },
     "file_path": {
-      "type": "string",
-      "$comment": "Условное (format=file). media_reference с media_target: file — ссылка/путь к вложению, НЕ канонический wikilink объекта (файл не объект метамодели). Существование файла — runner (value.media.file_exists)."
+      "$ref": "../common/defs.json#/$defs/file_link",
+      "$comment": "Условное (format=file). media_reference с media_target: file — wikilink на вложение, НЕ канонический wikilink объекта (файл не объект метамодели). Существование файла — runner (value.media.file_exists). Теневого свойства нет: значение и так ссылка на файл (§7.2 media)."
     },
     "file_format": {
       "enum": ["epub", "fb2", "pdf", "mobi", "azw3", "txt", "djvu", "cbr", "cbz"],
@@ -120,10 +120,16 @@
         { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/link_person" }, "maxItems": 1 }
       ],
       "$comment": "Условное (format=audio). 0..1, object_reference → person."
+    },
+
+    "cover_file": {
+      "$ref": "../common/defs.json#/$defs/file_link",
+      "$comment": "Теневое свойство (DL-144/153, суффикс _file): пишет только плагин (shadow-sync) из file обёртки, на которую указывает cover; рассинхрон — warning media.referrers.shadow_synced, команда sb-resync-media-shadows. Назначение: свойство-изображение карточек Bases (ссылку на заметку Bases картинкой не рисует)."
     }
   },
   "required": ["author", "read_status", "format"],
   "allOf": [
-    { "$ref": "../common/defs.json#/$defs/system_core" }
+    { "$ref": "../common/defs.json#/$defs/system_core" },
+    { "$ref": "../common/defs.json#/$defs/service_props" }
   ]
 }

@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "media — экземпляр объекта «Медиа (обёртка файла)» (слой 3)",
+  "description": "Frontmatter заметки MEDIA-{ULID}.md: запись о файле-вложении (что это, зачем, как появилось). Обязательны системная шапка, file и media_kind.",
+  "$comment": "Нормы: карточка docs/metamodel/entities/media.md (16 базовых + 19 условных свойств), 05-enumerations §3.9/§3.10/§3.17.6/§3.17.7, ADR-006/008, 04-attributes §10–§11. Принципы (DL-222…DL-224, DL-229): схема — только frontmatter и только внутрифайловые ограничения уровня error. Runner: media.file.exists (error, межобъектное — существование файла), media.file.single_wrapper (error, межобъектное), media.ai.model_required / media.ai.prompt_present / media.capture.required_for_photo / media.body.embed_synced (И8 — тело заметки) / media.dimensions.stale / media.hash.mismatch / media.source_url.format / media.kind_matches_extension / media.file.is_attachment (warning/info). Инвариант И8 (встраивание ![[{file}|{title}]] первым элементом тела) — свойство ТЕЛА заметки: схема его не видит, проверяет runner; тело примеров его соблюдает. Условные свойства (19, триггер creation_method через includes_any, DL-141) на уровне схемы необязательны всегда (М1/М2). Кэш (width_px, height_px, file_size, file_hash) — не источник истины: схема проверяет только тип. Неизвестные поля — не ошибка схемы. Даты в YAML — в кавычках; datetime без секунд (T18:40) — строка и без кавычек (конвенции батчей 1–2).",
+  "type": "object",
+  "properties": {
+    "type": { "const": "media" },
+
+    "file": {
+      "$ref": "../common/defs.json#/$defs/file_link",
+      "$comment": "Обязательно, cardinality 1 (media.file.required — error). Wikilink на вложение: \"[[Attachments/cover.jpg]]\". Существование файла — runner (media.file.exists); одна обёртка на файл — runner (media.file.single_wrapper, error, DL-154)."
+    },
+    "media_kind": {
+      "enum": ["image", "audio", "video", "document", "other"],
+      "$comment": "Обязательно. 05-enumerations §3.9 (5 значений, закрыто); media.kind.enum (error). Граница с creation_method: вид — «что за файл», способ — «как появился» (DL-135/141)."
+    },
+    "role": {
+      "type": "array",
+      "items": {
+        "enum": ["cover", "banner", "logo", "portrait", "avatar", "preview", "background", "other", "illustration", "photo", "screenshot", "diagram", "attachment"]
+      },
+      "$comment": "0..N, мультивыбор (DL-142): одно изображение может быть обложкой книги и иллюстрацией главы. 05-enumerations §3.10 (13 значений); media.roles.enum (error)."
+    },
+    "creation_method": {
+      "type": "array",
+      "items": {
+        "enum": ["photo", "drawing", "digital_art", "collage", "ai_generated", "scan", "screenshot", "render"]
+      },
+      "$comment": "0..N, мультивыбор (DL-141): коллаж из фото, доработанного нейросетью, — законно [collage, photo, ai_generated]. 05-enumerations §3.17.6 (8 значений, закрыто — DL-155); триггер 19 условных свойств (includes_any). media.creation_method.enum (error)."
+    },
+    "origin": {
+      "oneOf": [
+        { "enum": ["clipboard", "vault", "local_disk", "downloaded", "generated", "camera", "unknown"] },
+        {
+          "type": "array",
+          "items": { "enum": ["clipboard", "vault", "local_disk", "downloaded", "generated", "camera", "unknown"] },
+          "maxItems": 1
+        }
+      ],
+      "$comment": "0..1. 05-enumerations §3.17.7 (7 значений, ПРЕДВАРИТЕЛЬНО — DL-145: состав может расшириться, пополнение = MINOR). media.origin.enum (error)."
+    },
+    "width_px": {
+      "type": "number",
+      "$comment": "Кэш (не источник истины, DL-118-подобие): сверяется с файлом, расхождение — warning media.dimensions.stale (runner)."
+    },
+    "height_px": { "type": "number" },
+    "file_size": {
+      "type": "number",
+      "$comment": "Байты; кэш."
+    },
+    "file_hash": {
+      "type": "string",
+      "$comment": "SHA-256, только при включённой настройке (вопрос 10.4 открыт: по умолчанию выключено); расхождение — warning media.hash.mismatch (runner). Формат отпечатка схема не ограничивает (warning-правило — runner)."
+    },
+    "source_url": {
+      "type": "string",
+      "$comment": "Префикс http(s) — warning media.source_url.format (runner), не схема."
+    },
+    "license": { "type": "string" },
+    "copyright_holder": { "type": "string" },
+    "credit": {
+      "type": "string",
+      "$comment": "Требуемая подпись авторства («Фото: Иван Петров») — отдельное поле от license и copyright_holder (карточка §4.3)."
+    },
+    "description": { "type": "string" },
+
+    "ai_model": {
+      "type": "string",
+      "$comment": "Условное (includes_any: ai_generated) — здесь и далее: схема не гейтит (М1/М2). Отсутствие при выбранном ai_generated — warning media.ai.model_required (runner)."
+    },
+    "ai_prompt": { "type": "string" },
+    "ai_negative_prompt": { "type": "string" },
+    "ai_seed": {
+      "type": "string",
+      "$comment": "text, не number: сиды бывает нужно хранить с ведущими нулями/как выдал инструмент; в YAML — в кавычках."
+    },
+    "ai_sampler": { "type": "string" },
+    "ai_steps": { "type": "number" },
+    "ai_base_image": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_media" },
+        { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/link_media" }, "maxItems": 1 }
+      ],
+      "$comment": "0..1, img2img: ссылка на ДРУГУЮ ОБЁТКУ media, не на голый файл (карточка §4.3 — цепочка происхождения)."
+    },
+    "ai_generated_on": { "$ref": "../common/defs.json#/$defs/datetime" },
+    "captured_at": {
+      "$ref": "../common/defs.json#/$defs/datetime",
+      "$comment": "Условное (photo, screenshot)."
+    },
+    "capture_device": { "type": "string" },
+    "capture_location": { "type": "string" },
+    "art_tool": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "art_medium": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "software_used": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "$comment": "Условное (digital_art, render) — одно свойство на две группы (М7)."
+    },
+    "render_engine": { "type": "string" },
+    "source_materials": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_media" },
+      "$comment": "Условное (collage), 0..N: ссылки на обёртки-исходники (не на голые файлы)."
+    },
+    "scan_source": { "type": "string" },
+    "scan_dpi": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "$comment": "media.scan.dpi_positive (error) зашит в схему."
+    },
+    "screenshot_of": { "type": "string" },
+
+    "ai_base_image_file": {
+      "$ref": "../common/defs.json#/$defs/file_link",
+      "$comment": "Теневое свойство (DL-144/153, суффикс _file): пишет только плагин (shadow-sync) из file обёртки-исходника; рассинхрон — warning media.referrers.shadow_synced. Для карточек Bases."
+    },
+    "source_materials_file": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/file_link" },
+      "$comment": "Теневое свойство для source_materials (0..N)."
+    }
+  },
+  "required": ["file", "media_kind"],
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" },
+    { "$ref": "../common/defs.json#/$defs/service_props" }
+  ]
+}
