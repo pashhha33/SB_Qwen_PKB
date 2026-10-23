@@ -4,7 +4,7 @@ title: "Передача: третья партия карточек ядра (1
 status: actual
 created: 2026-10-23
 metamodel_version: 0.23.0
-covers: DL-217, DL-218 (предложено)
+covers: DL-217, DL-218 (принято, ответ «А»)
 tags: [handoff, commit]
 ---
 
@@ -23,10 +23,12 @@ tags: [handoff, commit]
 | `docs/metamodel/entities/facet.md` | **новый** — сокращённая карточка (M1): измерение классификации, носитель правил, наследование умолчаний, C-05 |
 | `docs/metamodel/entities/category.md` | **новый** — сокращённая карточка (M1): значение ровно одного фасета, иерархия, граница с `tags` |
 | `docs/metamodel/02-entities.md` | v0.10.1 — строки тройки со ссылками на карточки; коллизия `CHARACTER`/`CATEGORY` уточнена; плашка §7 приведена к принятому ADR-007; вводная «карточки созданы» |
-| `docs/metamodel/01-classification.md` | v0.2.3 — плашка §2.4 «формат предварительный» → «утверждён» (норма `04-attributes` §2); `metamodel_version` в шапке |
+| `docs/metamodel/01-classification.md` | v0.2.4 — плашка §2.4 «формат предварительный» → «утверждён» (норма `04-attributes` §2); плашка §7 — соответствие реестру команд MVP (DL-218); `metamodel_version` в шапке |
+| `docs/metamodel/entities/knowledge.md` | §10 — создание фасета «Вид знания» приведено к DL-218: `create-object` (обёртки — этап 2) |
+| `docs/roadmap/mvp-scope.md` | v0.11.0 — строка §3.2: выделенные команды `create-facet`/`create-category` — этап 2, в MVP покрываются `create-object` (DL-218, ответ «А») |
 | `docs/metamodel/00-overview.md` | v0.4.1 — счётчик карточек 15 из 15 |
 | `docs/roadmap/readiness-checklist.md` | v0.18.0 — **A2/A3 закрыты**; сводка A 9/10, B 4/4 ✅, C 5/5 ✅; устаревшие счётчики сносок (A2, A6, B1, E2–E5) заменены долговечными формулировками |
-| `docs/decisions/decision-log.md` | v1.19.0 — DL-217 (принято), DL-218 (**предложено** — ждёт ответа) |
+| `docs/decisions/decision-log.md` | v1.19.0 — DL-217 (принято), DL-218 (**принято**, ответ «А») |
 | `docs/changelog/CHANGELOG.md` | v0.19.0 — запись [0.23.0] |
 | `docs/project-map/PROJECT_MAP.md` | v1.19.0 — шаги 4–5, таблица файлов (+3 карточки), версии, чек-лист A 9/10 |
 | `docs/README.md` | v0.3.1 — дерево: карточки 15/15; 00-overview, 07-hierarchy, 11-rdf — ✅ |
@@ -41,13 +43,14 @@ docs(metamodel): карточки taxonomy/facet/category — ядро 15/15, A2
 
 - три сокращённые системные карточки (мера M1 ADR-006): entities/taxonomy.md,
   entities/facet.md, entities/category.md — новых норм и правил не добавляют (DL-217)
+- DL-218 принято (ответ «А»): create-facet/create-category вне реестра 18 команд MVP —
+  экземпляры создаёт create-object, обёртки — этап 2; внесено: mvp-scope v0.11.0 (§3.2),
+  01-classification v0.2.4 (плашка §7), knowledge §10
 - readiness-checklist v0.18.0: A2/A3 закрыты (A — 9/10, B — 4/4, C — 5/5),
   устаревшие счётчики сносок заменены долговечными формулировками
 - housekeeping: 02-entities v0.10.1 (ссылки на карточки, коллизия CHARACTER/CATEGORY,
-  плашка §7 к принятому ADR-007), 01-classification v0.2.3 (формат categories утверждён
-  в 04-attributes §2), 00-overview v0.4.1, docs/README v0.3.1
-- DL-218 предложено: create-facet/create-category отсутствуют в реестре 18 команд MVP —
-  варианты A/B/C, ждёт решения пользователя
+  плашка §7 к принятому ADR-007), 01-classification v0.2.4 (формат categories утверждён
+  в 04-attributes §2), 00-overview v0.4.1, README и docs/README v0.3.1
 - счётчики: метамодель 0.23.0, документация 1.19.0, CHECKPOINT v27.0.0
 ```
 
@@ -59,8 +62,9 @@ docs(metamodel): карточки taxonomy/facet/category — ядро 15/15, A2
 Допустимо сделать один общий коммит — тогда предложено сообщение выше, а детали партий
 остаются в CHANGELOG и decision log.
 
-## Открытый вопрос (ждёт ответа)
+## Решённый вопрос партии
 
-**DL-218** — состав команд классификации: вариант **A** (рекомендация: `create-object`
-покрывает создание фасетов и категорий, реестр 18 команд не меняется), **B** (добавить
-`create-facet`/`create-category` → 20 команд) или **C** (отложить до аудита A9).
+**DL-218 принято (ответ «А», 2026-10-23):** реестр 18 команд MVP верен; экземпляры фасетов
+и категорий создаёт универсальная команда `create-object` (самоопределяемость, ADR-004);
+выделенные обёртки `create-facet` / `create-category` — UX-сахар этапа 2 (`mvp-scope` §3.2).
+Правки внесены во все затронутые документы; счётчики не менялись.
