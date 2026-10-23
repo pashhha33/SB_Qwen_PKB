@@ -2,7 +2,7 @@
 doc_type: docs_index
 title: Структура документации проекта
 status: draft
-version: 0.3.0
+version: 0.3.1
 created: 2026-10-22
 updated: 2026-10-23
 ---
@@ -25,27 +25,27 @@ project-root/
 │   ├── metamodel/                # ЧТО мы описываем: правила устройства базы знаний
 │   │   ├── analysis-01-incoming-drafts.md  # диагноз исходных черновиков (Фаза 1)
 │   │   ├── analysis-contradictions.md      # реестр C/D/U/G с идентификаторами
-│   │   ├── 00-overview.md        # 🔶 предложен (8f): общий вид, принципы, схема целиком (Mermaid)
+│   │   ├── 00-overview.md        # ✅ входная точка: общий вид, принципы, схема целиком (Mermaid); actual (DL-212)
 │   │   ├── 01-classification.md  # ✅ классификация: taxonomy → facet → category, два теста, tags
 │   │   ├── 02-entities.md        # ✅ реестр всех типов (58 записей) + реестр TYPE_PREFIX
-│   │   ├── entities/             # ✅ по одному файлу на тип сущности (5 из 15 карточек ядра)
+│   │   ├── entities/             # ✅ по одному файлу на тип сущности (все 15 карточек ядра, DL-217)
 │   │   │   ├── book.md           # ✅ образец формы
 │   │   │   ├── person.md         # ✅ образец формы
 │   │   │   ├── chapter.md        # ✅
 │   │   │   ├── media.md          # ✅
 │   │   │   ├── project.md        # ✅
-│   │   │   └── …                 # остальные 10 карточек ядра — впереди
+│   │   │   └── …                 # ✅ ещё 10: knowledge, work, activity, object_type, property, relation_type, relation, taxonomy, facet, category
 │   │   ├── 03-relations.md       # ✅ связи: два способа хранения, реестр типов отношений
 │   │   ├── relations/            # ✅ по одному файлу на связь: authorship, ownership, part_of, related_to, contains
 │   │   │   └── rel_<имя>.md
 │   │   ├── 04-attributes.md      # ✅ системные и предметные поля, 7 типов значений, даты, applies_when
 │   │   ├── 05-enumerations.md    # ✅ реестр 23 перечислений (21 закрыто), единый стиль значений
 │   │   ├── 06-time-and-intervals.md   # ✅ даты, частичные даты, интервалы, шаблон вывода
-│   │   ├── 07-hierarchy.md       # 🔶 предложен (8f): дерево типов, три уровня, абстрактные типы
+│   │   ├── 07-hierarchy.md       # ✅ дерево типов, три уровня, абстрактные типы, смена типа (accepted, DL-212)
 │   │   ├── 08-views.md           # ✅ представления: 12 штук, mechanism, .base в Views/
 │   │   ├── 09-modules.md         # ✅ модули: 45 MVP / 12 отложенных / 12 нереализуемых, Svelte
 │   │   ├── 10-migration-rules.md # ✅ правила миграций (accepted; движок — этап 2)
-│   │   ├── 11-rdf-extension.md   # 🔶 предложен (8f): направление RDF, сопоставление, границы
+│   │   ├── 11-rdf-extension.md   # ✅ направление RDF: объяснительный минимум, сопоставление, границы (accepted, DL-211)
 │   │   └── 12-links-and-aliases.md  # ✅ пустые ссылки и сбор aliases
 │   ├── validation/
 │   │   ├── rules.md              # ✅ единый реестр 167 правил с ID, уровнями и номером уровня контроля

@@ -3,10 +3,10 @@ doc_type: metamodel_section
 section: "02"
 title: "Реестр типов объектов"
 status: actual
-version: 0.10.0
+version: 0.10.1
 created: 2026-10-22
 updated: 2026-10-23
-metamodel_version: 0.22.0
+metamodel_version: 0.23.0
 governing_adr:
   - docs/adr/ADR-004-first-pass-scope-and-command-driven-authoring.md
   - docs/adr/ADR-005-classification-model.md
@@ -22,7 +22,8 @@ tags: [metamodel, entities, registry]
 
 > [!info] Что это за документ
 > Полный реестр **всех** типов, упомянутых в исходных черновиках, плюс типы, добавленные нашими решениями.
-> Детально описываются только типы со статусом `core` — их карточки появятся в `entities/`.
+> Детально описываются только типы со статусом `core` — их карточки созданы в `entities/`
+> (все 15 типов ядра, DL-217).
 > Остальные сохраняются в поле зрения, чтобы ни один тип не потерялся.
 >
 > Ступень 1 из [[../adr/ADR-004-first-pass-scope-and-command-driven-authoring|ADR-004]].
@@ -91,9 +92,9 @@ tags: [metamodel, entities, registry]
 | Тип свойства | `property_type` | `PROPERTY_TYPE` | — | `core`, `abstract: true` | 8 значений закрыты и заданы кодом (слой 1). **Карточка не создаётся** — см. ADR-004 |
 | Тип отношения | `relation_type` | `RELATION_TYPE` | — | `core` | Задаёт семантику и правила связи; карточка [[entities/relation_type\|`entities/relation_type.md`]] (DL-216) |
 | Отношение | `relation` | `RELATION` | — | `core` | Реифицированная связь; карточка [[entities/relation\|`entities/relation.md`]] (DL-216) |
-| Таксономия | `taxonomy` | `TAXONOMY` | — | `core` | Утверждено ADR-005 |
-| Фасет | `facet` | `FACET` | — | `core` | Утверждено ADR-005 |
-| Категория | `category` | `CATEGORY` | — | `core` | Утверждено ADR-005 |
+| Таксономия | `taxonomy` | `TAXONOMY` | — | `core` | Утверждено ADR-005; необязательная группировка фасетов (ADR-007); карточка [[entities/taxonomy\|`entities/taxonomy.md`]] (DL-217) |
+| Фасет | `facet` | `FACET` | — | `core` | Утверждено ADR-005; самостоятельный объект (ADR-007); карточка [[entities/facet\|`entities/facet.md`]] (DL-217) |
+| Категория | `category` | `CATEGORY` | — | `core` | Утверждено ADR-005; карточка [[entities/category\|`entities/category.md`]] (DL-217) |
 | Представление | `view` | `VIEW` | — | `phase2` | Шаг 8b: тип объекта **не вводится в MVP** — представления существуют как артефакты (`.base`-файлы, код-блоки, панели плагина). Норма — [[08-views\|`08-views.md`]] (DL-164) |
 | Автоматизация | `automation` | `AUTOMATION` | — | `phase2` | Шаг 8. Механизм QuickAdd под вопросом (C-11) |
 | Документация | `documentation` | `DOCUMENTATION` | — | `out_of_scope` | В модель не вводится. Документы **проекта** живут в `docs/` и не являются объектами базы знаний |
@@ -303,7 +304,7 @@ tags: [metamodel, entities, registry]
 
 | Префикс | Префикс | Коллизия? |
 |---|---|---|
-| `CHARACTER` | `CATEGORY` | нет: разные строки, хотя первые три буквы совпадают |
+| `CHARACTER` | `CATEGORY` | нет: разные строки, совпадает только первая буква; сравнение префиксов — целыми строками |
 | `PROJECT` | `PROPERTY` | нет: разные строки |
 | `RELATION` | `RELATION_TYPE` | нет, но **требует внимания**: префикс `RELATION` является началом `RELATION_TYPE`. Правило «префикс уникален как целая строка» это допускает, однако при поиске по префиксу в коде нужно сравнивать строки целиком, а не через «начинается с» |
 
@@ -371,9 +372,10 @@ tags: [metamodel, entities, registry]
 | Классификация источников | Носитель | Текст, Веб, Видео, Аудио | `0..1` | утверждён; дублирует подтипы, см. меру защиты в §4.4 |
 | (независимый) | Тема | свободный набор | `0..N` | пример независимого фасета — см. [[../adr/ADR-007-facet-independence\|ADR-007]] |
 
-> [!warning] Зависит от ADR-007
-> Если [[../adr/ADR-007-facet-independence|ADR-007]] будет принят, таксономия станет необязательной
-> группировкой, а фасет — самостоятельным объектом. Колонка «Таксономия» тогда может быть пустой.
+> [!note] Приведено в соответствие с ADR-007 (принят 2026-10-22)
+> Таксономия — **необязательная** группировка, фасет — самостоятельный объект: колонка
+> «Таксономия» может быть пустой (пример — независимый фасет «Тема»).
+> Норма — [[../adr/ADR-007-facet-independence|ADR-007]], `01-classification` §2.1–§2.2.
 
 ## 8. Вопросы, требующие решения пользователя
 
@@ -399,6 +401,7 @@ tags: [metamodel, entities, registry]
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-23 | 0.23.0 | Строки `taxonomy`, `facet`, `category` дополнены ссылками на созданные карточки — **карточки ядра 15 из 15**; попутные правки: в §6 уточнена строка коллизии `CHARACTER`/`CATEGORY` (совпадает только первая буква), плашка §7 приведена к принятому ADR-007 (убрано условие «если будет принят»), вводная заметка — «карточки созданы» | Третья партия карточек (DL-217); A2/A3 закрыты | [[entities/taxonomy]], [[entities/facet]], [[entities/category]] |
 | 2026-10-23 | 0.22.0 | Строки `object_type`, `property`, `relation_type`, `relation` дополнены ссылками на созданные карточки (системная четвёрка, мера M1) | Вторая партия карточек (DL-216) — 12 из 15 | [[entities/object_type]], [[entities/property]], [[entities/relation_type]], [[entities/relation]] |
 | 2026-10-23 | 0.21.0 | Строки `knowledge`, `work`, `activity` дополнены ссылками на созданные карточки (`entities/knowledge.md` — детальная, `entities/work.md` и `entities/activity.md` — сокращённые) | Порядок «карточки → аудит → шаг 9» (DL-213, DL-214) | [[entities/knowledge]], [[entities/work]], [[entities/activity]] |
 | 2026-10-23 | 0.19.0 | Приведение к DL-124 (устранено отставание): строка `chapter` — префикс **`CHP`**, статус **`core`** (было `CHAPTER`, `phase2`); реестр `TYPE_PREFIX` исправлен так же; сводка пересчитана (13 `core` + 2 `core_abstract` = **ядро 15 типов**, 26 `phase2`); добавлена пометка о полном пересчёте на пункте A9 | Под-шаг 8f, сверка с `entities/chapter.md` и CHECKPOINT §6.8 | DL-124, DL-207 |
