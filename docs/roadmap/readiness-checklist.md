@@ -2,7 +2,7 @@
 doc_type: checklist
 title: Чек-лист «Метамодель готова к реализации плагина»
 status: draft
-version: 0.10.0
+version: 0.11.0
 created: 2026-10-22
 updated: 2026-10-23
 gate: переход от Фазы 4 к Фазе 5 разрешён только при 100% выполнения блоков A и B
@@ -57,8 +57,8 @@ gate: переход от Фазы 4 к Фазе 5 разрешён только
       → `docs/roadmap/phases.md` *(v0.4.0, этапы A–E, **принято пользователем** DL-161)*
 - [x] C4. Границы MVP записаны явно: что входит и что точно не входит
       → `docs/roadmap/mvp-scope.md` *(v0.6.0, **принято пользователем** DL-162, серые зоны DL-163)*
-- [ ] C5. Интеграции оценены: Bases, Templater, Dataview и прочие — решение по каждой + способ защиты метамодели
-      → `docs/integrations/*.md` *(под-шаг 8d: партия 1 готова — **Bases**, **Templater**, **Front Matter Title** (DL-189…DL-193); осталась партия 2 — Dataview, Fileclass, Metadata Menu, QuickAdd)*
+- [x] C5. Интеграции оценены: Bases, Templater, Dataview и прочие — решение по каждой + способ защиты метамодели
+      → `docs/integrations/*.md` *(под-шаг 8d закрыт: **7 из 7 карточек** — Bases (использовать), Front Matter Title (необязательный адаптер), Templater и Dataview (отклонены как зависимости), Fileclass и Metadata Menu (референсы), QuickAdd (отложен); DL-189…DL-198, C-11 закрыто)*
 
 ## D. Машиночитаемые артефакты
 
