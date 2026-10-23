@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "person — экземпляр объекта «Человек» (слой 3)",
+  "description": "Frontmatter заметки PERSON-{ULID}.md: конкретное лицо (автор, владелец проекта, контакт). Обязательны системная шапка и role (1..N, закрытое перечисление person_role).",
+  "$comment": "Нормы: карточка docs/metamodel/entities/person.md, 05-enumerations §3.17.5/§3.17.10, ADR-006/008/009/011, 04-attributes §11 (applies_when, includes_any). Принципы (DL-222…DL-224): схема — только frontmatter и только внутрифайловые ограничения уровня error. Runner: warning/info (person.sort_name.format, person.links.format, person.pseudonym.in_aliases, person.name.conflict, person.death_not_future, person.duplicate_name, person.portrait.role, person.role.suggested) и правила, которые схема выразить не может (person.dates.order — сравнение двух дат; person.doctoral_advisor.not_self — межобъектное; И4). 27 условных свойств (DL-138, триггер role через includes_any) на уровне схемы необязательны ВСЕГДА (М1/М2). Неизвестные поля — не ошибка схемы. Значения-даты в YAML — в кавычках (конвенция батча 2).",
+  "type": "object",
+  "$defs": {
+    "person_role_value": {
+      "enum": [
+        "author", "novelist", "poet", "screenwriter", "translator", "editor", "blogger",
+        "artist", "illustrator", "photographer", "sculptor", "designer",
+        "actor", "director", "musician", "composer", "singer", "dancer", "voice_actor",
+        "athlete", "coach", "esport_player",
+        "scientist", "academic", "teacher", "engineer", "inventor",
+        "physician",
+        "programmer", "game_developer", "data_scientist",
+        "entrepreneur", "executive", "investor",
+        "politician", "military", "civil_servant", "diplomat", "jurist",
+        "other_occupation"
+      ],
+      "$comment": "05-enumerations §3.17.5: 40 значений (9 групп — 39 + служебное other_occupation); фактический пересчёт батча 2 — прежнее «34» было ошибкой подсчёта, состав утверждён пользователем без сокращений (DL-157, пересчёт по образцу DL-150, DL-228). Перечисление закрыто (DL-224): значение вне списка = ошибка схемы (person.role.enum, error); добавление значения — правка метамодели/схемы или create-enum-value (этап 2). Значение без группы (other_occupation) — норма, условных свойств не даёт (person.role.suggested, info)."
+    }
+  },
+  "properties": {
+    "type": { "const": "person" },
+
+    "role": {
+      "oneOf": [
+        { "$ref": "#/$defs/person_role_value" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/person_role_value" },
+          "minItems": 1
+        }
+      ],
+      "$comment": "1..N, обязательно (person.role.required, error, DL-156): строка = одно значение, список = несколько (конвенция «строка или список» батча 1). Мультивыбор — триггер 27 условных свойств (includes_any, DL-139)."
+    },
+    "birth_date": {
+      "$ref": "../common/defs.json#/$defs/date",
+      "$comment": "Частичные даты допустимы: \"1891-00-00\". birth_date ≤ death_date — runner (person.dates.order, error): JSON Schema не сравнивает две строки."
+    },
+    "death_date": { "$ref": "../common/defs.json#/$defs/date" },
+    "birth_name": {
+      "type": "string",
+      "$comment": "Имя при рождении (DL-151: три поля псевдонимов вместо одного). Совпадение с title — warning person.name.conflict (runner). Все варианты имени обязаны попадать в aliases — warning person.pseudonym.in_aliases (runner)."
+    },
+    "original_name": { "type": "string" },
+    "pen_name": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "$comment": "0..N. Базовое свойство (не условное — DL-151); строка §3.17.5 о включении pen_name группой «Литература» устарела и исправлена (DL-228)."
+    },
+    "also_known_as": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "sort_name": {
+      "type": "string",
+      "$comment": "Формат «Фамилия, Имя» — warning person.sort_name.format (runner)."
+    },
+    "gender": {
+      "enum": ["male", "female", "other"],
+      "$comment": "05-enumerations §3.17.10 (зарегистрировано в батче 2, DL-226 — вопрос person 9.6 закрыт: закрытое перечисление, не категория)."
+    },
+    "nationality": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_category" },
+      "$comment": "0..N, категории фасета «Страна» (гражданство ≠ место жительства — два поля, карточка §4.3)."
+    },
+    "country_of_residence": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_category" },
+        { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/link_category" }, "maxItems": 1 }
+      ]
+    },
+    "languages_spoken": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_category" }
+    },
+    "links": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "$comment": "Префикс http(s) — warning person.links.format (runner). Структура «название + адрес + тип профиля» — открытый вопрос 9.5, пока простые строки."
+    },
+    "description": { "type": "string" },
+    "portrait": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_media" },
+        { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/link_media" }, "maxItems": 1 }
+      ],
+      "$comment": "media_reference, media_target: object, media_roles: [portrait, avatar]; роль — warning person.portrait.role (runner)."
+    },
+    "related_to": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "$ref": "../common/defs.json#/$defs/link_person" },
+          { "$ref": "../common/defs.json#/$defs/link_knowledge" }
+        ]
+      },
+      "$comment": "direct + symmetric (ADR-009 Р1/Р6): хранится один раз, обратная сторона вычисляется."
+    },
+
+    "known_for": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "$comment": "Условное (includes_any, 21 значение role — сквозное, М7): здесь и далее схема не гейтит (М1/М2)."
+    },
+    "field_of_work": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "active_years": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "array", "items": { "type": "string", "minLength": 1 }, "maxItems": 1 }
+      ],
+      "$comment": "0..1, текст вида «1995–2020» (дедупликация years_active/serviceyears — DL-152)."
+    },
+    "writing_genres": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_category" },
+      "$comment": "Категории фасета genre (Литература)."
+    },
+    "writing_languages": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_category" }
+    },
+    "published_works": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "$comment": "Литература + Изобразительное искусство; перевод на object_reference — этап 2 (вопрос 9.4)."
+    },
+    "art_movement": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "art_training": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "art_mediums": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "instruments": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "performance_genres": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_category" },
+      "$comment": "Дедупликация жанров музыканта/танцовщика/актёра (DL-152)."
+    },
+    "ensembles": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "$comment": "Текст до появления типа organization (этап 2, вопрос 9.4)."
+    },
+    "sport": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_category" },
+        { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/link_category" }, "maxItems": 1 }
+      ],
+      "$comment": "0..1, категория фасета «Спорт»."
+    },
+    "sport_position": { "type": "string" },
+    "sport_teams": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "academic_degree": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "academic_institutions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "doctoral_advisor": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_person" },
+        { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/link_person" }, "maxItems": 1 }
+      ],
+      "$comment": "0..1; не указывает на себя — runner (person.doctoral_advisor.not_self, error)."
+    },
+    "thesis_title": { "type": "string" },
+    "medical_specialty": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "medical_institution": { "type": "string" },
+    "programming_languages": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "software_projects": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "business_positions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "office_held": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "military_rank": { "type": "string" },
+    "conflicts": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  },
+  "required": ["role"],
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" }
+  ]
+}

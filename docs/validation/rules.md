@@ -2,10 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.11.0
+version: 0.11.1
 created: 2026-10-22
 updated: 2026-10-23
-metamodel_version: 0.14.0
+metamodel_version: 0.25.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -216,8 +216,8 @@ tags: [validation, registry]
 | ID | Формулировка | Уровень | Когда |
 |---|---|---|---|
 | `person.role.required` | У человека указана минимум одна роль (`cardinality: 1..N`, DL-156) | error | 4 |
-| `person.role.enum` | Каждое значение `role` входит в закрытый список `person_role` (34 значения) | error | 4 |
-| `person.role.suggested` | Значение `role` вне списка групп — разрешено, но условных свойств не даёт | info | 4 |
+| `person.role.enum` | Каждое значение `role` входит в закрытый список `person_role` (40 значений — подсчёт исправлен, DL-228; состав утверждён DL-157) | error | 4 |
+| `person.role.suggested` | Значение `role` входит в перечисление, но не входит ни в одну группу (например, `other_occupation`) — допустимо, условных свойств не даёт. Переинтерпретация DL-224: значение **вне** перечисления — ошибка `person.role.enum`, а не info | info | 4 |
 | `person.dates.order` | `birth_date` не позже `death_date` | error | 4 |
 | `person.death_not_future` | `death_date` не позже сегодняшней даты | warning | 4 |
 | `person.name.conflict` | `birth_name` не совпадает с `title` (иначе поле избыточно) | warning | 4 |
@@ -383,6 +383,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-23 | 0.11.1 | Батч 2 шага 9 (состав правил не менялся — **167**): `person.role.enum` — подсчёт значений исправлен на **40** (DL-228, по образцу DL-150); `person.role.suggested` переинтерпретировано (DL-224): info — для значений **внутри** перечисления без группы (`other_occupation`), значения вне перечисления — error `person.role.enum`; перечисление зашито в `schema/entities/person.schema.json` | [[../metamodel/05-enumerations\|`05-enumerations.md`]] §3.17.5, DL-224, DL-228 |
 | 2026-10-23 | 0.11.0 | Группа N **утверждена** (вопрос K2 карточки `knowledge` закрыт ответом «А», DL-215): пометки † сняты. Итог — **167 правил** в 14 группах (A–N) | [[../metamodel/entities/knowledge\|`knowledge.md`]] §9, DL-215 |
 | 2026-10-23 | 0.10.0 | Добавлена группа **N. Тип `knowledge`** — 1 правило † `knowledge.body.not_empty` (warning), предварительное до ответа на вопрос K2 карточки. Итого **167 правил** в 14 группах (A–N) | [[../metamodel/entities/knowledge\|`knowledge.md`]] §6, DL-214 |
 | 2026-10-22 | 0.9.0 | Группа M и правило `property.create_from_link.auto_needs_single_target` **утверждены** вместе с разделом 12 (ответы Б / А / А / А, DL-184…DL-188): пометки † сняты, уточнено поведение `link.canonical.format` при `linkCreation.insertAlias: false`. Итого **166 правил** в 13 группах |

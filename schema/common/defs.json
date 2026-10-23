@@ -53,6 +53,23 @@
       "type": "string",
       "pattern": "^\\[\\[CATEGORY-[0-9A-HJKMNP-TV-Z]{26}\\.md(#[^\\[\\]|]+)?(\\|[^\\[\\]]+)?\\]\\]$"
     },
+    "link_person": {
+      "type": "string",
+      "pattern": "^\\[\\[PERSON-[0-9A-HJKMNP-TV-Z]{26}\\.md(#[^\\[\\]|]+)?(\\|[^\\[\\]]+)?\\]\\]$",
+      "$comment": "Батч 2 (DL-225): типизированные ссылки слоя 3 добавляются по мере надобности; фактический тип объекта-цели проверяет runner (межобъектное правило)."
+    },
+    "link_media": {
+      "type": "string",
+      "pattern": "^\\[\\[MEDIA-[0-9A-HJKMNP-TV-Z]{26}\\.md(#[^\\[\\]|]+)?(\\|[^\\[\\]]+)?\\]\\]$"
+    },
+    "link_book": {
+      "type": "string",
+      "pattern": "^\\[\\[BOOK-[0-9A-HJKMNP-TV-Z]{26}\\.md(#[^\\[\\]|]+)?(\\|[^\\[\\]]+)?\\]\\]$"
+    },
+    "link_knowledge": {
+      "type": "string",
+      "pattern": "^\\[\\[KNOWLEDGE-[0-9A-HJKMNP-TV-Z]{26}\\.md(#[^\\[\\]|]+)?(\\|[^\\[\\]]+)?\\]\\]$"
+    },
     "datetime": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2})?$",

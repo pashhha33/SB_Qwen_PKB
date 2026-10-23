@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "book — экземпляр объекта «Книга» (слой 3)",
+  "description": "Frontmatter заметки BOOK-{ULID}.md: законченное письменное произведение. Обязательны системная шапка, author (1..N), read_status и format (закрытые перечисления).",
+  "$comment": "Нормы: карточка docs/metamodel/entities/book.md, 05-enumerations §3.17.1/§3.17.2/§3.17.4/§3.17.9, ADR-006/009/011, 04-attributes §11–§12, 06-time-and-intervals. Принципы (DL-222/223): схема описывает ТОЛЬКО frontmatter и только внутрифайловые ограничения уровня error; warning/info (book.isbn.format, book.finished_requires_status, book.cover.role) и межобъектные правила (book.genre.cardinality — принадлежность категории фасету genre; book.author.required — фактический тип цели; book.chapter_count.consistency; contains/part_of; И1–И7) — validation-runner. 10 условных свойств (DL-122/128, applies_when по format) на уровне схемы необязательны ВСЕГДА: «погасшие» значения законны и не удаляются (меры М1/М2) — applies_when управляет показом и обязательностью в рантайме. chapter_count не хранится (DL-118). Неизвестные поля — не ошибка схемы (warning «вне схемы» — runner). Значения-даты в YAML — в кавычках (конвенция батча 2: дата без кавычек разбирается как Date-объект, а не строка).",
+  "type": "object",
+  "properties": {
+    "type": { "const": "book" },
+
+    "author": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_person" },
+      "minItems": 1,
+      "$comment": "1..N, обязательно (book.author.required, error). Фактический тип цели (person) и существование файла — runner."
+    },
+    "publication_year": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2100
+    },
+    "first_published_on": {
+      "$ref": "../common/defs.json#/$defs/date",
+      "$comment": "Частичные даты допустимы: «1966 год» = \"1966-00-00\" (06-time-and-intervals §2). work свойств не объявляет (DL-214) — поле принадлежит book."
+    },
+    "publisher": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/wikilink" },
+        { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/wikilink" }, "maxItems": 1 }
+      ],
+      "$comment": "0..1, цель — тип organization (этап 2): типизированной ссылки нет, в MVP заполнить нечем (карточка §4). Общая форма wikilink; тип цели — runner."
+    },
+    "isbn": {
+      "type": "string",
+      "$comment": "Формат ISBN-10/13 с дефисами — warning book.isbn.format (runner), не схема: нарушение схемы всегда error, уровень severity терять нельзя (severity-policy)."
+    },
+    "pages": {
+      "type": "integer",
+      "minimum": 1,
+      "$comment": "book.pages.positive (error) зашит как minimum: 1."
+    },
+    "original_language": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_category" },
+        { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/link_category" }, "maxItems": 1 }
+      ],
+      "$comment": "0..1, категория фасета «Язык» (словарь — не перечисление; карточка §9 — вопрос остаётся открытым, схема следует текущей карточке)."
+    },
+    "cover": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_media" },
+        { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/link_media" }, "maxItems": 1 }
+      ],
+      "$comment": "media_reference, media_target: object, media_kinds: [image], media_roles: [cover] (объявление — в определении свойства). Роль обложки — warning book.cover.role (runner)."
+    },
+    "read_status": {
+      "enum": ["planned", "reading", "read", "abandoned", "not_planned"],
+      "default": "planned",
+      "$comment": "Обязательно. 05-enumerations §3.17.9 (зарегистрировано в батче 2, DL-226); book.read_status.enum (error)."
+    },
+    "rating": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "$comment": "DL-115/116: целое 1–10 (book.rating.range, error). Звёздный показ — display.renderer: stars (рантайм); символы ⭐ в данных запрещены (DL-117)."
+    },
+    "format": {
+      "enum": ["file", "card", "web_novel", "print", "audio"],
+      "$comment": "Обязательно. 05-enumerations §3.17.1 (закрыто, DL-121); book.format.enum/required (error). Триггер 10 условных свойств (DL-122/128)."
+    },
+    "finished_on": {
+      "$ref": "../common/defs.json#/$defs/date",
+      "$comment": "Связь с read_status (read/abandoned) — warning book.finished_requires_status (runner)."
+    },
+    "description": { "type": "string" },
+    "categories": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_category" },
+      "minItems": 1,
+      "$comment": "Фасет genre обязателен для книги (1..N, DL-119/126): minItems 1 — внутрифайловое приближение; принадлежность назначенных категорий фасету genre — межобъектная проверка runner'а (book.genre.cardinality, error). literary_form — необязательный фасет."
+    },
+    "related_to": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "$ref": "../common/defs.json#/$defs/link_book" },
+          { "$ref": "../common/defs.json#/$defs/link_knowledge" }
+        ]
+      },
+      "$comment": "direct + symmetric (ADR-009 Р1/Р6): связь хранится один раз, обратная сторона вычисляется (rel_related_to)."
+    },
+
+    "platform": {
+      "type": "string",
+      "$comment": "Условное (applies_when format=web_novel) — здесь и далее: схема не гейтит, значение законно при любом format (М1/М2)."
+    },
+    "publication_status": {
+      "enum": ["ongoing", "hiatus", "completed", "cancelled", "unknown"],
+      "$comment": "Условное (format=web_novel). 05-enumerations §3.17.2 (предварительное)."
+    },
+    "release_cadence": { "type": "string" },
+    "last_chapter_on": { "$ref": "../common/defs.json#/$defs/date" },
+    "file_path": {
+      "type": "string",
+      "$comment": "Условное (format=file). media_reference с media_target: file — ссылка/путь к вложению, НЕ канонический wikilink объекта (файл не объект метамодели). Существование файла — runner (value.media.file_exists)."
+    },
+    "file_format": {
+      "enum": ["epub", "fb2", "pdf", "mobi", "azw3", "txt", "djvu", "cbr", "cbz"],
+      "$comment": "Условное (format=file). 05-enumerations §3.17.4 — 9 значений (предварительное); инлайн-список карточки book (6 значений) приведён к реестру (DL-228)."
+    },
+    "card_series": { "type": "string" },
+    "card_count": { "type": "integer", "minimum": 1 },
+    "audio_duration": {
+      "type": "number",
+      "minimum": 0,
+      "$comment": "Условное (format=audio). Минуты (карточка §4)."
+    },
+    "narrator": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_person" },
+        { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/link_person" }, "maxItems": 1 }
+      ],
+      "$comment": "Условное (format=audio). 0..1, object_reference → person."
+    }
+  },
+  "required": ["author", "read_status", "format"],
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" }
+  ]
+}
