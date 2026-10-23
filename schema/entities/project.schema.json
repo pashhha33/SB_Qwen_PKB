@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "project — экземпляр объекта «Проект» (слой 3)",
+  "description": "Frontmatter заметки PROJECT-{ULID}.md: ограниченное по времени намерение с результатом. Обязательны системная шапка, status (закрытое перечисление) и owner (ссылка на person).",
+  "$comment": "Нормы: карточка docs/metamodel/entities/project.md (DL-176), 05-enumerations §3.17.8 (ЗАКРЫТО — DL-234, вопрос 9-9 ответ А), ADR-006/009/011, 04-attributes §11–§12. Принципы (DL-222…DL-224, DL-229): схема — только frontmatter и только внутрифайловые ограничения уровня error. Runner: project.dates.order и project.done_date.order (сравнение двух дат схема не умеет), project.done_date.required / progress.done_consistency / dropped.reason / overdue (warning), value.reference.exists/target_type для owner, связь ownership. 4 условных свойства (триггер status, equals — DL-176) на уровне схемы необязательны ВСЕГДА (М1/М2 — «погасшие» значения законны: done_on при status active — валидные данные, форма их просто не показывает). progress — ЦЕЛОЕ 0–100 (project.progress.range, error); символы шкалы ▓░ в данных не хранятся (принцип DL-117), рисует display.renderer: progress (DL-123). description отмечено ↑ в карточке как «от activity» — отметка описательная: activity свойств не объявляет (DL-214), поле принадлежит project. Неизвестные поля — не ошибка схемы. Даты в YAML — в кавычках.",
+  "type": "object",
+  "properties": {
+    "type": { "const": "project" },
+
+    "status": {
+      "enum": ["idea", "active", "paused", "done", "dropped"],
+      "$comment": "Обязательно. 05-enumerations §3.17.8 — ЗАКРЫТО (DL-234): blocked/backlog не введены — блокировка = paused + paused_reason, «отложено» ≈ idea; пополнение позже = MINOR + правка схемы. project.status.enum/required (error). Триггер 4 условных свойств (equals); поле группировки канбана В6 (groupBy + groupOrder)."
+    },
+    "owner": {
+      "oneOf": [
+        { "$ref": "../common/defs.json#/$defs/link_person" },
+        { "type": "array", "items": { "$ref": "../common/defs.json#/$defs/link_person" }, "minItems": 1, "maxItems": 1 }
+      ],
+      "$comment": "Обязательно, cardinality 1 (project.owner.required, error): строка или список из одного элемента (конвенция «строка или список»). Связь ownership (direct, subject_to_object 1); текст вместо ссылки — ошибка схемы (value.type_conformance)."
+    },
+    "description": { "type": "string" },
+    "goal": {
+      "type": "string",
+      "$comment": "Цель/результат — отдельно от description (что это за проект): смешение лишает «готово» проверяемости (карточка §4.3). Вопрос 9.3 (тип goal на этапе 2) открыт — поле текстовое."
+    },
+    "started_on": {
+      "$ref": "../common/defs.json#/$defs/date",
+      "$comment": "Частичные даты допустимы. started_on ≤ due_on — runner (project.dates.order, error)."
+    },
+    "due_on": { "$ref": "../common/defs.json#/$defs/date" },
+    "progress": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "$comment": "project.progress.range (error) зашит в схему. Вводится вручную (вопрос 9.2: вычисление из задач — этап 2, смена семантики через миграцию)."
+    },
+    "links": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "$comment": "Внешние ссылки http(s)://… (карточка §4.1); отдельного warning-правила формата у проекта нет — схема не ограничивает (по образцу person.links — runner, если правило появится)."
+    },
+    "related_to": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "$ref": "../common/defs.json#/$defs/link_project" },
+          { "$ref": "../common/defs.json#/$defs/link_knowledge" },
+          { "$ref": "../common/defs.json#/$defs/link_book" }
+        ]
+      },
+      "$comment": "direct + symmetric; цели по карточке project §5 — project, knowledge, book (свойство сужает allowed_* типа отношения: на уровне relation_type related_to допущены 4 ядровых типа — DL-234). Подпроекты через contains — этап 2 (вопрос 9.4)."
+    },
+
+    "done_on": {
+      "$ref": "../common/defs.json#/$defs/date",
+      "$comment": "Условное (status = done). Отсутствие при done — warning project.done_date.required (runner); done_on ≥ started_on — runner (project.done_date.order). Для dropped дата не требуется — причина важнее даты (карточка §4.3)."
+    },
+    "paused_reason": { "type": "string" },
+    "abandoned_reason": {
+      "type": "string",
+      "$comment": "Условное (status = dropped); отсутствие — warning project.dropped.reason (runner)."
+    },
+    "next_action": {
+      "type": "string",
+      "$comment": "Условное (status = active, paused). Текст, не задача: тип task — этап 2, тогда поле станет ссылкой (вопрос 9.5)."
+    }
+  },
+  "required": ["status", "owner"],
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" },
+    { "$ref": "../common/defs.json#/$defs/service_props" }
+  ]
+}

@@ -70,6 +70,11 @@
       "type": "string",
       "pattern": "^\\[\\[KNOWLEDGE-[0-9A-HJKMNP-TV-Z]{26}\\.md(#[^\\[\\]|]+)?(\\|[^\\[\\]]+)?\\]\\]$"
     },
+    "link_project": {
+      "type": "string",
+      "pattern": "^\\[\\[PROJECT-[0-9A-HJKMNP-TV-Z]{26}\\.md(#[^\\[\\]|]+)?(\\|[^\\[\\]]+)?\\]\\]$",
+      "$comment": "Батч 4 (DL-234/235): нужен для related_to (пары project↔project у проекта, knowledge↔project у знания). owner проекта — link_person (ownership)."
+    },
     "file_link": {
       "type": "string",
       "allOf": [

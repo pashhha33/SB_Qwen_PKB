@@ -2,7 +2,7 @@
 doc_type: checklist
 title: Чек-лист «Метамодель готова к реализации плагина»
 status: draft
-version: 0.20.3
+version: 0.20.4
 created: 2026-10-22
 updated: 2026-10-23
 gate: переход от Фазы 4 к Фазе 5 разрешён только при 100% выполнения блоков A и B
@@ -27,7 +27,7 @@ gate: переход от Фазы 4 к Фазе 5 разрешён только
 - [x] A5. Связи описаны: роли с обеих сторон, двусторонняя кардинальность, физическое хранение, поведение при ошибке
       → [[../metamodel/03-relations|03-relations.md]], [[../adr/ADR-009-relations-model|ADR-009]], [[../adr/ADR-010-relation-storage|ADR-010]], 4 карточки в `relations/`. Закрыто 2026-10-22
 - [x] A6. Все enum-ы и справочники выписаны, значения в едином стиле
-      → [[../metamodel/05-enumerations|05-enumerations.md]]: 26 перечислений, 24 закрыто (батчи 2–3: +`read_status`, +`gender` — DL-226; +`draft_status` — DL-231); предварительные — `media_origin`, `project_status` (вопросы карточек); `trigger`/`mechanism` автоматизаций — этап 2 вместе с типом `automation`. Закрыто 2026-10-22, дополнено на шаге 8b (`mechanism` представлений — DL-164)
+      → [[../metamodel/05-enumerations|05-enumerations.md]]: 26 перечислений, 25 закрыто (батчи 2–3: +`read_status`, +`gender` — DL-226; +`draft_status` — DL-231; `project_status` закрыт — DL-234); предварительное одно — `media_origin` (вопросы карточек); `trigger`/`mechanism` автоматизаций — этап 2 вместе с типом `automation`. Закрыто 2026-10-22, дополнено на шаге 8b (`mechanism` представлений — DL-164)
 - [x] A7. Правила для дат и интервалов зафиксированы: формат, обязательность, проверки порядка
       → [[../metamodel/06-time-and-intervals|06-time-and-intervals.md]]: частичные даты, интервалы, редактируемый шаблон вывода, системные даты, 11 правил. Закрыто 2026-10-22
 - [x] A8. Наследование и абстрактные типы либо описаны, либо явно отключены решением
@@ -64,13 +64,13 @@ gate: переход от Фазы 4 к Фазе 5 разрешён только
 ## D. Машиночитаемые артефакты
 
 - [ ] D1. JSON Schema создана для каждой сущности MVP и для самой метамодели
-      → `schema/metamodel.schema.json`, `schema/entities/*.schema.json` *(в работе: соглашения приняты А/А/А — DL-222; **батч 1 готов** — `schema/common/defs.json` + 6 схем метамодели, ajv 27/27, DL-223; **батч 2 готов** — `book` + `person` (DL-224…DL-228); **батч 3 готов** — `media` + `chapter`, 11 схем компилируются (DL-229…DL-231); далее батч 4: `project` + `knowledge`)*
+      → `schema/metamodel.schema.json`, `schema/entities/*.schema.json` *(в работе: соглашения приняты А/А/А — DL-222; **батч 1 готов** — `schema/common/defs.json` + 6 схем метамодели, ajv 27/27, DL-223; **батч 2 готов** — `book` + `person` (DL-224…DL-228); **батч 3 готов** — `media` + `chapter` (DL-229…DL-231); **батч 4 готов** — `project` + `knowledge`: все 6 предметных типов ядра, 13 схем компилируются (DL-234/235); далее батч 5: связи `.jsonl`)*
 - [ ] D2. TypeScript-типы соответствуют JSON Schema (без расхождений)
       → `src/types/*` (или черновик в `schema/`)
 - [ ] D3. Минимум 3 примера корректных экземпляров на каждый тип MVP
-      → `examples/instances/*` *(накапливаются с батча 2 — DL-227: `book` — 2, `person` — 2, `media` — 2, `chapter` — 2, `object_type` — 1; минимумы добиваются в сводном батче)*
+      → `examples/instances/*` *(накапливаются с батча 2 — DL-227: `book`/`person`/`media`/`chapter`/`knowledge`/`project` — по 2, `object_type` — 1; примеры 19/19; минимумы добиваются в сводном батче)*
 - [ ] D4. Минимум 2 примера **некорректных** экземпляров с указанием, какое правило они нарушают
-      → `examples/instances/*/invalid-*.md` *(батчи 2–3: `book`, `person`, `media`, `chapter` — по 1, с разбором «правило → кто ловит: схема/runner»; проверка — `npm run check`, `scripts/check-examples.cjs`; примеры 13/13)*
+      → `examples/instances/*/invalid-*.md` *(батчи 2–4: `book`, `person`, `media`, `chapter`, `knowledge`, `project` — по 1, с разбором «правило → кто ловит: схема/runner»; проверка — `npm run check`, `scripts/check-examples.cjs`; примеры 19/19)*
 - [ ] D5. Шаблоны заметок для создания новых экземпляров
       → `examples/templates/*`
 

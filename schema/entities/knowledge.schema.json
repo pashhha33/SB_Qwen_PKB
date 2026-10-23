@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "knowledge — экземпляр объекта «Знание» (слой 3)",
+  "description": "Frontmatter заметки KNOWLEDGE-{ULID}.md: атомарная заметка — одна мысль (концепция, идея, гипотеза, вывод, решение). Сам тезис живёт в теле заметки; обязательных предметных свойств нет.",
+  "$comment": "Нормы: карточка docs/metamodel/entities/knowledge.md (DL-214/215), ADR-005/006, 01-classification §4.1. Принципы (DL-222…DL-224, DL-229, DL-234): схема — только frontmatter и только внутрифайловые ограничения уровня error. ТЕЛО — свободный Markdown и есть содержание знания: knowledge.body.not_empty (warning) — runner (схема тело не видит). Пять видов знания — КАТЕГОРИИ фасета «Вид знания» (0..1), не подтипы (DL-050/057): кардинальность назначения — runner (assignment.cardinality, группа E), поэтому categories здесь БЕЗ minItems (в отличие от book). Условных свойств нет — состав полей одинаков у всех видов (основание категоризации). source — текст (K1, DL-215), объявлен миграционно-пригодно: перевод на sourced_from/object_reference на этапе 2 — миграция по образцу 9.4 раздела 10. authorship не применяется (автор — владелец хранилища). Неизвестные поля — не ошибка схемы. Даты в YAML — в кавычках (конвенция батча 2).",
+  "type": "object",
+  "properties": {
+    "type": { "const": "knowledge" },
+
+    "source": {
+      "type": "string",
+      "$comment": "0..1. Откуда тезис: книга, статья, разговор, наблюдение — свободный текст (K1 закрыт: А, DL-215). На этапе 2 — отношение sourced_from (reified, .sb/relations/)."
+    },
+    "related_to": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "$ref": "../common/defs.json#/$defs/link_knowledge" },
+          { "$ref": "../common/defs.json#/$defs/link_book" },
+          { "$ref": "../common/defs.json#/$defs/link_person" },
+          { "$ref": "../common/defs.json#/$defs/link_project" }
+        ]
+      },
+      "$comment": "direct + symmetric (ADR-009 Р1/Р6): связь хранится ОДИН РАЗ на любой из сторон, обратная вычисляется; уникальность по паре (pair). Цели в MVP — четыре предметных типа ядра (DL-234, вопрос 9-10 ответ А: «знание ↔ любой объект» в пределах ядра; любой тип — этап 2)."
+    }
+  },
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" },
+    { "$ref": "../common/defs.json#/$defs/service_props" }
+  ]
+}

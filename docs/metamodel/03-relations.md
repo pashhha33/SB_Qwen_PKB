@@ -3,7 +3,7 @@ doc_type: metamodel_section
 section: "03"
 title: "Связи: типы отношений и экземпляры"
 status: actual
-version: 0.2.1
+version: 0.3.0
 created: 2026-10-22
 updated: 2026-10-23
 metamodel_version: 0.4.0
@@ -254,7 +254,7 @@ definition: Authorship of a written work.
 | Авторство | `authorship` | `RELATION_TYPE` | `book` → `person` | `directed` | `1..N` / `0..N` | `triple` | `direct` | [[relations/rel_authorship]] |
 | Владение | `ownership` | `RELATION_TYPE` | `project` → `person` | `directed` | `1` / `0..N` | `triple` | `direct` | [[relations/rel_ownership]] |
 | Часть целого | `part_of` | `RELATION_TYPE` | `chapter` → `work`, `episode` → `series` | `directed` | `0..1` / `0..N` | `triple` | `reified` (нужен `order`) | [[relations/rel_part_of]] |
-| Связано с | `related_to` | `RELATION_TYPE` | `knowledge` → `knowledge` | `symmetric` | `0..N` / `0..N` | `triple` | `direct` | [[relations/rel_related_to]] |
+| Связано с | `related_to` | `RELATION_TYPE` | `book`, `person`, `project`, `knowledge` → те же четыре (DL-234; свойства типов сужают цели по карточкам §5) | `symmetric` | `0..N` / `0..N` | **`pair`** (исправлено с `triple` — DL-233) | `direct` | [[relations/rel_related_to]] |
 
 #### `contains` — «содержит» (DL-125, 2026-10-22)
 
@@ -331,5 +331,7 @@ definition: Authorship of a written work.
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-23 | 0.27.0 | Строка `related_to` в таблице ядра приведена к DL-234 (ответы А/А/А на вопросы 9-9…9-11): допустимые типы — четыре предметных типа ядра, свойства сужают цели; ключ поля — `related_to` | Батч 4 шага 9 | DL-234, [[relations/rel_related_to]] v0.2.0 |
+| 2026-10-23 | 0.26.1 | Опечатка в таблице ядра MVP: `uniqueness_rule` у `related_to` исправлен `triple` → **`pair`** (консенсус: карточка `rel_related_to`, ADR-009, CHECKPOINT §6.18). Разногласия по допустимым типам и имени поля `related_to` вынесены пользователю (вопросы 9-10/9-11) — строка «Субъект → Объект» до ответов не меняется | Батч 4 шага 9, сверка перед схемами `project`/`knowledge` | DL-233, [[relations/rel_related_to]], [[../adr/ADR-009-relations-model\|ADR-009]] |
 | 2026-10-23 | 0.20.0 | Добавлена пометка о семантике `allowed_*`/`suggested_*` в отношении потомков и абстрактных типов (указание типа покрывает всех потомков; абстрактный = «любой неабстрактный потомок»); нумерация версии файла приведена в соответствие с учётом (в записях значилось 0.2.0) | Раздел 07 принят, ответы А/А/А | DL-208, DL-209, [[07-hierarchy]] §5, §7 |
 | 2026-10-22 | 0.4.0 | Документ создан: два способа хранения, привязка к свойству, состав полей типа отношения и экземпляра, реестр из 4 типов ядра и 6 типов этапа 2, 23 правила валидации, 5 команд | Шаг 6 плана закрыт | [[../adr/ADR-009-relations-model\|ADR-009]], [[../adr/ADR-010-relation-storage\|ADR-010]] |

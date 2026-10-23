@@ -2,7 +2,7 @@
 doc_type: docs_index
 title: Структура документации проекта
 status: draft
-version: 0.3.5
+version: 0.3.6
 created: 2026-10-22
 updated: 2026-10-23
 ---
@@ -40,7 +40,7 @@ project-root/
 │   │   ├── relations/            # ✅ по одному файлу на связь: authorship, ownership, part_of, related_to, contains
 │   │   │   └── rel_<имя>.md
 │   │   ├── 04-attributes.md      # ✅ системные и предметные поля, 7 типов значений, даты, applies_when
-│   │   ├── 05-enumerations.md    # ✅ реестр 26 перечислений (24 закрыто), единый стиль значений
+│   │   ├── 05-enumerations.md    # ✅ реестр 26 перечислений (25 закрыто), единый стиль значений
 │   │   ├── 06-time-and-intervals.md   # ✅ даты, частичные даты, интервалы, шаблон вывода
 │   │   ├── 07-hierarchy.md       # ✅ дерево типов, три уровня, абстрактные типы, смена типа (accepted, DL-212)
 │   │   ├── 08-views.md           # ✅ представления: 12 штук, mechanism, .base в Views/
@@ -102,10 +102,10 @@ project-root/
 ├── schema/                       # машиночитаемые описания: JSON Schema, Draft 2020-12 (DL-222)
 │   ├── common/defs.json          # ✅ общие $defs: ULID, системная шапка, ссылки, даты, enum-ы
 │   ├── metamodel/                # ✅ схемы слоя 2 (6): object_type, property, relation_type, taxonomy, facet, category
-│   ├── entities/                 # ✅ схемы слоя 3 (батчи 2–3): book, person, media, chapter — далее project, knowledge
+│   ├── entities/                 # ✅ схемы слоя 3 (батчи 2–4): book, person, media, chapter, project, knowledge — все 6 предметных типов ядра
 │   └── relations/                # схемы строк .jsonl реифицированных связей — батч 5
 ├── examples/                     # живые примеры: заметки в YAML/Markdown, заполненные по метамодели
-│   ├── instances/                # 🔶 примеры экземпляров: instances/<type>/{valid,invalid}-NN-… (object_type; book, person — батч 2; media, chapter — батч 3)
+│   ├── instances/                # 🔶 примеры экземпляров: instances/<type>/{valid,invalid}-NN-… (object_type; book, person — батч 2; media, chapter — батч 3; knowledge, project — батч 4)
 │   └── templates/                # шаблоны заметок для создания новых (D5 — батч 5)
 ├── scripts/check-examples.cjs    # ✅ прогонщик примеров: npm run check (ajv + js-yaml, DL-227)
 ├── package.json / .gitignore     # ✅ dev-зависимости прогонщика (ajv, js-yaml)
