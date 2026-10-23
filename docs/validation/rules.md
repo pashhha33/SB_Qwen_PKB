@@ -2,10 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.11.1
+version: 0.11.2
 created: 2026-10-22
 updated: 2026-10-23
-metamodel_version: 0.25.0
+metamodel_version: 0.26.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -76,7 +76,9 @@ tags: [validation, registry]
 > правила про `aliases`, `categories`, `tags` и имя файла к связям не применяются (Р10 ADR-009).
 
 Инвариант **И7** (новый, DL-124): у `chapter` при пустом `chapter_title` системный `title`
-равен «Глава {N}». Проверяется правилом `chapter.title.fallback`.
+равен «Глава {N}». Проверяется правилом `chapter.title.fallback`. **Область действия уточнена
+(DL-230, вопрос 9-8 ответ А):** И7 применяется только к нумерованным частям; у частей вне
+нумерации (`is_front_matter: true`) `title` задаётся ролью — «Пролог», «Эпилог», «Приложение».
 
 ## B. Определения свойств
 
@@ -179,7 +181,7 @@ tags: [validation, registry]
 | `chapter.contains.required` | У главы ровно одна связь `contains`, где она — объект | error | 4 |
 | `chapter.number.positive` | `chapter_number` > 0, если `is_front_matter` не `true` | warning | 4 |
 | `chapter.number.matches_order` | `chapter_number` совпадает с `order` связи `contains` | warning | 4 |
-| `chapter.title.fallback` | При пустом `chapter_title` заголовок равен «Глава {N}» (инвариант И7) | error | 2 |
+| `chapter.title.fallback` | При пустом `chapter_title` заголовок равен «Глава {N}» (инвариант И7); только нумерованные части — у `is_front_matter: true` заголовок задаётся ролью (DL-230) | error | 2 |
 | `book.format.enum` | `format` входит в закрытый список из **пяти** значений | error | 4 |
 | `book.rating.range` | `rating` — целое от 1 до 10 | error | 3 |
 
@@ -383,6 +385,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-23 | 0.11.2 | Батч 3 шага 9 (состав правил не менялся — **167**): область действия И7 и `chapter.title.fallback` уточнена по DL-230 (вопрос 9-8, ответ А) — только нумерованные части; `chapter_number` условно обязателен (схема `chapter.schema.json`, if/then/else); `draft_status` зарегистрирован (`05-enumerations` §3.17.11) |
 | 2026-10-23 | 0.11.1 | Батч 2 шага 9 (состав правил не менялся — **167**): `person.role.enum` — подсчёт значений исправлен на **40** (DL-228, по образцу DL-150); `person.role.suggested` переинтерпретировано (DL-224): info — для значений **внутри** перечисления без группы (`other_occupation`), значения вне перечисления — error `person.role.enum`; перечисление зашито в `schema/entities/person.schema.json` | [[../metamodel/05-enumerations\|`05-enumerations.md`]] §3.17.5, DL-224, DL-228 |
 | 2026-10-23 | 0.11.0 | Группа N **утверждена** (вопрос K2 карточки `knowledge` закрыт ответом «А», DL-215): пометки † сняты. Итог — **167 правил** в 14 группах (A–N) | [[../metamodel/entities/knowledge\|`knowledge.md`]] §9, DL-215 |
 | 2026-10-23 | 0.10.0 | Добавлена группа **N. Тип `knowledge`** — 1 правило † `knowledge.body.not_empty` (warning), предварительное до ответа на вопрос K2 карточки. Итого **167 правил** в 14 группах (A–N) | [[../metamodel/entities/knowledge\|`knowledge.md`]] §6, DL-214 |

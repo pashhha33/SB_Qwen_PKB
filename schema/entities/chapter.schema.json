@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "chapter — экземпляр объекта «Глава» (слой 3)",
+  "description": "Frontmatter заметки CHP-{ULID}.md: отдельная часть произведения (глава, пролог, эпилог, приложение). Обязательны системная шапка и — при is_front_matter ≠ true — chapter_number (DL-230, ответ А на вопрос 9-8).",
+  "$comment": "Нормы: карточка docs/metamodel/entities/chapter.md (DL-124/125/129/130/131/133), 05-enumerations §3.17.11 (draft_status), ADR-006/009/010, 06-time-and-intervals. Принципы (DL-222…DL-224, DL-229): схема — только frontmatter и только внутрифайловые ограничения уровня error. Связь с произведением (contains, reified, локальные свойства order и role) хранится в .sb/relations/*.jsonl (ADR-010) — в frontmatter главы её НЕТ (карточка §4); отсюда runner-правила: chapter.contains.required (error), relation.contains.single_record (error), relation.order.unique_per_subject (error), relation.order.no_gap (warning), relation.subject.has_parts (info). Также runner: chapter.title.fallback (И7 — сравнение строк title и «Глава {chapter_number}», JSON Schema конструировать строки не умеет; для частей вне нумерации title задаётся ролью — «Пролог»/«Эпилог»/«Приложение», DL-230), chapter.number.positive (warning — только при is_front_matter: false), И4. Глава НЕ категоризируется самостоятельно (DL-134): categories обычно пусты — схема не запрещает (запрещающего правила нет), жанр/форма/формат — свойства произведения. Блок навигации sb-chapter-nav — свойство тела (DL-129, Н1–Н8), схема его не видит. Неизвестные поля — не ошибка схемы. Даты в YAML — в кавычках (конвенция батча 2).",
+  "type": "object",
+  "properties": {
+    "type": { "const": "chapter" },
+
+    "chapter_number": {
+      "type": "number",
+      "$comment": "Номер внутри произведения. precision: 1 — настройка показа (04-attributes §12), дробные допустимы (7.5 — интерлюдия без перенумерации хвоста, карточка §10-2); schema тип number, знак и величину не ограничивает: ≤ 0 при is_front_matter: false — warning chapter.number.positive (runner). Уникальность в пределах произведения — runner (relation.order.unique_per_subject). Обязательность условная — см. allOf (DL-230)."
+    },
+    "chapter_title": {
+      "type": "string",
+      "$comment": "Исходное намерение автора; пусто/отсутствует = «названия нет» → title становится «Глава {N}» (И7, rule chapter.title.fallback — runner). Отличие от системного title намеренное (карточка §3)."
+    },
+    "is_front_matter": {
+      "type": "boolean",
+      "$comment": "Часть вне нумерации: пролог, эпилог, приложение (карточка §3, §5). true → chapter_number не обязателен (DL-230); в навигации не участвует (Н2), создаётся кнопкой «предыдущая» у главы 1 (Н5)."
+    },
+    "published_on": {
+      "$ref": "../common/defs.json#/$defs/date",
+      "$comment": "Дата публикации главы (для веб-сериалов); частичные даты допустимы (06-time-and-intervals §2)."
+    },
+    "word_count": {
+      "type": "number",
+      "$comment": "Объём в словах; производное от текста значение — как кэш у media: вторая копия правды нежелательна, при рассинхроне источник истины — текст заметки (по духу DL-118; отдельного правила нет)."
+    },
+    "draft_status": {
+      "enum": ["outline", "draft", "revised", "final"],
+      "$comment": "05-enumerations §3.17.11 (зарегистрировано в батче 3 по образцу DL-226 — до этого жило только в карточке §3); value.allowed_values (error)."
+    }
+  },
+  "allOf": [
+    { "$ref": "../common/defs.json#/$defs/system_core" },
+    { "$ref": "../common/defs.json#/$defs/service_props" },
+    {
+      "$comment": "DL-230 (вопрос 9-8, ответ А): chapter_number обязателен, ЕСЛИ is_front_matter не true. Ветвь else срабатывает, когда if не выполнен — т.е. когда is_front_matter отсутствует или равен false. У частей вне нумерации номера может не быть; если указан — проверяется типом.",
+      "if": {
+        "properties": { "is_front_matter": { "const": true } },
+        "required": ["is_front_matter"]
+      },
+      "then": true,
+      "else": { "required": ["chapter_number"] }
+    }
+  ]
+}

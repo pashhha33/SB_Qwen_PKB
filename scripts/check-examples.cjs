@@ -21,6 +21,7 @@ const Ajv = require('ajv/dist/2020.js');
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
+const { pathToFileURL } = require('url');
 
 const REPO = path.join(__dirname, '..');
 const SCHEMA_DIRS = ['schema/common', 'schema/metamodel', 'schema/entities', 'schema/relations'];
@@ -28,7 +29,7 @@ const EXAMPLES_ROOT = path.join(REPO, 'examples', 'instances');
 
 // --- 1. Загрузка и компиляция схем -----------------------------------------
 const ajv = new Ajv({ strict: false, allErrors: true });
-const schemaKeys = []; // 'file://...' ключи добавленных схем
+const schemaKeys = []; // file-URL ключи добавленных схем (pathToFileURL — DL-232)
 
 function addSchemasFrom(dirRel) {
   const dir = path.join(REPO, dirRel);
@@ -36,7 +37,10 @@ function addSchemasFrom(dirRel) {
   for (const name of fs.readdirSync(dir).sort()) {
     if (!name.endsWith('.json')) continue;
     const abs = path.join(dir, name);
-    const key = 'file://' + abs;
+    // pathToFileURL, а не 'file://' + abs: на Windows литеральный путь (D:\\…, пробелы,
+    // не-ASCII) даёт невалидный URI — ajv/fast-uri падают с «URI authority must not
+    // contain a literal backslash» (DL-232). pathToFileURL корректно экранирует путь.
+    const key = pathToFileURL(abs).href;
     if (ajv.getSchema(key)) continue;
     ajv.addSchema(JSON.parse(fs.readFileSync(abs, 'utf8')), key);
     schemaKeys.push(key);
@@ -49,7 +53,7 @@ console.log(`Скомпилировано схем: ${schemaKeys.length}`);
 function schemaFor(typeKey) {
   for (const d of ['schema/entities', 'schema/metamodel']) {
     const abs = path.join(REPO, d, `${typeKey}.schema.json`);
-    if (fs.existsSync(abs)) return 'file://' + abs;
+    if (fs.existsSync(abs)) return pathToFileURL(abs).href;
   }
   return null;
 }

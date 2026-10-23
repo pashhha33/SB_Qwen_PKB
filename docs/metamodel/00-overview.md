@@ -3,7 +3,7 @@ doc_type: metamodel_section
 section: "00"
 title: "Обзор метамодели Second Brain: философия, принципы, схема целиком"
 status: actual
-version: 0.4.3
+version: 0.4.4
 created: 2026-10-23
 updated: 2026-10-23
 metamodel_version: 0.23.1
@@ -44,7 +44,7 @@ tags: [metamodel, overview, step8]
 | Типов отношений ядра | **5**: `authorship`, `ownership`, `part_of`, `related_to`, `contains` | `03-relations`, карточки в `relations/` |
 | Системных атрибутов | **8**, закрытый набор | ADR-006, `04-attributes` |
 | Типов значений | **7**, закрытый набор; множественность — только `cardinality` | ADR-006 |
-| Перечислений | **25** (23 закрыто) | `05-enumerations` |
+| Перечислений | **26** (24 закрыто) | `05-enumerations` |
 | Правил валидации | **167** в 14 группах (A–N), 6 уровней контроля | `validation/rules`, `severity-policy` |
 | Модулей плагина | **45** в MVP (12 отложенных, 12 нереализуемых), UI — Svelte (слой 5) | `09-modules` |
 | Команд | **18** в MVP | `mvp-scope` |
