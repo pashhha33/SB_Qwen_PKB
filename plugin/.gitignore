@@ -1,0 +1,10 @@
+# Зависимости
+node_modules/
+
+# Артефакты сборки (создаются локально: npm run dev / npm run build)
+main.js
+main.js.map
+*.tsbuildinfo
+
+# Runtime-данные плагина в тестовом хранилище
+data.json

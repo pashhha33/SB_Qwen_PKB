@@ -2,9 +2,9 @@
 doc_type: changelog
 title: Changelog — история изменений
 status: draft
-version: 0.29.0
+version: 0.30.0
 created: 2026-10-22
-updated: 2026-10-23
+updated: 2026-10-24
 semver_policy: docs/README.md#версионирование
 ---
 
@@ -22,6 +22,71 @@ semver_policy: docs/README.md#версионирование
 Каждая запись обязана содержать: версию, дату, что изменилось, **почему**, нужна ли миграция, ссылку на ADR/решение.
 
 ---
+
+## [1.0.2] — 2026-10-24
+
+**Фаза 5 стартовала: организация этапа A решена (ответы F5-3…F5-6 = А, DL-244); доставлен под-батч A1 — каркас плагина `0.1.0`.**
+PATCH: нормы, схемы и примеры метамодели не менялись; добавлены код плагина (новая область `plugin/`, своя версия) и учётные документы.
+
+### Добавлено
+
+- **Код плагина — под-батч A1** (плагин **0.1.0**, `plugin/`): каркас (`manifest.json`
+  с id `second-brain`, `versions.json`, esbuild dev-watch + production с поддержкой
+  `SB_VAULT_PATH`, tsconfig strict, vitest); `obsidian-adapter` (тонкая обёртка API:
+  vault.*, fileManager.processFrontMatter, parseYaml/stringifyYaml приложения,
+  vault.adapter для `.sb/`) + интерфейс `VaultAdapter` (слой 0); `identity` — ULID
+  (Crockford, зеркало `defs#ulid`), имя файла `{TYPE_PREFIX}-{ULID}.md`, И1-скан
+  `findDuplicateIds`, И2-починка `repairFileNameById`, локальные даты до минут;
+  **универсальный парсер** `markdown-parser` (BOM/CRLF, splitFrontmatter, 8 системных
+  атрибутов ADR-006, нормализация Date по конвенции DL-228, wikilink-и тела с пропуском
+  код-блоков) + модель `SbNote`; точка входа `main.ts`.
+- **Тесты плагина — 82/82** (vitest; решение F5-4 = А, закрывает вопрос 9.3 `09-modules`):
+  юнит (ulid, datetime, identity, parser, wikilinks), интеграционные — контракт
+  `VaultAdapter` на **FakeVault** (13), парсер × **62 примера** `examples/instances/`
+  (valid-*: И1, И4, каноническое имя), слой-тест М2 (`core/**` без импорта `obsidian`).
+- `docs/plugin/dev-setup.md` v0.1.0 — **dev-связка с хранилищем** (вариант А — junction,
+  вариант Б — `SB_VAULT_PATH`; цикл разработки, перезагрузка плагина, troubleshooting
+  для Windows/PowerShell 5.1).
+- `docs/plugin/architecture.md` v0.1.0 — слои, соответствие «модуль `09-modules` →
+  файлы `plugin/src/`», конвенции кода, отклонение от М4 для `obsidian-adapter`
+  (контракт-тесты + ручная проверка DoD), реестр известных расхождений норм.
+
+### Решено (организация этапа A, DL-244)
+
+- **F5-3 = А**: код плагина — в **монорепозитории**, подпапка `plugin/` (схемы рядом;
+  D2-генератор будет читать `../schema` в том же коммите).
+- **F5-4 = А**: тесты — **vitest** (`plugin/tests/unit/` + `plugin/tests/integration/`),
+  интеграционные — на FakeVault (tmp-папка за интерфейсом), vault-фикстура в репозитории не нужна.
+- **F5-5 = А**: этап A — **три под-батча A1/A2/A3** (гранулярность передачи, состав этапа
+  не менялся; `phases.md` v0.5.0).
+- **F5-6 = А**: **один плагин** без разделения на пакеты (9.2); `commands` — **тонкая
+  обёртка** над сервисами (9.5). Раздел 9 `09-modules` закрыт целиком (v0.6.0).
+
+### Найдено (требует решения — F5-7)
+
+- **Расхождение реестра префиксов и схемы** (обнаружено кодом A1, в реестре противоречий
+  не значилось): `02-entities` §6 содержит 12 префиксов с `_` (`OBJECT_TYPE`,
+  `PROPERTY_TYPE`, `RELATION_TYPE` — core; ещё 9 — phase2) и 4 длиннее 12 символов,
+  но `defs.json#type_prefix` (`^[A-Z][A-Z0-9-]*$`) и правило ADR-001 («только A–Z, 0–9,
+  дефис», 3–12) подчёркивание запрещают; ADR-001 при этом предписывает «UPPER_SNAKE_CASE».
+  Код A1 следует схеме; **блокирует A2** (бутстрап пишет `OBJECT_TYPE-{ULID}.md`).
+  Рекомендация — легализовать `_` и длину 3–20 (MINOR-расширение, старые заметки не ломаются).
+
+### Изменено
+
+- `09-modules` **v0.6.0**: вопросы 9.2/9.3/9.5 закрыты (DL-244); `phases.md` **v0.5.0**:
+  под-батчи A1–A3 + блокер F5-7; PROJECT_MAP **v1.32.0**; `00-overview` **v0.4.11**
+  (строка истории 1.0.2); корневой README **v0.3.3** (стадия: Фаза 5, этап A, A1 доставлен);
+  docs/README **v0.3.11** (дерево: `plugin/`, `docs/plugin/`); глоссарий **v1.19.0**
+  (+6 терминов: монорепозиторий, manifest.json, тестовый фреймворк, подделка (FakeVault),
+  junction, watch-режим → **271 активная запись**); decision log **v1.35.0** (DL-244);
+  CHECKPOINT **v42.0.0** (§6.56).
+
+### Проверено
+
+- `npm run check` (корень) — **72 OK, 0 FAIL** (схемы и примеры не менялись);
+  `plugin`: `npm test` — **82/82**, `npm run typecheck` — 0 ошибок, `npm run build` — main.js собран;
+  E2E патча на свежем клоне (apply → npm ci/test/build в plugin → npm run check в корне).
 
 ## [1.0.1] — 2026-10-23
 

@@ -2,9 +2,9 @@
 doc_type: docs_index
 title: Структура документации проекта
 status: draft
-version: 0.3.10
+version: 0.3.11
 created: 2026-10-22
-updated: 2026-10-23
+updated: 2026-10-24
 ---
 
 # Документация проекта
@@ -84,11 +84,11 @@ project-root/
 │   │   ├── fileclass.md          # ✅ карточка: референс, не зависимость (плагин сменился в 2026!)
 │   │   ├── metadata-menu.md      # ✅ карточка: референс, не зависимость
 │   │   └── quickadd.md           # ✅ карточка: deferred — этап 2, «быстрый захват»
-│   ├── plugin/                   # появляется в Фазе 5
-│   │   ├── architecture.md       # устройство плагина: модули, поток данных
-│   │   ├── user-guide.md         # руководство пользователя
-│   │   ├── development.md        # как собрать и запустить локально, команды, тесты
-│   │   └── testing.md            # что тестируем и как
+│   ├── plugin/                   # ✅ появился в Фазе 5 (под-батч A1)
+│   │   ├── architecture.md       # ✅ устройство плагина: слои, модули → исходники, конвенции, находка F5-7
+│   │   ├── dev-setup.md          # ✅ dev-связка с хранилищем: junction / SB_VAULT_PATH, цикл разработки
+│   │   ├── user-guide.md         # руководство пользователя (появится на этапе E)
+│   │   └── testing.md            # что тестируем и как (пока — раздел 3 architecture.md)
 │   ├── project-map/
 │   │   └── PROJECT_MAP.md        # карта проекта: цель, фаза, решено, открыто, риски
 │   └── templates/                # шаблоны документов (см. ниже)
@@ -111,7 +111,16 @@ project-root/
 │   └── templates/                # ✅ шаблоны заметок для команд создания (D5 — батч 6): 12 Markdown-типов + relation-row.json + README
 ├── scripts/check-examples.cjs    # ✅ прогонщик примеров: npm run check (ajv + js-yaml, DL-227)
 ├── package.json / .gitignore     # ✅ dev-зависимости прогонщика (ajv, js-yaml)
-└── src/                          # код плагина (Фаза 5)
+└── plugin/                       # ✅ код плагина Obsidian (Фаза 5, монорепозиторий — F5-3 = А, DL-244)
+    ├── manifest.json             # ✅ паспорт плагина: id second-brain (F5-1), minAppVersion 1.9.0
+    ├── versions.json             # ✅ соответствие версий плагина и минимальной версии приложения
+    ├── package.json              # ✅ свои dev-зависимости: esbuild, typescript, vitest, obsidian, js-yaml
+    ├── esbuild.config.mjs        # ✅ dev-watch + production; SB_VAULT_PATH — сборка прямо в хранилище
+    ├── tsconfig.json             # ✅ strict, noEmit (typecheck)
+    ├── vitest.config.ts          # ✅ тесты из tests/
+    ├── scripts/link-vault.mjs    # ✅ копия manifest/versions/main.js в хранилище (вариант Б)
+    ├── src/                      # ✅ исходники: main.ts, adapter/ (obsidian-adapter, интерфейс), core/ (ulid, identity, datetime, markdown-parser, model, errors)
+    └── tests/                    # ✅ 82 теста: unit/ + integration/ (контракт FakeVault, парсер × 62 примера, слой-тест М2) + support/fake-vault.ts
 ```
 
 ## Почему такая структура

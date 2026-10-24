@@ -1,0 +1,10 @@
+{
+	"id": "second-brain",
+	"name": "Second Brain",
+	"version": "0.1.0",
+	"minAppVersion": "1.9.0",
+	"description": "Самоопределяющаяся объектная метамодель личной базы знаний: типы, свойства, связи и классификация — заметки в папке Metamodel/. Этап A (каркас и бутстрап).",
+	"author": "pashhha33",
+	"authorUrl": "https://github.com/pashhha33/SB_Qwen_PKB",
+	"isDesktopOnly": true
+}
