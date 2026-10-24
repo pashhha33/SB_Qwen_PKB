@@ -145,6 +145,16 @@ describe('markdown-parser — parseNote', () => {
 		expect(note.system.created_at).toBe('2026-09-14T00:00');
 	});
 
+	it('TZ-баг исправлен (DL-245): некавычные даты нормализуются лексически, результат не зависит от timezone машины', () => {
+		// js-yaml разбирает некавычные метки времени как UTC; на машине UTC+3 прежняя
+		// реализация выдавала «2026-09-14T03:00» вместо «2026-09-14». Лексический
+		// уровень берёт значение из сырого текста frontmatter — «что написано».
+		const content = '---\ntitle: T\nfinished_on: 2026-09-14\nupdated_at: 2026-09-14T10:30:00+03:00\n---\n';
+		const note = parseNote({ path: 'x.md', content }, vault);
+		expect(note.properties.finished_on).toBe('2026-09-14');
+		expect(note.system.updated_at).toBe('2026-09-14T10:30'); // смещение отброшено, стена сохранена
+	});
+
 	it('нестроковые aliases (числа) не нормализуются молча — остаются вне system', () => {
 		const note = parseNote({ path: 'x.md', content: '---\naliases: 42\n---\n' }, vault);
 		// Парсер не «чинит молча» (спецификация v1.0 §19): значение не строковое —

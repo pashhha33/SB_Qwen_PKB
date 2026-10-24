@@ -49,23 +49,78 @@ export function isDateString(value: unknown): value is string {
 }
 
 /**
- * Нормализация ЗНАЧЕНИЯ СВОЙСТВА, которое YAML-парсер мог превратить в объект Date
- * (конвенция батча 2, DL-228: даты в примерах пишутся в кавычках, но заметка,
- * созданная ВНЕ плагина, может содержать голую дату — это 1-й разрешённый случай
- * автоисправления severity-policy; здесь только чтение, без записи).
+ * НОРМАЛИЗАЦИЯ ДАТ ИЗ YAML — исправление TZ-бага под-батча A1 (плагин 0.1.1, DL-245).
  *
- * Эвристика: Date в локальную полночь = «дата без времени» (YAML date) → 'YYYY-MM-DD';
- * иначе → 'YYYY-MM-DDTHH:mm'. Строки и остальные значения проходят без изменений.
+ * Суть бага: js-yaml (и, по нашим данным, parseYaml Obsidian) разбирает НЕкавычные
+ * YAML-метки времени как **UTC** (date-only → UTC-полночь; «2026-09-14 10:30:00» →
+ * 10:30 UTC). Первая реализация форматировала такие Date ЛОКАЛЬНЫМИ геттерами —
+ * на машине с UTC+3 даты съезжали на +3 часа («2026-09-14» → «2026-09-14T03:00»).
+ *
+ * Исправление — два уровня, оба TZ-независимы:
+ *   1. ЛЕКСИЧЕСКИЙ (основной): значение берётся из СЫРОГО текста frontmatter
+ *      (normalizeDateScalarText) — «что написано, то и хранится», без Date-объектов
+ *      и арифметики часовых поясов. Работает для скаляров верхнего уровня.
+ *   2. FALLBACK (Date в списках/вложенных структурах, где сырой скаляр не найти):
+ *      UTC-геттеры — они возвращают ровно то, что написал пользователь, потому что
+ *      парсер построил Date в UTC.
+ *
+ * Норма проекта при этом не нарушается: мы ХРАНИМ локальное время без смещения
+ * (ADR-006) — созданные плагином метки пишутся локальными геттерами
+ * (formatDateTimeLocal/nowStamp); UTC-геттеры используются ТОЛЬКО чтобы
+ * восстановить написанный текст из чужого Date-объекта.
+ */
+
+/** UTC-дата Date → 'YYYY-MM-DD' (восстановление date-only из чужого Date). */
+export function formatDateUTC(value: Date): string {
+	return `${pad(value.getUTCFullYear(), 4)}-${pad(value.getUTCMonth() + 1)}-${pad(value.getUTCDate())}`;
+}
+
+/** UTC-дата+время Date → 'YYYY-MM-DDTHH:mm' (восстановление datetime из чужого Date). */
+export function formatDateTimeUTC(value: Date): string {
+	return `${formatDateUTC(value)}T${pad(value.getUTCHours())}:${pad(value.getUTCMinutes())}`;
+}
+
+/** Точная UTC-полночь = признак date-only значения ( js-yaml строит их как UTC-полночь). */
+function isUtcMidnight(value: Date): boolean {
+	return (
+		value.getUTCHours() === 0 &&
+		value.getUTCMinutes() === 0 &&
+		value.getUTCSeconds() === 0 &&
+		value.getUTCMilliseconds() === 0
+	);
+}
+
+/**
+ * Лексическая нормализация СЫРОГО скаляра YAML (уровень 1):
+ *   '2026-09-14'               → '2026-09-14'          (date-only; частичные '1928-00-00' проходят)
+ *   '2026-09-14 10:30:00'      → '2026-09-14T10:30'    (секунды отбрасываются — точность до минут)
+ *   '2026-09-14T10:30:00+03:00'→ '2026-09-14T10:30'    (смещение отбрасывается — не храним, ADR-006)
+ *   не дата                    → null
+ */
+export function normalizeDateScalarText(text: string): string | null {
+	const trimmed = text.trim();
+	if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+		return trimmed;
+	}
+	const match = /^(\d{4}-\d{2}-\d{2})[Tt ](\d{2}):(\d{2})/.exec(trimmed);
+	if (match) {
+		return `${match[1]}T${match[2]}:${match[3]}`;
+	}
+	return null;
+}
+
+/**
+ * Нормализация ЗНАЧЕНИЯ СВОЙСТВА (fallback-уровень): Date → строка по UTC-компонентам.
+ * Точная UTC-полночь считается date-only → 'YYYY-MM-DD', иначе → 'YYYY-MM-DDTHH:mm'.
+ * Строки и остальные значения проходят без изменений.
  *
  * ВНИМАНИЕ: для created_at/updated_at НЕ применяется (там полночь законна как время
  * суток) — для них есть normalizeSystemDateTime.
  */
 export function normalizeDateValue(value: unknown): { value: unknown; normalized: boolean } {
 	if (value instanceof Date && !Number.isNaN(value.getTime())) {
-		const isDateOnly =
-			value.getHours() === 0 && value.getMinutes() === 0 && value.getSeconds() === 0;
 		return {
-			value: isDateOnly ? formatDateLocal(value) : formatDateTimeLocal(value),
+			value: isUtcMidnight(value) ? formatDateUTC(value) : formatDateTimeUTC(value),
 			normalized: true,
 		};
 	}
@@ -73,12 +128,14 @@ export function normalizeDateValue(value: unknown): { value: unknown; normalized
 }
 
 /**
- * Нормализация created_at/updated_at: эти ключи по норме ВСЕГДА дата+время
- * (defs.json#$defs.datetime), поэтому Date → 'YYYY-MM-DDTHH:mm' без эвристики.
+ * Нормализация created_at/updated_at (fallback-уровень): эти ключи по норме ВСЕГДА
+ * дата+время (defs.json#$defs.datetime), поэтому Date → 'YYYY-MM-DDTHH:mm'
+ * (UTC-полночь date-only значения даёт '…T00:00' — починка по 1-му случаю
+ * автоисправления severity-policy).
  */
 export function normalizeSystemDateTime(value: unknown): { value: unknown; normalized: boolean } {
 	if (value instanceof Date && !Number.isNaN(value.getTime())) {
-		return { value: formatDateTimeLocal(value), normalized: true };
+		return { value: formatDateTimeUTC(value), normalized: true };
 	}
 	return { value, normalized: false };
 }

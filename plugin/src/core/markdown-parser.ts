@@ -26,7 +26,7 @@
  */
 
 import type { VaultAdapter } from '../adapter/vault-adapter';
-import { normalizeDateValue, normalizeSystemDateTime } from './datetime';
+import { normalizeDateScalarText, normalizeDateValue, normalizeSystemDateTime } from './datetime';
 import type { ParseIssue, SbNote, SystemAttributes, WikilinkRef } from './model';
 import { SYSTEM_KEYS } from './model';
 import { parseFileName } from './identity';
@@ -58,6 +58,57 @@ export function splitFrontmatter(content: string): SplitFrontmatterResult {
 		return { frontmatterText: null, body: content };
 	}
 	return { frontmatterText: match[1], body: content.slice(match[0].length) };
+}
+
+function escapeRegExp(text: string): string {
+	return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Сырой скаляр верхнего уровня из текста frontmatter (лексический уровень
+ * нормализации дат, DL-245): null, если ключа нет, значение пусто или в кавычках
+ * (кавычные значения js-yaml и так возвращает строками — Date из них не возникает).
+ */
+function rawScalarFor(frontmatterText: string, key: string): string | null {
+	const pattern = new RegExp(`^${escapeRegExp(key)}:[ \\t]*([^\\n]*?)[ \\t]*$`, 'm');
+	const match = pattern.exec(frontmatterText);
+	if (!match) {
+		return null;
+	}
+	const scalar = match[1].trim();
+	if (scalar === '' || scalar.startsWith('"') || scalar.startsWith("'")) {
+		return null;
+	}
+	return scalar;
+}
+
+/**
+ * Двухуровневая нормализация даты (исправление TZ-бага A1, DL-245):
+ *   1. если значение — Date и сырой скаляр найден в тексте frontmatter →
+ *      лексически («что написано, то и хранится» — TZ-независимо);
+ *   2. иначе fallback: Date → строка по UTC-геттерам (js-yaml строит Date в UTC,
+ *      поэтому UTC-компоненты возвращают написанный текст).
+ * system=true — для created_at/updated_at (всегда datetime, без эвристики date-only).
+ */
+function normalizeDateWithRaw(
+	rawValue: unknown,
+	key: string,
+	frontmatterText: string | null,
+	system: boolean,
+): { value: unknown; normalized: boolean } {
+	if (!(rawValue instanceof Date)) {
+		return { value: rawValue, normalized: false };
+	}
+	if (frontmatterText !== null) {
+		const raw = rawScalarFor(frontmatterText, key);
+		if (raw !== null) {
+			const lexical = normalizeDateScalarText(raw);
+			if (lexical !== null) {
+				return { value: lexical, normalized: true };
+			}
+		}
+	}
+	return system ? normalizeSystemDateTime(rawValue) : normalizeDateValue(rawValue);
 }
 
 export interface ParseNoteInput {
@@ -148,8 +199,8 @@ export function parseNote(input: ParseNoteInput, adapter: Pick<VaultAdapter, 'pa
 
 			for (const [key, rawValue] of Object.entries(record)) {
 				if (!isSystemKey(key)) {
-					// Предметное свойство: нормализуем только Date-объекты (DL-228).
-					const normalized = normalizeDateValue(rawValue);
+					// Предметное свойство: нормализуем только Date-объекты (DL-228, DL-245).
+					const normalized = normalizeDateWithRaw(rawValue, key, frontmatterText, false);
 					if (normalized.normalized) {
 						issues.push({
 							code: 'date_normalized',
@@ -168,7 +219,7 @@ export function parseNote(input: ParseNoteInput, adapter: Pick<VaultAdapter, 'pa
 					case 'created_at':
 					case 'updated_at': {
 						if (key === 'created_at' || key === 'updated_at') {
-							const normalized = normalizeSystemDateTime(rawValue);
+							const normalized = normalizeDateWithRaw(rawValue, key, frontmatterText, true);
 							if (normalized.normalized) {
 								issues.push({
 									code: 'date_normalized',

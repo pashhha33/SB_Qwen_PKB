@@ -4,6 +4,7 @@ import {
 	formatDateTimeLocal,
 	isDateString,
 	isDateTimeString,
+	normalizeDateScalarText,
 	normalizeDateValue,
 	normalizeSystemDateTime,
 	nowStamp,
@@ -42,12 +43,24 @@ describe('datetime — локальное время без смещения (AD
 		expect(isDateString('28-05-14')).toBe(false);
 	});
 
-	it('normalizeDateValue: Date в полночь → только дата; Date со временем → дата+время; строки не трогает', () => {
-		expect(normalizeDateValue(new Date(2026, 8, 14))).toEqual({
+	it('normalizeDateScalarText: лексическая нормализация сырого скаляра — TZ-независимо (DL-245)', () => {
+		expect(normalizeDateScalarText('2026-09-14')).toBe('2026-09-14');
+		expect(normalizeDateScalarText('1928-00-00')).toBe('1928-00-00'); // частичная дата проходит как есть
+		expect(normalizeDateScalarText('2026-09-14 10:30:00')).toBe('2026-09-14T10:30');
+		expect(normalizeDateScalarText('2026-09-14T10:30:45')).toBe('2026-09-14T10:30'); // секунды отбрасываются
+		expect(normalizeDateScalarText('2026-09-14T10:30:00+03:00')).toBe('2026-09-14T10:30'); // смещение не храним (ADR-006)
+		expect(normalizeDateScalarText('2026-09-14T10:30:00Z')).toBe('2026-09-14T10:30');
+		expect(normalizeDateScalarText('не дата')).toBeNull();
+	});
+
+	it('normalizeDateValue (fallback): Date восстанавливается по UTC-компонентам (js-yaml строит Date в UTC)', () => {
+		// Баг A1: локальные геттеры сдвигали дату на машине UTC+3 («2026-09-14» → «2026-09-14T03:00»).
+		// Исправление (DL-245): UTC-полночь = date-only; остальное — datetime по UTC-компонентам.
+		expect(normalizeDateValue(new Date(Date.UTC(2026, 8, 14)))).toEqual({
 			value: '2026-09-14',
 			normalized: true,
 		});
-		expect(normalizeDateValue(new Date(2026, 8, 14, 10, 30))).toEqual({
+		expect(normalizeDateValue(new Date(Date.UTC(2026, 8, 14, 10, 30)))).toEqual({
 			value: '2026-09-14T10:30',
 			normalized: true,
 		});
@@ -59,9 +72,9 @@ describe('datetime — локальное время без смещения (AD
 		expect(normalizeDateValue(null)).toEqual({ value: null, normalized: false });
 	});
 
-	it('normalizeSystemDateTime: created_at в полночь СОХРАНЯЕТ время (без эвристики «только дата»)', () => {
-		expect(normalizeSystemDateTime(new Date(2026, 9, 24, 0, 0))).toEqual({
-			value: '2026-10-24T00:00',
+	it('normalizeSystemDateTime (fallback): UTC-полночь НЕ урезается до даты', () => {
+		expect(normalizeSystemDateTime(new Date(Date.UTC(2026, 8, 14)))).toEqual({
+			value: '2026-09-14T00:00',
 			normalized: true,
 		});
 		expect(normalizeSystemDateTime('2026-10-24T09:05')).toEqual({
