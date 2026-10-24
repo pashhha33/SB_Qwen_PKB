@@ -61,7 +61,14 @@ export function registerValidateObjectCommand(context: PluginContext, addCommand
 				}
 				try {
 					const registry = await context.reloadRegistry();
-					const result = await validateObject(context.adapter, registry, context.labels, file.path);
+					const result = await validateObject(
+						context.adapter,
+						registry,
+						context.labels,
+						file.path,
+						context.logger.fn,
+						context.settings.logging.logValidation,
+					);
 					if (result.diagnostics.length === 0) {
 						new Notice(`Проверка «${file.path}»: нарушений нет (уровни 2–4, группа A)`);
 					} else {

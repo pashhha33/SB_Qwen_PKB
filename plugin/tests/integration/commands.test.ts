@@ -9,6 +9,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { ActivityLog, DEFAULT_LOG_SETTINGS } from '../../src/core/activity-log';
 import { SbError } from '../../src/core/errors';
 import { assembleFileName, createObjectInstance, createObjectTypeDefinition } from '../../src/core/creation';
 import { isValidTypePrefix, parseFileName } from '../../src/core/identity';
@@ -138,6 +139,31 @@ describe('цепочка создания: тип → экземпляр → п�
 		expect(content).toContain(`[[OBJECT_TYPE-${work.id}.md|Произведение]]`);
 		registry = await TypeRegistry.load(vault);
 		expect(registry.ancestorsOf('book').map((def) => def.typeKey)).toEqual(['work']);
+	});
+
+	it('журнал (DL-251): создание типа и объекта пишет события info; отказ — error', async () => {
+		const logger = new ActivityLog(vault, { ...DEFAULT_LOG_SETTINGS, levels: { ...DEFAULT_LOG_SETTINGS.levels } });
+		let registry = await TypeRegistry.load(vault);
+		await createObjectTypeDefinition(
+			vault,
+			registry,
+			{ typeKey: 'book', label: 'Книга', typePrefix: 'BOOK' },
+			logger.fn,
+		);
+		registry = await TypeRegistry.load(vault);
+		await createObjectInstance(vault, registry, { typeKey: 'book', title: 'Том 1' }, logger.fn);
+		try {
+			await createObjectInstance(vault, registry, { typeKey: 'nosuch', title: 'X' }, logger.fn);
+			expect.unreachable();
+		} catch (error) {
+			expect(error).toBeInstanceOf(SbError);
+		}
+		const entries = logger.tail(20);
+		expect(entries.filter((entry) => entry.level === 'info' && entry.area === 'creation')).toHaveLength(2);
+		expect(entries.some((entry) => entry.message.includes('«Книга» (book)'))).toBe(true);
+		// отказ команды логирует error (в командах — catch; здесь проверяем сам механизм)
+		logger.log('error', 'creation', 'Тип «nosuch» не найден в реестре определений');
+		expect(logger.tail(20).filter((entry) => entry.level === 'error')).toHaveLength(1);
 	});
 
 	it('созданные определения проходят валидацию группы A без ошибок', async () => {

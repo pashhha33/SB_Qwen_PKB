@@ -6,9 +6,9 @@ type_key: property
 type_prefix: PROPERTY
 aliases: [Свойства, property]
 status: actual
-metamodel_version: 0.22.0
+metamodel_version: 1.1.0
 created: 2026-10-23
-updated: 2026-10-23
+updated: 2026-10-24
 classification: core
 group: Системные (метамодель)
 abstract: false
@@ -41,6 +41,7 @@ tags: [metamodel, entity, core, system]
 | `value_type` — один из **7** (набор закрыт кодом, слой 1) | ADR-006, §2 |
 | `cardinality` — единственный механизм множественности (`0..1`, `1`, `0..N`, `1..N`) | ADR-006, §4 («Про `required` и `cardinality`») |
 | `required` | §4 |
+| `object_types` — привязка к типам-владельцам (F5-8 = А): universal — пусто, family — абстрактный предок (потомки включаются, DL-208), specific — конкретные типы | §4.1, DL-250/252 |
 | `applies_when` — условные свойства (триггеры, `includes_any`, правила М1–М7) | §11 |
 | `create_from_link` (`allow` / `forbid` / `auto`) | `12-links-and-aliases` §5–§6 |
 | `target_types` — для `object_reference` / `media_reference` | §4, §10 |
@@ -53,7 +54,7 @@ Markdown-заметка в `Metamodel/**` (ADR-002); создание — ком
 
 ## 4. Связи с другими типами метамодели
 
-Принадлежность `object_type`; `target_types` → экземпляры `object_type`; перечисления →
+Принадлежность `object_type` — поле `object_types` (§4.1 `04-attributes`, F5-8 = А); `target_types` → экземпляры `object_type`; перечисления →
 `05-enumerations`; `create_from_link: auto` → правила создания объекта из пустой ссылки
 (раздел 12, контексты К1–К5).
 
@@ -76,4 +77,5 @@ Markdown-заметка в `Metamodel/**` (ADR-002); создание — ком
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-24 | 1.1.0 | Введено поле `object_types` (привязка свойства к типу): строка в §2, уточнение §4 | F5-8 = А (DL-250/252), `04-attributes` §4.1 | [[../04-attributes]], [[../../validation/rules]] v0.12.0 |
 | 2026-10-23 | 0.22.0 | Сокращённая карточка создана: систематизация норм ADR-003/006, `04-attributes` §4/§10/§11, раздела 12; новых норм не вводит | Вторая партия карточек ядра (DL-213/216) | [[../04-attributes]], [[../12-links-and-aliases]] |

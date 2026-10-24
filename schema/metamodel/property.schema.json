@@ -19,6 +19,12 @@
       "$ref": "../common/defs.json#/$defs/link_facet",
       "$comment": "Только для свойства-словаря (04-attributes §5): значения — категории фасета."
     },
+    "object_types": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.json#/$defs/link_object_type" },
+      "uniqueItems": true,
+      "$comment": "F5-8 = А (DL-250/252): привязка свойства к типам. Семантика: scope=universal и поле пусто/отсутствует — свойство для всех типов; scope=family — ровно одна ссылка на абстрактного предка (потомки включаются, DL-208); scope=specific — одна и более ссылок на конкретные типы. Согласованность scope и состава — runner (property.object_types.scope_consistency); существование определений — runner (property.object_types.exists)."
+    },
     "link_mode": {
       "enum": ["direct", "reified"],
       "$comment": "Обязательно для object_reference (ADR-009/010): способ хранения связи объявляется в свойстве, не в типе отношения."

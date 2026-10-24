@@ -63,10 +63,12 @@ class TitleModal extends Modal {
 				.setCta()
 				.onClick(async () => {
 					try {
-						const result = await createObjectInstance(this.context.adapter, this.context.registry, {
-							typeKey: this.def.typeKey,
-							title: this.title,
-						});
+						const result = await createObjectInstance(
+							this.context.adapter,
+							this.context.registry,
+							{ typeKey: this.def.typeKey, title: this.title },
+							this.context.logger.fn,
+						);
 						new Notice(`Объект создан: ${result.path}`);
 						this.close();
 						// Открыть созданную заметку (слой 4 — имеет право на workspace).
@@ -75,7 +77,9 @@ class TitleModal extends Modal {
 							await this.app.workspace.getLeaf().openFile(file);
 						}
 					} catch (error) {
-						new Notice(error instanceof SbError ? error.message : `Не удалось создать объект: ${String(error)}`);
+						const message = error instanceof SbError ? error.message : `Не удалось создать объект: ${String(error)}`;
+						this.context.logger.log('error', 'creation', message, { typeKey: this.def.typeKey, title: this.title });
+						new Notice(message);
 					}
 				}),
 		);

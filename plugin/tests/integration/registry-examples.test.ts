@@ -20,7 +20,7 @@ describe('type-registry × примеры репозитория', () => {
 		await vault.cleanup();
 	});
 
-	it('3 определения типов + 5 определений свойств из valid-примеров индексируются', async () => {
+	it('3 определения типов + 6 определений свойств из valid-примеров индексируются', async () => {
 		const examples = await loadExamples();
 		for (const example of examples) {
 			if (example.validity !== 'valid') {
@@ -43,14 +43,29 @@ describe('type-registry × примеры репозитория', () => {
 		expect(registry.getType('image_wrapper')?.supersededById).toBe('01J8Z6M4K2Q7V9X3N5B0C1D2WM');
 		expect(registry.instantiableTypes().map((def) => def.typeKey).sort()).toEqual(['book', 'image_wrapper']);
 
-		// свойства: author, cover, format, rating, platform
+		// свойства: author, cover, format, rating, platform, subtitle (valid-06, F5-8)
 		expect(registry.properties.map((def) => def.key).sort()).toEqual([
 			'author',
 			'cover',
 			'format',
 			'platform',
 			'rating',
+			'subtitle',
 		]);
+
+		// F5-8 (DL-252): object_types из примеров — platform → book (...EK), subtitle → work (...WA)
+		const platform = registry.getPropertiesByKey('platform')[0];
+		expect(platform.scope).toBe('specific');
+		expect(platform.objectTypes).toEqual(['01J8Z6M4K2Q7V9X3N5B0C1D2EK']);
+		const subtitle = registry.getPropertiesByKey('subtitle')[0];
+		expect(subtitle.scope).toBe('family');
+		expect(subtitle.objectTypes).toEqual(['01J8Z6M4K2Q7V9X3N5B0C1D2WA']);
+		// getPropertiesForType: platform доступен book (прямая привязка);
+		// subtitle — work; у book предок в примере висячий (...EA ≠ ...WA, DL-019),
+		// поэтому subtitle в набор book не входит — это иллюстрация данных, не бага кода
+		expect(registry.getPropertiesForType('book').map((def) => def.key)).toContain('platform');
+		expect(registry.getPropertiesForType('book').map((def) => def.key)).not.toContain('subtitle');
+		expect(registry.getPropertiesForType('work').map((def) => def.key)).toContain('subtitle');
 		const author = registry.getPropertiesByKey('author')[0];
 		expect(author.valueType).toBe('object_reference');
 		expect(author.cardinality).toBe('1..N');

@@ -11,7 +11,8 @@ label: ""                     # подпись по-русски
 value_type: text              # text | number | boolean | date | datetime | object_reference | media_reference | category_reference (§3.1)
 cardinality: "1"              # "1" | 0..1 | 0..N | 1..N (§3.2)
 required: true                # согласованность с cardinality зашита в схему
-scope: specific               # specific | universal (§3.3)
+scope: specific               # specific | universal | family (§3.3)
+# object_types: []            # привязка к типам (F5-8, §4.1): specific — конкретные типы; family — один абстрактный предок (потомки включаются, DL-208); universal — пусто/нет
 # target_types: []            # обязательно для object_reference / media_reference → OBJECT_TYPE-….md
 # link_mode: direct           # обязательно для object_reference: direct | reified (Р2)
 # media_target: object        # обязательно для media_reference: object | file

@@ -1,5 +1,5 @@
 /**
- * Интеграционный тест: универсальный парсер против 62 примеров шага 9
+ * Интеграционный тест: универсальный парсер против 64 примеров шага 9 (+F5-8, DL-252)
  * (examples/instances/) — те самые заметки, на которых зелёный `npm run check`
  * (схемы + runner), должны безупречно читаться парсером плагина.
  *
@@ -16,12 +16,12 @@ import { isValidUlid } from '../../src/core/ulid';
 import { TYPE_PREFIX_BY_TYPE, loadExamples } from '../support/examples';
 import { FakeVault } from '../support/fake-vault';
 
-describe('парсер × примеры репозитория (62 файла, шаг 9)', () => {
-	it('все примеры читаются: 62 файла, ни одной ошибки YAML', async () => {
+describe('парсер × примеры репозитория (64 файла, шаг 9 + F5-8)', () => {
+	it('все примеры читаются: 64 файла, ни одной ошибки YAML', async () => {
 		const vault = await FakeVault.create();
 		try {
 			const examples = await loadExamples();
-			expect(examples.length).toBe(62); // защита от дрейфа: число примеров = учтённое в чек-листе
+			expect(examples.length).toBe(64); // защита от дрейфа: число примеров = учтённое в чек-листе (62 шага 9 + 2 F5-8, DL-252)
 
 			for (const example of examples) {
 				const note = parseNote({ path: example.relative, content: example.content }, vault);

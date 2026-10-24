@@ -86,13 +86,14 @@ export interface PropertyDef {
 	scope: string;
 	path: string;
 	title: string;
-	/**
-	 * F5-8 (ВОПРОС ПОЛЬЗОВАТЕЛЮ): поле привязки свойства к типу в утверждённых нормах
-	 * ОТСУТСТВУЕТ (scope: specific/family не имеет носителя данных; правила
-	 * property.key.unique_in_type и applies_when.property_exists предполагают её).
-	 * Реестр сохраняет то, что есть; когда F5-8 решён — здесь появится objectTypes.
-	 */
 	lifecycle: string | null;
+	/**
+	 * Привязка свойства к типам (F5-8 = А, DL-250/252): ULID определений object_type
+	 * из поля `object_types` (wikilink-и). Семантика: пусто при scope=universal —
+	 * свойство для всех типов; ссылка на абстрактного предка при scope=family —
+	 * покрытие всех потомков (DL-208); конкретные типы при scope=specific.
+	 */
+	objectTypes: string[];
 }
 
 export type RegistryIssueCode =
@@ -244,6 +245,22 @@ export class TypeRegistry {
 			});
 			return;
 		}
+		// object_types: список wikilink-ов на OBJECT_TYPE-определения (F5-8 = А).
+		const objectTypesRaw = note.properties.object_types;
+		const objectTypes: string[] = [];
+		if (Array.isArray(objectTypesRaw)) {
+			for (const item of objectTypesRaw) {
+				const linkId = extractLinkId(item);
+				if (linkId !== null) {
+					objectTypes.push(linkId);
+				}
+			}
+		} else if (typeof objectTypesRaw === 'string') {
+			const linkId = extractLinkId(objectTypesRaw);
+			if (linkId !== null) {
+				objectTypes.push(linkId);
+			}
+		}
 		this.properties.push({
 			id: id as string,
 			key: key as string,
@@ -255,6 +272,7 @@ export class TypeRegistry {
 			path: note.path,
 			title: note.system.title ?? (key as string),
 			lifecycle: asString(note.properties.lifecycle),
+			objectTypes,
 		});
 	}
 
@@ -348,6 +366,28 @@ export class TypeRegistry {
 	/** Все неабстрактные типы (для окна создания объекта), сортировка по подписи. */
 	instantiableTypes(): TypeDef[] {
 		return this.types.filter((def) => !def.abstract).sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+	}
+
+	/**
+	 * Свойства, применимые к типу (F5-8 = А, DL-252): universal без привязки —
+	 * всем; остальные — если `object_types` пересекается с {сам тип + его предки}
+	 * (ссылка на абстрактного предка покрывает потомков — DL-208).
+	 * Основа будущего schema-engine (этап B) и форм.
+	 */
+	getPropertiesForType(typeKey: string): PropertyDef[] {
+		const def = this.byKey.get(typeKey);
+		if (!def) {
+			return [];
+		}
+		const covered = new Set<string>([def.id]);
+		for (const ancestor of this.ancestorsOf(typeKey)) {
+			covered.add(ancestor.id);
+		}
+		return this.properties.filter(
+			(prop) =>
+				(prop.scope === 'universal' && prop.objectTypes.length === 0) ||
+				prop.objectTypes.some((id) => covered.has(id)),
+		);
 	}
 
 	// ---- Кэш (.sb/cache/registry.json; М5 — не источник истины) ----

@@ -15,6 +15,7 @@
  */
 
 import type { VaultAdapter } from '../adapter/vault-adapter';
+import type { LogFn } from './activity-log';
 import { diagnostic, type SbDiagnostic } from './diagnostics';
 import { findDuplicateIds, fileNameMatchesId, parseFileName, repairFileNameById } from './identity';
 import type { LabelResolver } from './label-resolver';
@@ -41,11 +42,16 @@ function compareStamps(a: string, b: string): number {
  * Проверяет одну заметку. Не бросает исключений на «плохих» данных — всё
  * возвращается диагностиками (система не должна молча переписывать неправильное).
  */
+/** Сколько строк уровня error писать в журнал на одну проверку (защита от флуда). */
+const MAX_ERROR_LINES_PER_RUN = 10;
+
 export async function validateObject(
 	adapter: VaultAdapter,
 	registry: TypeRegistry,
 	labels: LabelResolver,
 	path: string,
+	log?: LogFn,
+	logValidation = true,
 ): Promise<ValidateObjectResult> {
 	const content = await adapter.read(path);
 	const note = parseNote({ path, content }, adapter);
@@ -64,6 +70,11 @@ export async function validateObject(
 				hint: 'Исправьте YAML между строками --- в начале файла (или пересоздайте объект командой плагина)',
 			}),
 		);
+		if (logValidation) {
+			log?.('error', 'validation', `Проверка «${path}»: frontmatter не разбирается — объект не применён`, {
+				rule_id: 'object.frontmatter.broken',
+			});
+		}
 		return finish(path, diagnostics, true);
 	}
 
@@ -306,6 +317,16 @@ export async function validateObject(
 		}
 	}
 
+	if (logValidation) {
+		const errors = diagnostics.filter((d) => d.severity === 'error');
+		const warnings = diagnostics.filter((d) => d.severity === 'warning');
+		log?.(
+			errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'info',
+			'validation',
+			`Проверка «${path}»: ошибок ${errors.length}, предупреждений ${warnings.length}`,
+			{ rules: diagnostics.slice(0, MAX_ERROR_LINES_PER_RUN).map((d) => d.rule_id) },
+		);
+	}
 	return finish(path, diagnostics, false);
 }
 

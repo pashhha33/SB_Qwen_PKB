@@ -10,6 +10,7 @@
  */
 
 import type { VaultAdapter } from '../adapter/vault-adapter';
+import type { LogFn } from './activity-log';
 import { nowStamp } from './datetime';
 import { SbError } from './errors';
 import { buildFileName, isValidTypePrefix } from './identity';
@@ -71,6 +72,7 @@ export async function createObjectTypeDefinition(
 	adapter: VaultAdapter,
 	registry: TypeRegistry,
 	input: CreateObjectTypeInput,
+	log?: LogFn,
 ): Promise<CreationResult> {
 	// --- предварительная проверка (уровень 1 контроля, ADR-011: до записи) ---
 	if (!TYPE_KEY_PATTERN.test(input.typeKey)) {
@@ -132,6 +134,12 @@ export async function createObjectTypeDefinition(
 
 	await adapter.createFolder(METAMODEL_SUBFOLDERS.objectTypes);
 	await adapter.create(path, renderNote(adapter, frontmatter, body));
+	log?.('info', 'creation', `Создан тип объекта «${input.label.trim()}» (${input.typeKey})`, {
+		path,
+		id,
+		type_prefix: input.typePrefix,
+		abstract: input.abstract === true,
+	});
 	return { path, id, fileName };
 }
 
@@ -155,6 +163,7 @@ export async function createObjectInstance(
 	adapter: VaultAdapter,
 	registry: TypeRegistry,
 	input: CreateObjectInput,
+	log?: LogFn,
 ): Promise<CreationResult> {
 	const typeDef = registry.getType(input.typeKey);
 	if (!typeDef) {
@@ -191,5 +200,6 @@ export async function createObjectInstance(
 		await adapter.createFolder(folder);
 	}
 	await adapter.create(path, renderNote(adapter, frontmatter, body));
+	log?.('info', 'creation', `Создан объект «${title}» типа «${typeDef.label}»`, { path, id, type: typeDef.typeKey });
 	return { path, id, fileName };
 }

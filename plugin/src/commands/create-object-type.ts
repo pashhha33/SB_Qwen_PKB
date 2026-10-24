@@ -88,20 +88,27 @@ class CreateObjectTypeModal extends Modal {
 							new Notice('Ключ типа: строчная латиница, цифры и «_», первая буква — строчная (^[a-z][a-z0-9_]*$)');
 							return;
 						}
-						const result = await createObjectTypeDefinition(this.context.adapter, this.context.registry, {
-							typeKey: this.typeKey,
-							label: this.label,
-							typePrefix: this.typePrefix,
-							abstract: this.isAbstract,
-							parentTypeId: this.parentId,
-							lifecycle: this.lifecycle,
-							description: this.description,
-						});
+						const result = await createObjectTypeDefinition(
+							this.context.adapter,
+							this.context.registry,
+							{
+								typeKey: this.typeKey,
+								label: this.label,
+								typePrefix: this.typePrefix,
+								abstract: this.isAbstract,
+								parentTypeId: this.parentId,
+								lifecycle: this.lifecycle,
+								description: this.description,
+							},
+							this.context.logger.fn,
+						);
 						await this.context.reloadRegistry();
 						new Notice(`Тип создан: ${result.path}`);
 						this.close();
 					} catch (error) {
-						new Notice(error instanceof SbError ? error.message : `Не удалось создать тип: ${String(error)}`);
+						const message = error instanceof SbError ? error.message : `Не удалось создать тип: ${String(error)}`;
+						this.context.logger.log('error', 'creation', message, { typeKey: this.typeKey });
+						new Notice(message);
 					}
 				}),
 		);

@@ -242,3 +242,105 @@ describe('label-resolver (ADR-003: view — подписи, source — ключ�
 		expect(labels.forTypeKey('nosuchtype')).toBe('nosuchtype');
 	});
 });
+
+describe('type-registry — привязка свойств к типам (F5-8 = А, DL-250/252)', () => {
+	let vault: FakeVault;
+
+	beforeEach(async () => {
+		vault = await FakeVault.create();
+	});
+	afterEach(async () => {
+		await vault.cleanup();
+	});
+
+	const WORK_DEF_ID = '01J8Z6M4K2Q7V9X3N5B0C1D2WA';
+	const BOOK_DEF_ID = '01J8Z6M4K2Q7V9X3N5B0C1D2EK';
+	const PERSON_DEF_ID = '01J8Z6M4K2Q7V9X3N5B0C1D2EP';
+
+	const typeNote = (id: string, key: string, label: string, prefix: string, isAbstract: boolean, parentId?: string): string =>
+		[
+			'---',
+			`id: ${id}`,
+			'type: object_type',
+			`title: ${key}`,
+			`type_key: ${key}`,
+			`label: ${label}`,
+			`type_prefix: ${prefix}`,
+			`abstract: ${isAbstract}`,
+			...(parentId ? [`parent_type:\n  - "[[OBJECT_TYPE-${parentId}.md|Родитель]]"`] : []),
+			'---',
+			'',
+		].join('\n');
+
+	const propNote = (id: string, key: string, scope: string, objectTypes?: string[]): string =>
+		[
+			'---',
+			`id: ${id}`,
+			'type: property',
+			`title: ${key}`,
+			`key: ${key}`,
+			`label: ${key} (подпись)`,
+			'value_type: text',
+			'cardinality: 0..1',
+			'required: false',
+			`scope: ${scope}`,
+			...(objectTypes ? ['object_types:', ...objectTypes.map((link) => `  - "${link}"`)] : []),
+			'---',
+			'',
+		].join('\n');
+
+	async function seed(): Promise<TypeRegistry> {
+		await vault.put(`${METAMODEL_SUBFOLDERS.objectTypes}/work.md`, typeNote(WORK_DEF_ID, 'work', 'Произведение', 'WORK', true));
+		await vault.put(`${METAMODEL_SUBFOLDERS.objectTypes}/book.md`, typeNote(BOOK_DEF_ID, 'book', 'Книга', 'BOOK', false, WORK_DEF_ID));
+		await vault.put(`${METAMODEL_SUBFOLDERS.objectTypes}/person.md`, typeNote(PERSON_DEF_ID, 'person', 'Человек', 'PERSON', false));
+		// universal без привязки — для всех
+		await vault.put(`${METAMODEL_SUBFOLDERS.properties}/p-desc.md`, propNote('01J8Z6M4K2Q7V9X3N5B0C1D2P1', 'description', 'universal'));
+		// specific — только book
+		await vault.put(
+			`${METAMODEL_SUBFOLDERS.properties}/p-platform.md`,
+			propNote('01J8Z6M4K2Q7V9X3N5B0C1D2P2', 'platform', 'specific', [`[[OBJECT_TYPE-${BOOK_DEF_ID}.md|Книга]]`]),
+		);
+		// family — ссылка на абстрактного предка work: покрывает всех потомков (DL-208)
+		await vault.put(
+			`${METAMODEL_SUBFOLDERS.properties}/p-subtitle.md`,
+			propNote('01J8Z6M4K2Q7V9X3N5B0C1D2P3', 'subtitle', 'family', [`[[OBJECT_TYPE-${WORK_DEF_ID}.md|Произведение]]`]),
+		);
+		// specific — только person
+		await vault.put(
+			`${METAMODEL_SUBFOLDERS.properties}/p-birth.md`,
+			propNote('01J8Z6M4K2Q7V9X3N5B0C1D2P4', 'birth_date', 'specific', [`[[OBJECT_TYPE-${PERSON_DEF_ID}.md|Человек]]`]),
+		);
+		return TypeRegistry.load(vault);
+	}
+
+	it('object_types извлекаются как ULID определений', async () => {
+		const registry = await seed();
+		const platform = registry.getPropertiesByKey('platform')[0];
+		expect(platform.objectTypes).toEqual([BOOK_DEF_ID]);
+		const description = registry.getPropertiesByKey('description')[0];
+		expect(description.objectTypes).toEqual([]);
+	});
+
+	it('getPropertiesForType: universal — всем; specific — только своему; family — потомкам предка', async () => {
+		const registry = await seed();
+		const forBook = registry.getPropertiesForType('book').map((def) => def.key).sort();
+		expect(forBook).toEqual(['description', 'platform', 'subtitle']);
+		const forPerson = registry.getPropertiesForType('person').map((def) => def.key).sort();
+		expect(forPerson).toEqual(['birth_date', 'description']);
+	});
+
+	it('getPropertiesForType для неизвестного типа — пустой список (не исключение)', async () => {
+		const registry = await seed();
+		expect(registry.getPropertiesForType('nosuchtype')).toEqual([]);
+	});
+
+	it('LabelResolver с typeKey берёт подпись из типобластного набора (F5-8)', async () => {
+		const registry = await seed();
+		const labels = new LabelResolver(registry);
+		expect(labels.forPropertyKey('platform', 'book')).toBe('platform (подпись)');
+		// у person свойства platform нет — резервный поиск по ключу (первое определение)
+		expect(labels.forPropertyKey('platform', 'person')).toBe('platform (подпись)');
+		// неизвестный ключ — сам ключ
+		expect(labels.forPropertyKey('unknown', 'book')).toBe('unknown');
+	});
+});

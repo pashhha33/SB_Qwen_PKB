@@ -12,6 +12,8 @@ value_type: text
 cardinality: 0..1
 required: false
 scope: specific
+object_types:
+  - "[[OBJECT_TYPE-01J8Z6M4K2Q7V9X3N5B0C1D2EK.md|Book]]"
 applies_when:
   property: format
   operation: equals
@@ -27,7 +29,11 @@ definition: "Площадка, на которой выходит веб-нов�
 - условие влияет **только на показ и проверку обязательности**, никогда на хранение
   (М1/М2): при смене `format` значение `platform` не удаляется, а «гаснет»;
 - `property: format` — key свойства-триггера **того же типа** (или унаследованного);
-  существование триггера — runner (`applies_when.property_exists`);
+  существование триггера — runner (`applies_when.property_exists`); «того же типа» —
+  теперь машиночитаемо: привязка `object_types` (F5-8 = А, DL-250/252);
+- `object_types` — ссылка на определение типа `book` (`OBJECT_TYPE-01J8…EK` из
+  `object_type/valid-01-book.md`): `scope: specific` + ровно одна ссылка на конкретный тип;
+  согласованность scope и состава — runner (`property.object_types.scope_consistency`);
 - значение условия для `in_category` — ULID категорий (проверка в `$defs.applies_when`);
   для `equals`/`includes_any` — строка или список строк.
 

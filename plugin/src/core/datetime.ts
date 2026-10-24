@@ -28,6 +28,11 @@ export function nowStamp(): string {
 	return formatDateTimeLocal(new Date());
 }
 
+/** Локальные дата+время Date → 'YYYY-MM-DDTHH:mm:ss' — для журнала плагина (DL-251). */
+export function formatDateTimeWithSecondsLocal(value: Date): string {
+	return `${formatDateTimeLocal(value)}:${pad(value.getSeconds())}`;
+}
+
 /** Точная метка времени YAML-формата: 'YYYY-MM-DDTHH:mm:ss' (со секундами). */
 const DATE_TIME_SECONDS_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
 

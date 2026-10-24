@@ -3,10 +3,10 @@ doc_type: metamodel_section
 section: "04"
 title: "Атрибуты: системные, предметные, типы значений"
 status: actual
-version: 0.7.0
+version: 0.8.0
 created: 2026-10-22
-updated: 2026-10-22
-metamodel_version: 0.11.0
+updated: 2026-10-24
+metamodel_version: 1.1.0
 governing_adr:
   - docs/adr/ADR-006-system-attributes-value-types-media.md
   - docs/adr/ADR-008-media-property-type.md
@@ -150,12 +150,34 @@ definition: Person or organization that created the work.
 | `media_*` | Семь настроек медиа | различный | для `media_reference` — `media_target` обязательно | см. раздел 10 | Допускаются **только** у свойств типа `media_reference` |
 | `cardinality` | Кардинальность | enum | да | `1`, `0..1`, `0..N`, `1..N` | Единственный способ задать множественность |
 | `required` | Обязательно | `boolean` | да | — | Производно от `cardinality`: `1` и `1..N` подразумевают обязательность |
-| `scope` | Область применения | enum | да | `universal`, `family`, `specific` | Объединяет исходные `область_применения` и `уровень` (U-06) |
+| `scope` | Область применения | enum | да | `universal`, `family`, `specific` | Объединяет исходные `область_применения` и `уровень` (U-06); машиночитаемая привязка — поле `object_types` (§4.1, F5-8) |
+| `object_types` | Привязка к типам | `object_reference` → `object_type` | нет (семантика задаётся `scope`, §4.1) | — | Список wikilink-ов на определения типов; введён F5-8 = А (DL-250/252) |
 | `lifecycle` | Жизненный цикл | enum | нет | `experimental`, `standard`, `deprecated`, `archived` | Из `01` §16 |
 | `default_value` | Значение по умолчанию | любой | нет | — | Подставляется при создании объекта |
 | `definition` | Определение | `text` | нет | — | Смысл поля человеческим языком |
 | `service` | Служебное | `boolean` | нет, по умолчанию `false` | `true` / `false` | Свойство существует в схеме и данных, но **не предлагается для ввода**: его ведёт плагин. В MVP одно такое свойство — `sb_issues` (DL-168, [[08-views\|`08-views.md`]] §7) |
 | `create_from_link` | Создание из пустой ссылки | enum | нет, по умолчанию `ask` | `ask`, `forbid`, `auto` | Только для `object_reference` и `media_reference`: разрешено ли создавать объект кликом по неразрешённой ссылке в этом свойстве. Норма — [[12-links-and-aliases\|`12-links-and-aliases.md`]] §5.4 (`accepted`, DL-187) |
+
+### 4.1. Привязка свойства к типу (F5-8 = А, DL-250/252)
+
+Поле **`object_types`** — список ссылок на определения `object_type`, которым принадлежит
+свойство. Закрывает пробел: правила `property.key.unique_in_type`,
+`property.applies_when.property_exists` («в том же типе»), наследование свойств
+(`07-hierarchy` §6) и формы этапа B предполагают принадлежность, но до 1.1.0 она
+не кодировалась в данных (`scope: family/specific` не имел носителя).
+
+| `scope` | `object_types` | Смысл |
+|---|---|---|
+| `universal` | пусто или отсутствует | Свойство доступно всем типам |
+| `family` | ровно одна ссылка на **абстрактный** тип | Свойство доступно всему семейству: потомки предка включаются автоматически (семантика DL-208) |
+| `specific` | одна и более ссылок на **неабстрактные** типы | Свойство принадлежит перечисленным типам (их потомки — по наследованию, `07-hierarchy` §6) |
+
+Правила: `property.object_types.scope_consistency` (error) и `property.object_types.exists`
+(error) — группа B реестра. Наследник, уточняющий свойство родителя (`01-classification` §5),
+ссылается на того же владельца; дублирование определения с тем же `key` для другого типа —
+нарушение `property.key.unique_in_type` в пределах типа и его предков. Привязка **не**
+заменяет `target_types` (цели ссылок) и `applies_when` (условный показ) — это три разных
+механизма.
 
 ### Про `required` и `cardinality`: устранение дублирования
 

@@ -2,10 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.11.2
+version: 0.12.0
 created: 2026-10-22
-updated: 2026-10-23
-metamodel_version: 0.26.0
+updated: 2026-10-24
+metamodel_version: 1.1.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -19,7 +19,7 @@ governing_documents:
   - docs/adr/ADR-009-relations-model.md
   - docs/adr/ADR-011-enumerations-dates-lifecycle.md
   - docs/metamodel/12-links-and-aliases.md
-rule_count: 167
+rule_count: 169
 tags: [validation, registry]
 ---
 
@@ -38,7 +38,7 @@ tags: [validation, registry]
 | Группа | Правил | Источник |
 |---|---|---|
 | A. Системные атрибуты объекта | 10 | `04-attributes` §3 |
-| B. Определения свойств | **14** | `04-attributes` §4, §11, `12-links-and-aliases` §9.1 |
+| B. Определения свойств | **16** | `04-attributes` §4, §11, `12-links-and-aliases` §9.1 |
 | C. Значения свойств | 5 | `04-attributes` §9 |
 | D. Медиа | 8 | `04-attributes` §11 |
 | E. Классификация | 19 | `01-classification` §6, ADR-005, ADR-007 |
@@ -51,7 +51,7 @@ tags: [validation, registry]
 | L. Тип `project` | **10** | `entities/project.md` §6 |
 | M. Ссылки и псевдонимы | **11** | [[../metamodel/12-links-and-aliases\|`12-links-and-aliases.md`]] §10 |
 | N. Тип `knowledge` | **1** | `entities/knowledge.md` §6 |
-| **Всего** | **167** | |
+| **Всего** | **169** | |
 
 ---
 
@@ -98,6 +98,8 @@ tags: [validation, registry]
 | `property.applies_when.value_present` | Поле `value` условия заполнено и не пусто | error | 2 |
 | `property.applies_when.operation_matches_cardinality` | `includes_any` применяется только к триггеру с множественной кардинальностью | warning | 4 |
 | `property.create_from_link.auto_needs_single_target` | `create_from_link: auto` задано только свойству, у которого `target_types` содержит ровно один тип | error | 3 |
+| `property.object_types.scope_consistency` | `object_types` согласовано со `scope`: `universal` — пусто или отсутствует; `family` — ровно одна ссылка на абстрактный тип (потомки включаются, DL-208); `specific` — одна и более ссылок на неабстрактные типы | error | 4 |
+| `property.object_types.exists` | Все ссылки `object_types` ведут на существующие определения `object_type` | error | 3 |
 
 ## C. Значения свойств
 
@@ -385,6 +387,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-24 | 0.12.0 | **F5-8 = А (DL-250/252)**: группа B +2 правила — `property.object_types.scope_consistency` (error, 4) и `property.object_types.exists` (error, 3); поле `object_types` введено в `property.schema` и `04-attributes` §4.1. Итого **169 правил** в 14 группах |
 | 2026-10-23 | 0.11.2 | Батч 3 шага 9 (состав правил не менялся — **167**): область действия И7 и `chapter.title.fallback` уточнена по DL-230 (вопрос 9-8, ответ А) — только нумерованные части; `chapter_number` условно обязателен (схема `chapter.schema.json`, if/then/else); `draft_status` зарегистрирован (`05-enumerations` §3.17.11) |
 | 2026-10-23 | 0.11.1 | Батч 2 шага 9 (состав правил не менялся — **167**): `person.role.enum` — подсчёт значений исправлен на **40** (DL-228, по образцу DL-150); `person.role.suggested` переинтерпретировано (DL-224): info — для значений **внутри** перечисления без группы (`other_occupation`), значения вне перечисления — error `person.role.enum`; перечисление зашито в `schema/entities/person.schema.json` | [[../metamodel/05-enumerations\|`05-enumerations.md`]] §3.17.5, DL-224, DL-228 |
 | 2026-10-23 | 0.11.0 | Группа N **утверждена** (вопрос K2 карточки `knowledge` закрыт ответом «А», DL-215): пометки † сняты. Итог — **167 правил** в 14 группах (A–N) | [[../metamodel/entities/knowledge\|`knowledge.md`]] §9, DL-215 |
