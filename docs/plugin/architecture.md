@@ -2,10 +2,10 @@
 doc_type: plugin_doc
 title: "Архитектура плагина: слои, модули, соответствие исходникам"
 status: actual
-version: 0.2.0
+version: 0.3.0
 created: 2026-10-24
 updated: 2026-10-24
-metamodel_version: 1.0.2
+metamodel_version: 1.0.3
 governing_documents:
   - docs/metamodel/09-modules.md
   - docs/adr/ADR-002-source-of-truth.md
@@ -46,16 +46,22 @@ tags: [plugin, architecture]
 | `obsidian-adapter` | A | `src/adapter/obsidian-adapter.ts` (прод), `src/adapter/vault-adapter.ts` (интерфейс) | ✅ создан |
 | `markdown-parser` | A | `src/core/markdown-parser.ts`, `src/core/model.ts` | ✅ создан |
 | `identity` | A | `src/core/ulid.ts`, `src/core/identity.ts`, `src/core/datetime.ts` | ✅ создан (И1 формат + уникальность-скан, И2 проверка/починка; И3 — в A2 с реестром) |
-| `metamodel-bootstrap` | A | — | A2 |
-| `type-registry` | A | — | A2 |
-| `label-resolver` | A | — | A2 |
-| `commands` (тонкая обёртка — DL-244/9.5) | A | — | A2 (`create-object-type`, `create-object`, `validate-object`) |
+| `metamodel-bootstrap` | A | — | **A2 часть 2** (ждёт решений F5-7/F5-9/F5-10) |
+| `type-registry` | A | `src/core/registry.ts` (+ кэш `.sb/cache/registry.json`) | ✅ A2 часть 1: индексы типов/свойств, предки, issues определений (ADR-002: битое определение не применяется, остальные работают) |
+| `label-resolver` | A | `src/core/label-resolver.ts` | ✅ A2 часть 1: режимы `view`/`source`, резерв «нет label → ключ» (команда `toggle-label-mode` — этап B) |
+| `commands` (тонкая обёртка — DL-244/9.5) | A | `src/commands/create-object-type.ts`, `create-object.ts`, `validate-object.ts`, `context.ts` | ✅ A2 часть 1: три команды MVP, vanilla-модалки (Svelte — этап B); логика — в `src/core/creation.ts` и `src/core/validation.ts` |
 | `front-matter-title-adapter` | A | — | A3 (изолирован, мягкий отказ) |
 | (D2: генератор TS-типов) | A/B | — | A3: `json-schema-to-typescript`, сгенерированные файлы коммитятся, тест «перегенерация == зафиксированное» (DL-222) |
 
+Часть слоя 2 (схема и валидация) в объёме A2: `src/core/validation.ts`
+(validate-object — группа A реестра правил, уровни 2–4) и `src/core/diagnostics.ts`
+(формат 11 полей, severity-policy §4). Группы B/C и полные свойства — этап B
+(schema-engine); связи — этап C.
+
 Вспомогательные файлы, не являющиеся модулями реестра:
-`src/core/errors.ts` (коды ошибок), `src/main.ts` (точка входа),
-`esbuild.config.mjs`, `scripts/link-vault.mjs` (dev-инструменты).
+`src/core/errors.ts` (коды ошибок), `src/core/creation.ts` (сервис создания —
+логика команд), `src/main.ts` (точка входа), `esbuild.config.mjs`,
+`scripts/link-vault.mjs` (dev-инструменты).
 
 ## 3. Тесты (решение DL-244, вопрос 9.3 = А)
 
@@ -70,7 +76,9 @@ tags: [plugin, architecture]
 `obsidian-adapter` автотестов нет — тонкая обёртка над API, её автопроверка
 означала бы мокирование самого Obsidian. Замена: поведенческий контракт
 интерфейса прогоняется на FakeVault (`adapter-contract.test.ts`), прод-реализация
-проверяется вручную по чек-боксам DoD.
+проверяется вручную по чек-боксам DoD. С A2 части 1 то же касается модалок команд
+(`src/commands/*` — vanilla-UI): автотестами покрыта логика ядра (creation,
+validation, registry), а не отрисовка окон.
 
 Материал для тестов парсера — **примеры шага 9** (`examples/instances/`,
 62 файла): те же заметки, на которых зелёный корневой `npm run check`.
@@ -100,11 +108,14 @@ tags: [plugin, architecture]
 
 | # | Расхождение | Влияние | Статус |
 |---|---|---|---|
-| **F5-7** | Реестр `02-entities` §6 содержит 12 префиксов с `_` (`OBJECT_TYPE`, `RELATION_TYPE`, `SERIES_COLLECTION`…) и 4 длиннее 12 символов, но схема `defs.json#type_prefix` (`^[A-Z][A-Z0-9-]*$`) и правило ADR-001 («только A–Z, 0–9, дефис», 3–12) подчёркивание запрещают; ADR-001 при этом сам говорит «UPPER_SNAKE_CASE» | **Блокирует A2**: бутстрап пишет файлы `OBJECT_TYPE-{ULID}.md`. Код A1 следует схеме (строгая валидация), имена файлов читает деликатно (парсер `_` допускает) | **Вопрос пользователю** (рекомендация: легализовать `_` и длину 3–20 — MINOR-расширение схемы) |
+| **F5-8** | **Привязка свойства к типу не кодируется в данных**: `scope: specific/family` не имеет поля-носителя (в `property.schema` и примерах нет `object_types` или подобного), но правила `property.key.unique_in_type`, `property.applies_when.property_exists` и построение форм этапа B предполагают принадлежность свойства типу; карточки типов (`entities/book.md` §4) хранят её только текстом | **Блокирует этап B** (schema-engine, формы, обязательность по типам); A2 не блокирует (группа A — системные атрибуты) | **Вопрос пользователю** (F5-8): поле `object_types` у свойства (рекомендация) / список `properties` у типа / отложить до B |
+| **F5-7** | Реестр `02-entities` §6 содержит 12 префиксов с `_` (`OBJECT_TYPE`, `RELATION_TYPE`, `SERIES_COLLECTION`…) и 4 длиннее 12 символов, но схема `defs.json#type_prefix` (`^[A-Z][A-Z0-9-]*$`) и правило ADR-001 («только A–Z, 0–9, дефис», 3–12) подчёркивание запрещают; ADR-001 при этом сам говорит «UPPER_SNAKE_CASE». Дополнительно (находка A2): схемы `link_object_type`/`link_property` **уже содержат** `OBJECT_TYPE-`/`PROPERTY-` — вариант «переименовать реестр» затронет 14 схем и примеры | **Блокирует A2 часть 2**: бутстрап пишет файлы `OBJECT_TYPE-{ULID}.md`. Код следует схеме (строгая валидация пользовательского ввода), системные префиксы изолированы в таблице `SYSTEM_TYPE_PREFIXES` (`registry.ts`), имена файлов читаются деликатно | **Вопрос пользователю** (рекомендация: легализовать `_` и длину 3–20 — MINOR-расширение схемы) |
+| (микро) | Временный id `object.frontmatter.broken`: в реестре 167 правил нет id для «frontmatter заметки не разбирается» (у `.base` есть `view.base.parsable`) | validate-object выдаёт диагностику с временным id | Регистрация постоянного id — вместе с батчем F5-7/F5-8 (MINOR: правило-предупреждение) |
 
 ## История изменений
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-24 | 0.3.0 | A2 часть 1: type-registry (+кэш), label-resolver, validation (группа A, 11-польный формат), три команды (vanilla-модалки); соответствие модулей обновлено; §5 + F5-8 и временный id `object.frontmatter.broken`; М4-уточнение про модалки | DL-246 |
 | 2026-10-24 | 0.2.0 | Конвенция двухуровневой нормализации дат (фикс TZ-бага A1) + плашка ограничения для Date в списках | DL-245, плагин 0.1.1 |
 | 2026-10-24 | 0.1.0 | Документ создан: слои, соответствие модулей исходникам A1, тесты (FakeVault, контракт, отклонение М4), конвенции кода, находка F5-7 | Под-батч A1, DL-244 |

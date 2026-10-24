@@ -2,7 +2,7 @@
 doc_type: roadmap
 title: "Этапы реализации: от схемы до плагина в руках"
 status: accepted
-version: 0.5.0
+version: 0.5.1
 created: 2026-10-22
 updated: 2026-10-24
 metamodel_version: 1.0.2
@@ -98,7 +98,7 @@ tags: [roadmap, phases, step8]
 > | Под-батч | Состав | Проверяемый результат |
 > |---|---|---|
 > | **A1** ✅ (2026-10-24) | Каркас `plugin/` (`manifest.json` id `second-brain`, esbuild dev/prod, tsconfig, vitest); `obsidian-adapter` + интерфейс `VaultAdapter` + FakeVault; `identity` (ULID, имя файла, И1–И2); `markdown-parser` (+ wikilink-и); dev-связка с хранилищем (`docs/plugin/dev-setup.md`) | vitest 82/82; парсер читает все 62 примера `examples/instances/`; `tsc --noEmit` и `npm run build` зелёные; слой-тест М2 |
-> | **A2** | `metamodel-bootstrap` (7 системных типов как данные плагина); `type-registry` + кэш `.sb/cache/`; `label-resolver`; команды `create-object-type` / `create-object` / `validate-object` (тонкие обёртки); диагностики формата 11 полей; ULID-инварианты И3–И6 в валидации | Чек-боксы DoD этапа: бутстрап в пустом хранилище; `book` создаётся из Markdown-определения без перекомпиляции; экземпляр `BOOK-{ULID}.md` с И4 |
+> | **A2** | `metamodel-bootstrap` (7 системных типов как данные плагина); `type-registry` + кэш `.sb/cache/`; `label-resolver`; команды `create-object-type` / `create-object` / `validate-object` (тонкие обёртки); диагностики формата 11 полей; ULID-инварианты И3–И6 в валидации. **Часть 1 ✅ (2026-10-24, DL-246)**: registry + кэш, label-resolver, validation (группа A), три команды — vitest 118/118. **Часть 2** (бутстрап) ждёт решений F5-7/F5-9/F5-10 | Чек-боксы DoD этапа: бутстрап в пустом хранилище (часть 2); `book` создаётся из Markdown-определения без перекомпиляции (✅ в тестах части 1); экземпляр `BOOK-{ULID}.md` с И4 (✅ в тестах части 1) |
 > | **A3** | **D2** — генератор TS-типов из JSON Schema (`json-schema-to-typescript`) + тест «перегенерация == зафиксированное»; `front-matter-title-adapter` (изолированный, мягкий отказ); закрытие DoD этапа A | D2 чек-листа закрыт конструкцией (DL-222); все чек-боксы DoD этапа A |
 >
 > **Блокер A2 — вопрос F5-7** (находка A1): реестр `02-entities` §6 использует snake_case-префиксы
