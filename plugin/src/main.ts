@@ -25,7 +25,7 @@
  * тест tests/integration/layering.test.ts).
  */
 
-import { Notice, Plugin } from 'obsidian';
+import { Notice, Plugin, type App } from 'obsidian';
 import { ObsidianVaultAdapter } from './adapter/obsidian-adapter';
 import { registerCopyLogCommand } from './commands/copy-log';
 import { registerCreateObjectCommand } from './commands/create-object';
@@ -35,6 +35,12 @@ import { registerShowLogCommand } from './commands/show-log';
 import { registerValidateObjectCommand } from './commands/validate-object';
 import { ActivityLog } from './core/activity-log';
 import { bootstrapMetamodel } from './core/bootstrap';
+import {
+	FRONT_MATTER_TITLE_ID,
+	frontMatterTitleAdvice,
+	NO_FRONT_MATTER_TITLE,
+	type ExternalPluginSnapshot,
+} from './core/front-matter-title';
 import { LabelResolver } from './core/label-resolver';
 import { TypeRegistry } from './core/registry';
 import { loadSettings, saveSettings as persistSettings, type PluginSettings } from './core/settings';
@@ -70,6 +76,26 @@ export default class SecondBrainPlugin extends Plugin implements PluginContext, 
 		this.registry = await this.reloadRegistry();
 		this.labels = new LabelResolver(this.registry);
 		this.labels.setMode(this.settings.labelMode);
+
+		// Front Matter Title — необязательная рекомендуемая интеграция (ADR-001 уровень 2,
+		// карточка docs/integrations/front-matter-title.md). Адаптер изолирован (М3):
+		// любой сбой проверки деградирует молча, плагин продолжает работать (М4).
+		try {
+			const fmtSnapshot = detectFrontMatterTitle(this.app);
+			const advice = frontMatterTitleAdvice(fmtSnapshot, this.settings.fmtAdviceShown);
+			this.logger.log(advice.logLevel, 'front-matter-title', advice.logMessage, {
+				installed: fmtSnapshot.installed,
+				enabled: fmtSnapshot.enabled,
+				version: fmtSnapshot.version,
+			});
+			if (advice.recommend) {
+				new Notice(`Second Brain: ${advice.message}`);
+				this.settings.fmtAdviceShown = true;
+				await this.saveSettings();
+			}
+		} catch (error) {
+			this.logger.log('debug', 'front-matter-title', `Проверка Front Matter Title пропущена (сбой адаптера, М3): ${String(error)}`);
+		}
 
 		// Команды получают сам плагин как контекст (он реализует PluginContext).
 		registerCreateObjectTypeCommand(this, (cmd) => this.addCommand(cmd));
@@ -135,5 +161,32 @@ export default class SecondBrainPlugin extends Plugin implements PluginContext, 
 	async saveSettings(): Promise<void> {
 		await persistSettings(this.adapter, this.settings);
 		this.logger?.log('debug', 'settings', 'Настройки сохранены в .sb/settings.json');
+	}
+}
+
+/**
+ * Снимок состояния Front Matter Title из среды — БЕЗ его API (публичного API у FMT нет,
+ * и он нам не нужен — карточка интеграции). `app.plugins` не входит в документированный
+ * интерфейс App, поэтому чтение защитное: любая неожиданность — NO_FRONT_MATTER_TITLE,
+ * плагин продолжает работать (М3 — изоляция адаптера, М4 — резервное поведение: имена файлов).
+ */
+function detectFrontMatterTitle(app: App): ExternalPluginSnapshot {
+	try {
+		const plugins = (
+			app as unknown as {
+				plugins?: {
+					manifests?: Record<string, { version?: string } | undefined>;
+					enabledPlugins?: { has(id: string): boolean };
+				};
+			}
+		).plugins;
+		const manifest = plugins?.manifests?.[FRONT_MATTER_TITLE_ID];
+		return {
+			installed: manifest !== undefined && manifest !== null,
+			enabled: typeof plugins?.enabledPlugins?.has === 'function' ? plugins.enabledPlugins.has(FRONT_MATTER_TITLE_ID) : false,
+			version: typeof manifest?.version === 'string' ? manifest.version : null,
+		};
+	} catch {
+		return NO_FRONT_MATTER_TITLE;
 	}
 }

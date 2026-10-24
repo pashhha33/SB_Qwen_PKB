@@ -2,7 +2,7 @@
 doc_type: plugin_doc
 title: "Архитектура плагина: слои, модули, соответствие исходникам"
 status: actual
-version: 0.7.0
+version: 0.8.0
 created: 2026-10-24
 updated: 2026-10-25
 metamodel_version: 1.2.0
@@ -53,10 +53,10 @@ Runtime-импорт `obsidian` разрешён только в `src/main.ts`, 
 | `type-registry` | A | `src/core/registry.ts` (+ кэш `.sb/cache/registry.json`) | ✅ A2 часть 1: индексы типов/свойств, предки, issues определений (ADR-002: битое определение не применяется, остальные работают) |
 | `label-resolver` | A | `src/core/label-resolver.ts` | ✅ A2 часть 1: режимы `view`/`source`, резерв «нет label → ключ» (команда `toggle-label-mode` — этап B) |
 | `commands` (тонкая обёртка — DL-244/9.5) | A | `src/commands/create-object-type.ts`, `create-object.ts`, `validate-object.ts`, `copy-log.ts`, `context.ts` | ✅ A2 часть 1: три команды MVP, vanilla-модалки (Svelte — этап B); логика — в `src/core/creation.ts` и `src/core/validation.ts` |
-| `front-matter-title-adapter` | A | — | A3 (изолирован, мягкий отказ) |
+| `front-matter-title-adapter` | A | `src/core/front-matter-title.ts` (+ обнаружение в `src/main.ts`) | ✅ **A3** (2026-10-25, DL-258): чистая логика рекомендации в ядре (М2); `main.ts` защитно читает `app.plugins` (без API FMT — его нет), сбой деградирует молча (М3); рекомендация — одноразовая (флаг `fmtAdviceShown` в `.sb/settings.json`); данные не трогает (М1), без FMT штатно показываются имена файлов (М4), тон — без обещаний покрытия (M6) |
 | `log-viewer` | A | `src/commands/show-log.ts`, `src/commands/copy-log.ts`, `src/ui/clipboard.ts` | ✅ A2.5 (DL-251): окно журнала — фильтр по уровню, последние 300, очистка, **живой режим**; **0.3.2 (DL-256)**: кнопка «Скопировать» (видимые записи) + команда `copy-log` (весь буфер); формат дампа — `formatEntriesForCopy` (ядро) |
 | `settings-ui` (первая инкарнация) | A→E | `src/ui/settings-tab.ts` | ✅ A2.5: выключатели журнала, лимит, «писать результаты проверок», режим подписей; полный модуль — этап E |
-| (D2: генератор TS-типов) | A/B | — | A3: `json-schema-to-typescript`, сгенерированные файлы коммитятся, тест «перегенерация == зафиксированное» (DL-222) |
+| (D2: генератор TS-типов) | A/B | `scripts/generate-schema-types.mjs` → `src/generated/*.ts` (13 файлов) | ✅ **A3** (2026-10-25, DL-258): `json-schema-to-typescript` (dev-зависимость), npm `generate:types` / `check:types-fresh`; файлы коммитятся; тест свежести `tests/unit/generated-freshness.test.ts` — «перегенерация == зафиксированное» (DL-222); канонические имена типов подставляются генератором (title схем содержит «(слой N)»); if/then/else уплощаются — типы приближение, норма — схема (M6) |
 
 Часть слоя 2 (схема и валидация) в объёме A2: `src/core/validation.ts`
 (validate-object — группа A реестра правил, уровни 2–4) и `src/core/diagnostics.ts`
@@ -124,6 +124,7 @@ validation, registry), а не отрисовка окон.
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-25 | 0.8.0 | **A3 — этап A закрыт (плагин 0.5.0, DL-258)**: `front-matter-title-adapter` → `core/front-matter-title.ts` + защитное обнаружение в `main.ts`; D2 — генератор `scripts/generate-schema-types.mjs` → 13 файлов `src/generated/` (коммитятся) + тест свежести; devDependency `json-schema-to-typescript` (первый батч, где нужен `npm ci`); настройки +`fmtAdviceShown`; тесты **165/165** | DL-258 |
 | 2026-10-25 | 0.7.0 | **A2 часть 2 — бутстрап `Metamodel/` (плагин 0.4.0, DL-257)**: модуль `metamodel-bootstrap` → `src/core/bootstrap.ts` (слой 1, среда-независим); семенные данные — статические строки (LF, без BOM, без токенов Templater — DL-190); фиксированные ULID как системные константы — примечание-исключение в ADR-001 (рев. 0.2.1); тесты +14 (157/157): рецепт ULID, формат семян, DoD «пустое хранилище → 7 типов», идемпотентность, частичное состояние, сохранность пользовательских определений, отказоустойчивость | DL-257 |
 | 2026-10-24 | 0.6.0 | **Плагин 0.3.2 (DL-255/256)**: контракт `VaultAdapter.dataWrite` — создаёт родительские папки (прод-адаптер строит цепочку `.sb/` по уровням; `DataAdapter.write` в Obsidian папки не создаёт — инцидент «не удалось сохранить кэш реестра»); юнит-тест прод-адаптера на стабе `obsidian-stub.ts` (исключение M4/DL-244); копирование журнала — кнопка «Скопировать» в `show-log` + команда `copy-log` (`ui/clipboard.ts`, `formatEntriesForCopy` в ядре); §1 — список файлов с правом импорта `obsidian` приведён к факту (commands/*, ui/*); тесты **137 → 143** | DL-255…DL-256 |
 | 2026-10-24 | 0.5.0 | **F5-7 = А (DL-253)**: `_` и длина 3–20 легализованы (`defs#type_prefix`, ADR-001 рев. 0.2.0, `02-entities` §6); расхождение §5 закрыто; микро-расхождение закрыто регистрацией `object.frontmatter.broken` (rules v0.13.0, **170 правил**, DL-254); плагин 0.3.1; бутстрап (A2 часть 2) разблокирован | DL-253…DL-254 |

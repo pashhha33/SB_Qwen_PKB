@@ -1,12 +1,14 @@
 {
 	"name": "second-brain",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"description": "Second Brain — плагин Obsidian: самоопределяющаяся объектная метамодель личной базы знаний (MVP, этап A).",
 	"private": true,
 	"license": "MIT",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "node esbuild.config.mjs production",
+		"generate:types": "node scripts/generate-schema-types.mjs",
+		"check:types-fresh": "node scripts/generate-schema-types.mjs --check",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:watch": "vitest",
@@ -17,6 +19,7 @@
 		"@types/js-yaml": "^4.0.9",
 		"@types/node": "^26.6.5",
 		"esbuild": "^0.28.2",
+		"json-schema-to-typescript": "^16.0.0",
 		"js-yaml": "^4.3.2",
 		"obsidian": "^1.14.4",
 		"typescript": "^5.9.3",

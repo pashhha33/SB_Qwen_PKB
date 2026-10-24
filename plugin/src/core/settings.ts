@@ -19,11 +19,17 @@ export interface PluginSettings {
 	logging: ActivityLogSettings;
 	/** Режим подписей LabelResolver (view/source) — сохраняется между сессиями (ADR-003). */
 	labelMode: 'view' | 'source';
+	/**
+	 * Рекомендация Front Matter Title уже показана (ADR-001 уровень 2, M6).
+	 * Хранится, чтобы не повторять совет при каждой загрузке плагина.
+	 */
+	fmtAdviceShown: boolean;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	logging: { ...DEFAULT_LOG_SETTINGS, levels: { ...DEFAULT_LOG_SETTINGS.levels } },
 	labelMode: 'view',
+	fmtAdviceShown: false,
 };
 
 /** Читает настройки из .sb/settings.json, дополняя отсутствующее значениями по умолчанию. */
@@ -31,6 +37,7 @@ export async function loadSettings(adapter: VaultAdapter): Promise<PluginSetting
 	const settings: PluginSettings = {
 		logging: { ...DEFAULT_SETTINGS.logging, levels: { ...DEFAULT_SETTINGS.logging.levels } },
 		labelMode: DEFAULT_SETTINGS.labelMode,
+		fmtAdviceShown: DEFAULT_SETTINGS.fmtAdviceShown,
 	};
 	try {
 		if (await adapter.dataExists(SETTINGS_PATH)) {
@@ -51,6 +58,9 @@ export async function loadSettings(adapter: VaultAdapter): Promise<PluginSetting
 			}
 			if (parsed.labelMode === 'view' || parsed.labelMode === 'source') {
 				settings.labelMode = parsed.labelMode;
+			}
+			if (typeof parsed.fmtAdviceShown === 'boolean') {
+				settings.fmtAdviceShown = parsed.fmtAdviceShown;
 			}
 		}
 	} catch {

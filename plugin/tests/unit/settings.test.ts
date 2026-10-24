@@ -53,4 +53,20 @@ describe('settings — .sb/settings.json (ADR-002: настройки в .sb/, �
 		const settings = await loadSettings(vault);
 		expect(settings.logging.maxLines).toBe(DEFAULT_SETTINGS.logging.maxLines);
 	});
+
+	it('fmtAdviceShown: дефолт false, roundtrip сохраняет true (рекомендация FMT — один раз)', async () => {
+		const fresh = await loadSettings(vault);
+		expect(fresh.fmtAdviceShown).toBe(false);
+
+		fresh.fmtAdviceShown = true;
+		await saveSettings(vault, fresh);
+		const reloaded = await loadSettings(vault);
+		expect(reloaded.fmtAdviceShown).toBe(true);
+
+		// Старый файл настроек без поля — дополняется дефолтом (формат расширяем).
+		await vault.dataWrite(SETTINGS_PATH, JSON.stringify({ labelMode: 'source' }));
+		const legacy = await loadSettings(vault);
+		expect(legacy.fmtAdviceShown).toBe(false);
+		expect(legacy.labelMode).toBe('source');
+	});
 });
