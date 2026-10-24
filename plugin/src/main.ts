@@ -1,7 +1,10 @@
 /**
  * Second Brain — точка входа плагина Obsidian.
  *
- * Этап A, под-батч A2 (часть 1) + журнализация (A2.5, DL-251) + фикс 0.3.2:
+ * Этап A, под-батч A2 (части 1+2) + журнализация (A2.5, DL-251) + фикс 0.3.2:
+ *   - БУТСТРАП Metamodel/ (A2 часть 2, DL-250/257): при загрузке плагин создаёт
+ *     отсутствующие определения 7 системных типов (F5-9 = А — фиксированные ULID,
+ *     F5-10 = Б — 7 OBJECT_TYPE-заметок); идемпотентен по существованию файлов;
  *   - реестр типов из Metamodel/ + кэш .sb/cache/registry.json;
  *   - LabelResolver (режим из настроек);
  *   - ЖУРНАЛ: .sb/logs/plugin-log.jsonl + настройки .sb/settings.json (ADR-002:
@@ -14,9 +17,8 @@
  *     в окне show-log (копирует видимое) + команда copy-log (копирует весь буфер);
  *   - команды: create-object-type, create-object, validate-object, show-log,
  *     copy-log (тонкие обёртки над ядром — DL-244/9.5).
- * Бутстрап Metamodel/ (7 системных типов) — часть 2 под-батча A2: все решения
- * приняты — F5-7 = А (префиксы: '_' и 3–20 легализованы, DL-253), F5-9 = А
- * (фиксированные ULID), F5-10 = Б (7 OBJECT_TYPE-заметок, DL-250); следующий батч.
+ * Дальше — A3: D2 (генератор TS-типов из схем + тест свежести, конструкция DL-222)
+ * и front-matter-title-adapter; закрытие DoD этапа A (phases.md §4).
  *
  * Архитектура: 'obsidian' импортируют только main.ts, adapter/obsidian-adapter.ts,
  * commands/* и ui/* (слои 4–5); ядро (core/**) — среда-независимо (правило М2,
@@ -32,8 +34,9 @@ import type { PluginContext } from './commands/context';
 import { registerShowLogCommand } from './commands/show-log';
 import { registerValidateObjectCommand } from './commands/validate-object';
 import { ActivityLog } from './core/activity-log';
+import { bootstrapMetamodel } from './core/bootstrap';
 import { LabelResolver } from './core/label-resolver';
-import { METAMODEL_FOLDER, TypeRegistry } from './core/registry';
+import { TypeRegistry } from './core/registry';
 import { loadSettings, saveSettings as persistSettings, type PluginSettings } from './core/settings';
 import { SecondBrainSettingTab, type SettingsHost } from './ui/settings-tab';
 
@@ -52,6 +55,17 @@ export default class SecondBrainPlugin extends Plugin implements PluginContext, 
 		this.settings = await loadSettings(this.adapter);
 		this.logger = new ActivityLog(this.adapter, this.settings.logging);
 		await this.logger.init();
+
+		// Бутстрап — ДО чтения реестра: в свежем хранилище появляются 7 системных типов.
+		const bootstrap = await bootstrapMetamodel(this.adapter, (level, area, message, data) =>
+			this.logger.log(level, area, message, data),
+		);
+		if (bootstrap.created.length > 0 || bootstrap.failed.length > 0) {
+			new Notice(
+				`Second Brain: бутстрап Metamodel/ — создано ${bootstrap.created.length}, ` +
+					`уже было ${bootstrap.skipped.length}, ошибок ${bootstrap.failed.length}`,
+			);
+		}
 
 		this.registry = await this.reloadRegistry();
 		this.labels = new LabelResolver(this.registry);
@@ -80,9 +94,10 @@ export default class SecondBrainPlugin extends Plugin implements PluginContext, 
 			});
 		}
 		if (typesCount === 0) {
-			console.info(
-				`[second-brain] ${this.manifest.version} loaded; ${METAMODEL_FOLDER}/ пуста — реестр пуст (бутстрап появится в A2-части 2)`,
-			);
+			// После бутстрапа это аномалия: либо определения не создались (см. ошибки
+			// бутстрапа в журнале), либо Metamodel/ не читается.
+			this.logger.log('warning', 'bootstrap', 'После бутстрапа в реестре 0 типов — проверьте папку Metamodel/ и журнал (show-log)');
+			console.info(`[second-brain] ${this.manifest.version} loaded; реестр пуст после бутстрапа — см. журнал`);
 		}
 		new Notice(`Second Brain ${this.manifest.version}: загружен (типов в реестре: ${typesCount})`);
 	}

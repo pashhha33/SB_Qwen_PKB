@@ -2,9 +2,9 @@
 doc_type: plugin_doc
 title: "Архитектура плагина: слои, модули, соответствие исходникам"
 status: actual
-version: 0.6.0
+version: 0.7.0
 created: 2026-10-24
-updated: 2026-10-24
+updated: 2026-10-25
 metamodel_version: 1.2.0
 governing_documents:
   - docs/metamodel/09-modules.md
@@ -48,7 +48,7 @@ Runtime-импорт `obsidian` разрешён только в `src/main.ts`, 
 | `obsidian-adapter` | A | `src/adapter/obsidian-adapter.ts` (прод), `src/adapter/vault-adapter.ts` (интерфейс) | ✅ создан; **0.3.2 (DL-255)**: `dataWrite` создаёт родительские папки `.sb/` по уровням перед записью (`DataAdapter.write` в Obsidian этого не делает) + юнит-тест (исключение M4) |
 | `markdown-parser` | A | `src/core/markdown-parser.ts`, `src/core/model.ts` | ✅ создан |
 | `identity` | A | `src/core/ulid.ts`, `src/core/identity.ts`, `src/core/datetime.ts` | ✅ создан (И1 формат + уникальность-скан, И2 проверка/починка; И3 — в A2 с реестром) |
-| `metamodel-bootstrap` | A | — | **A2 часть 2** (F5-9 = А, F5-10 = Б приняты — DL-250; ждёт только F5-7) |
+| `metamodel-bootstrap` | A | `src/core/bootstrap.ts` | ✅ **A2 часть 2** (2026-10-25, DL-257): 7 семенных OBJECT_TYPE-заметок (F5-10 = Б) с фиксированными ULID (F5-9 = А, рецепт — SHA-256 от `second-brain/system-type/{type_key}`, время — 2026-10-23); идемпотентность по существованию файлов (не перезаписывает правки пользователя — ADR-002); отказоустойчивость; вызов из `main.ts` до `TypeRegistry.load`; Notice-отчёт только при изменениях |
 | `activity-log` | A | `src/core/activity-log.ts` (+ `src/core/settings.ts`) | ✅ A2.5 (DL-251): уровни error/warning/info/debug с выключателями, `.sb/logs/plugin-log.jsonl` (лимит, обрезка по хвосту), кольцевой буфер + подписчики (live); **настройки — `.sb/settings.json`, не data.json (ADR-002)** |
 | `type-registry` | A | `src/core/registry.ts` (+ кэш `.sb/cache/registry.json`) | ✅ A2 часть 1: индексы типов/свойств, предки, issues определений (ADR-002: битое определение не применяется, остальные работают) |
 | `label-resolver` | A | `src/core/label-resolver.ts` | ✅ A2 часть 1: режимы `view`/`source`, резерв «нет label → ключ» (команда `toggle-label-mode` — этап B) |
@@ -124,6 +124,7 @@ validation, registry), а не отрисовка окон.
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-25 | 0.7.0 | **A2 часть 2 — бутстрап `Metamodel/` (плагин 0.4.0, DL-257)**: модуль `metamodel-bootstrap` → `src/core/bootstrap.ts` (слой 1, среда-независим); семенные данные — статические строки (LF, без BOM, без токенов Templater — DL-190); фиксированные ULID как системные константы — примечание-исключение в ADR-001 (рев. 0.2.1); тесты +14 (157/157): рецепт ULID, формат семян, DoD «пустое хранилище → 7 типов», идемпотентность, частичное состояние, сохранность пользовательских определений, отказоустойчивость | DL-257 |
 | 2026-10-24 | 0.6.0 | **Плагин 0.3.2 (DL-255/256)**: контракт `VaultAdapter.dataWrite` — создаёт родительские папки (прод-адаптер строит цепочку `.sb/` по уровням; `DataAdapter.write` в Obsidian папки не создаёт — инцидент «не удалось сохранить кэш реестра»); юнит-тест прод-адаптера на стабе `obsidian-stub.ts` (исключение M4/DL-244); копирование журнала — кнопка «Скопировать» в `show-log` + команда `copy-log` (`ui/clipboard.ts`, `formatEntriesForCopy` в ядре); §1 — список файлов с правом импорта `obsidian` приведён к факту (commands/*, ui/*); тесты **137 → 143** | DL-255…DL-256 |
 | 2026-10-24 | 0.5.0 | **F5-7 = А (DL-253)**: `_` и длина 3–20 легализованы (`defs#type_prefix`, ADR-001 рев. 0.2.0, `02-entities` §6); расхождение §5 закрыто; микро-расхождение закрыто регистрацией `object.frontmatter.broken` (rules v0.13.0, **170 правил**, DL-254); плагин 0.3.1; бутстрап (A2 часть 2) разблокирован | DL-253…DL-254 |
 | 2026-10-24 | 0.4.0 | A2.5: `activity-log` + `log-viewer` + первая инкарнация `settings-ui` (DL-251); конвенция `.sb/settings.json`; F5-8 закрыто (object_types, getPropertiesForType); F5-9/F5-10 приняты — бутстрап ждёт только F5-7 | DL-250…DL-252 |
