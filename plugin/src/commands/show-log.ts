@@ -3,12 +3,15 @@
  *
  * Возможности: фильтр по уровню, последние 300 записей (буфер в памяти — он
  * включает хвост файла, загруженный при старте плагина), **живой режим (live)**:
- * подписка на события журнала — новые строки добавляются на лету, и кнопка
+ * подписка на события журнала — новые строки добавляются на лету, кнопка
+ * «Скопировать» (DL-256 — то, что видно, идёт в буфер обмена) и кнопка
  * «Очистить журнал».
  */
 
-import { Modal, Setting } from 'obsidian';
-import { LOG_LEVELS, type ActivityLog, type LogEntry, type LogLevel } from '../core/activity-log';
+import { Modal, Notice, Setting } from 'obsidian';
+import { formatEntriesForCopy, LOG_LEVELS, type ActivityLog, type LogEntry, type LogLevel } from '../core/activity-log';
+import { formatDateTimeWithSecondsLocal } from '../core/datetime';
+import { copyTextToClipboard } from '../ui/clipboard';
 import type { PluginContext } from './context';
 
 const LEVEL_BADGE: Record<LogLevel, string> = {
@@ -57,6 +60,31 @@ class LogViewerModal extends Modal {
 				button.setButtonText('Живой режим: выкл').onClick(() => {
 					this.toggleLive(button);
 				}),
+			)
+			.addButton((button) =>
+				button
+					.setButtonText('Скопировать')
+					.setTooltip('Скопировать показанные записи в буфер обмена (весь буфер — команда copy-log)')
+					.onClick(async () => {
+						// Копируем то, что видно: фильтр по уровню и лимит отрисовки (DL-256).
+						const entries = this.context.logger.tail(
+							MAX_RENDERED,
+							this.levelFilter === 'all' ? undefined : this.levelFilter,
+						);
+						const text = formatEntriesForCopy(entries, formatDateTimeWithSecondsLocal(new Date()));
+						const ok = await copyTextToClipboard(text);
+						new Notice(
+							ok
+								? `Журнал скопирован в буфер обмена: ${entries.length} запис(ей)`
+								: 'Не удалось скопировать журнал — подробности в консоли (Ctrl+Shift+I)',
+						);
+						if (ok) {
+							this.context.logger.log('info', 'log', 'Журнал скопирован в буфер обмена (из окна журнала)', {
+								entries: entries.length,
+								filter: this.levelFilter,
+							});
+						}
+					}),
 			)
 			.addButton((button) =>
 				button

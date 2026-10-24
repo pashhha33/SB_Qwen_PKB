@@ -126,4 +126,20 @@ describe('VaultAdapter контракт (FakeVault)', () => {
 		await vault.dataRemove('.sb/cache/state.json');
 		expect(await vault.dataExists('.sb/cache/state.json')).toBe(false);
 	});
+
+	it('dataWrite сам создаёт родительские папки — контракт (DL-255)', async () => {
+		// DataAdapter.write в Obsidian папки НЕ создаёт (obsidian.d.ts: «otherwise the
+		// file will be created» — про папки ни слова), поэтому прод-адаптер строит
+		// цепочку mkdir-ом перед записью. Без этого первая запись в свежем хранилище
+		// (.sb/cache/registry.json, .sb/logs/plugin-log.jsonl) падает ENOENT — баг,
+		// пойманный пользователем 2026-10-24. Контракт закреплён за интерфейсом, чтобы
+		// обе реализации вели себя одинаково; порядок вызовов в проде проверяет
+		// tests/unit/obsidian-adapter.test.ts.
+		await vault.dataWrite('.sb/logs/plugin-log.jsonl', '{"level":"info"}\n');
+		expect(await vault.dataExists('.sb/logs/plugin-log.jsonl')).toBe(true);
+
+		// Вложенность произвольной глубины — тоже без предварительного dataCreateFolder.
+		await vault.dataWrite('.sb/backups/2026/10/24/snapshot.json', '{}');
+		expect(await vault.dataRead('.sb/backups/2026/10/24/snapshot.json')).toBe('{}');
+	});
 });

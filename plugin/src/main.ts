@@ -1,14 +1,19 @@
 /**
  * Second Brain — точка входа плагина Obsidian.
  *
- * Этап A, под-батч A2 (часть 1) + журнализация (A2.5, DL-251):
+ * Этап A, под-батч A2 (часть 1) + журнализация (A2.5, DL-251) + фикс 0.3.2:
  *   - реестр типов из Metamodel/ + кэш .sb/cache/registry.json;
  *   - LabelResolver (режим из настроек);
  *   - ЖУРНАЛ: .sb/logs/plugin-log.jsonl + настройки .sb/settings.json (ADR-002:
  *     настройки в .sb/, не в data.json); уровни error/warning/info/debug с
  *     выключателями; команда show-log — окно журнала с живым режимом (live);
- *   - команды: create-object-type, create-object, validate-object, show-log
- *     (тонкие обёртки над ядром — DL-244/9.5).
+ *   - 0.3.2 (DL-255): dataWrite прод-адаптера создаёт родительские папки .sb/ —
+ *     DataAdapter.write сам этого не делает, из-за чего кэш реестра и файл
+ *     журнала не записывались в свежем хранилище («не удалось сохранить кэш»);
+ *   - 0.3.2 (DL-256): копирование журнала в буфер обмена — кнопка «Скопировать»
+ *     в окне show-log (копирует видимое) + команда copy-log (копирует весь буфер);
+ *   - команды: create-object-type, create-object, validate-object, show-log,
+ *     copy-log (тонкие обёртки над ядром — DL-244/9.5).
  * Бутстрап Metamodel/ (7 системных типов) — часть 2 под-батча A2: все решения
  * приняты — F5-7 = А (префиксы: '_' и 3–20 легализованы, DL-253), F5-9 = А
  * (фиксированные ULID), F5-10 = Б (7 OBJECT_TYPE-заметок, DL-250); следующий батч.
@@ -20,6 +25,7 @@
 
 import { Notice, Plugin } from 'obsidian';
 import { ObsidianVaultAdapter } from './adapter/obsidian-adapter';
+import { registerCopyLogCommand } from './commands/copy-log';
 import { registerCreateObjectCommand } from './commands/create-object';
 import { registerCreateObjectTypeCommand } from './commands/create-object-type';
 import type { PluginContext } from './commands/context';
@@ -56,6 +62,7 @@ export default class SecondBrainPlugin extends Plugin implements PluginContext, 
 		registerCreateObjectCommand(this, (cmd) => this.addCommand(cmd));
 		registerValidateObjectCommand(this, (cmd) => this.addCommand(cmd));
 		registerShowLogCommand(this, (cmd) => this.addCommand(cmd));
+		registerCopyLogCommand(this, (cmd) => this.addCommand(cmd));
 
 		// Настройки (первая инкарнация settings-ui; полный модуль — этап E).
 		this.addSettingTab(new SecondBrainSettingTab(this.app, this));

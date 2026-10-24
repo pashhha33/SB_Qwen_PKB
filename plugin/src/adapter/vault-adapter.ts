@@ -71,6 +71,7 @@ export interface VaultAdapter {
 
 	dataExists(path: string): Promise<boolean>;
 	dataRead(path: string): Promise<string>;
+	/** Записать файл служебной области. КОНТРАКТ (DL-255): создаёт родительские папки, если их нет (Obsidian DataAdapter.write сам этого не делает — см. obsidian-adapter). */
 	dataWrite(path: string, content: string): Promise<void>;
 	dataRemove(path: string): Promise<void>;
 	dataCreateFolder(path: string): Promise<void>;

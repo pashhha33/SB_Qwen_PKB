@@ -2,10 +2,10 @@
 doc_type: plugin_doc
 title: "Архитектура плагина: слои, модули, соответствие исходникам"
 status: actual
-version: 0.5.0
+version: 0.6.0
 created: 2026-10-24
 updated: 2026-10-24
-metamodel_version: 1.1.0
+metamodel_version: 1.2.0
 governing_documents:
   - docs/metamodel/09-modules.md
   - docs/adr/ADR-002-source-of-truth.md
@@ -37,22 +37,24 @@ tags: [plugin, architecture]
 Правило слоёв: модуль зависит только от своего слоя и нижележащих. В A1 это
 защищено **тестом импортов** (`plugin/tests/integration/layering.test.ts`):
 `src/core/**` и интерфейс `vault-adapter.ts` не имеют права импортировать
-`obsidian` — разрешено только `src/main.ts` и `src/adapter/obsidian-adapter.ts`.
+Runtime-импорт `obsidian` разрешён только в `src/main.ts`, `src/adapter/obsidian-adapter.ts`,
+`src/commands/*` и `src/ui/*` (обёртки слоёв 4–5; ядро `src/core/**` среда-независимо —
+проверяется тестом `tests/integration/layering.test.ts`).
 
 ## 2. Соответствие «модуль реестра → исходники» (этап A)
 
 | Модуль (`09-modules` §4) | Этап | Файлы `plugin/` | Статус в A1 |
 |---|---|---|---|
-| `obsidian-adapter` | A | `src/adapter/obsidian-adapter.ts` (прод), `src/adapter/vault-adapter.ts` (интерфейс) | ✅ создан |
+| `obsidian-adapter` | A | `src/adapter/obsidian-adapter.ts` (прод), `src/adapter/vault-adapter.ts` (интерфейс) | ✅ создан; **0.3.2 (DL-255)**: `dataWrite` создаёт родительские папки `.sb/` по уровням перед записью (`DataAdapter.write` в Obsidian этого не делает) + юнит-тест (исключение M4) |
 | `markdown-parser` | A | `src/core/markdown-parser.ts`, `src/core/model.ts` | ✅ создан |
 | `identity` | A | `src/core/ulid.ts`, `src/core/identity.ts`, `src/core/datetime.ts` | ✅ создан (И1 формат + уникальность-скан, И2 проверка/починка; И3 — в A2 с реестром) |
 | `metamodel-bootstrap` | A | — | **A2 часть 2** (F5-9 = А, F5-10 = Б приняты — DL-250; ждёт только F5-7) |
 | `activity-log` | A | `src/core/activity-log.ts` (+ `src/core/settings.ts`) | ✅ A2.5 (DL-251): уровни error/warning/info/debug с выключателями, `.sb/logs/plugin-log.jsonl` (лимит, обрезка по хвосту), кольцевой буфер + подписчики (live); **настройки — `.sb/settings.json`, не data.json (ADR-002)** |
 | `type-registry` | A | `src/core/registry.ts` (+ кэш `.sb/cache/registry.json`) | ✅ A2 часть 1: индексы типов/свойств, предки, issues определений (ADR-002: битое определение не применяется, остальные работают) |
 | `label-resolver` | A | `src/core/label-resolver.ts` | ✅ A2 часть 1: режимы `view`/`source`, резерв «нет label → ключ» (команда `toggle-label-mode` — этап B) |
-| `commands` (тонкая обёртка — DL-244/9.5) | A | `src/commands/create-object-type.ts`, `create-object.ts`, `validate-object.ts`, `context.ts` | ✅ A2 часть 1: три команды MVP, vanilla-модалки (Svelte — этап B); логика — в `src/core/creation.ts` и `src/core/validation.ts` |
+| `commands` (тонкая обёртка — DL-244/9.5) | A | `src/commands/create-object-type.ts`, `create-object.ts`, `validate-object.ts`, `copy-log.ts`, `context.ts` | ✅ A2 часть 1: три команды MVP, vanilla-модалки (Svelte — этап B); логика — в `src/core/creation.ts` и `src/core/validation.ts` |
 | `front-matter-title-adapter` | A | — | A3 (изолирован, мягкий отказ) |
-| `log-viewer` | A | `src/commands/show-log.ts` | ✅ A2.5 (DL-251): окно журнала — фильтр по уровню, последние 300, очистка, **живой режим** |
+| `log-viewer` | A | `src/commands/show-log.ts`, `src/commands/copy-log.ts`, `src/ui/clipboard.ts` | ✅ A2.5 (DL-251): окно журнала — фильтр по уровню, последние 300, очистка, **живой режим**; **0.3.2 (DL-256)**: кнопка «Скопировать» (видимые записи) + команда `copy-log` (весь буфер); формат дампа — `formatEntriesForCopy` (ядро) |
 | `settings-ui` (первая инкарнация) | A→E | `src/ui/settings-tab.ts` | ✅ A2.5: выключатели журнала, лимит, «писать результаты проверок», режим подписей; полный модуль — этап E |
 | (D2: генератор TS-типов) | A/B | — | A3: `json-schema-to-typescript`, сгенерированные файлы коммитятся, тест «перегенерация == зафиксированное» (DL-222) |
 
@@ -73,6 +75,8 @@ tags: [plugin, architecture]
 | `tests/unit/*.test.ts` | Чистая логика: ULID, даты, identity, парсер, wikilink-и | `npm test` (vitest run) |
 | `tests/integration/*.test.ts` | Контракт `VaultAdapter` на FakeVault; парсер × 62 примера `examples/instances/`; тест слоёв | там же |
 | `tests/support/fake-vault.ts` | **FakeVault** — «поддельное хранилище»: настоящая папка во временном каталоге за интерфейсом `VaultAdapter`, без Obsidian | используется тестами |
+| `tests/unit/obsidian-adapter.test.ts` | Контракт `dataWrite` прод-адаптера (DL-255): порядок `mkdir` по уровням → `write`, идемпотентность, корень без `mkdir` — исключение из M4 (баг уже уезжал к пользователю) | `npm test` |
+| `tests/support/obsidian-stub.ts` | Стаб модуля `obsidian` (npm-пакет — только типы, `"main": ""`): минимальная рантайм-поверхность для теста прод-адаптера; подключён алиасом `vitest.config.ts`, на сборку esbuild не влияет (`obsidian` — external) | используется тестами |
 | Ручные в Obsidian | Чек-боксы DoD этапа (`phases.md` §4) — на реальном хранилище пользователем | dev-связка: `docs/plugin/dev-setup.md` |
 
 **Отклонение от правила М4 (зафиксировано, DL-244):** у прод-реализации
@@ -120,6 +124,7 @@ validation, registry), а не отрисовка окон.
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-24 | 0.6.0 | **Плагин 0.3.2 (DL-255/256)**: контракт `VaultAdapter.dataWrite` — создаёт родительские папки (прод-адаптер строит цепочку `.sb/` по уровням; `DataAdapter.write` в Obsidian папки не создаёт — инцидент «не удалось сохранить кэш реестра»); юнит-тест прод-адаптера на стабе `obsidian-stub.ts` (исключение M4/DL-244); копирование журнала — кнопка «Скопировать» в `show-log` + команда `copy-log` (`ui/clipboard.ts`, `formatEntriesForCopy` в ядре); §1 — список файлов с правом импорта `obsidian` приведён к факту (commands/*, ui/*); тесты **137 → 143** | DL-255…DL-256 |
 | 2026-10-24 | 0.5.0 | **F5-7 = А (DL-253)**: `_` и длина 3–20 легализованы (`defs#type_prefix`, ADR-001 рев. 0.2.0, `02-entities` §6); расхождение §5 закрыто; микро-расхождение закрыто регистрацией `object.frontmatter.broken` (rules v0.13.0, **170 правил**, DL-254); плагин 0.3.1; бутстрап (A2 часть 2) разблокирован | DL-253…DL-254 |
 | 2026-10-24 | 0.4.0 | A2.5: `activity-log` + `log-viewer` + первая инкарнация `settings-ui` (DL-251); конвенция `.sb/settings.json`; F5-8 закрыто (object_types, getPropertiesForType); F5-9/F5-10 приняты — бутстрап ждёт только F5-7 | DL-250…DL-252 |
 | 2026-10-24 | 0.3.0 | A2 часть 1: type-registry (+кэш), label-resolver, validation (группа A, 11-польный формат), три команды (vanilla-модалки); соответствие модулей обновлено; §5 + F5-8 и временный id `object.frontmatter.broken`; М4-уточнение про модалки | DL-246 |

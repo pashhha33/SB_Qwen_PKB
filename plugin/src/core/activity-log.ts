@@ -214,3 +214,19 @@ export class ActivityLog {
 		}
 	}
 }
+
+/**
+ * Человекочитаемый дамп записей для копирования в буфер обмена (DL-256).
+ * Формат: строка-заголовок (число записей и момент копирования) + по строке
+ * на запись `ts УРОВЕНЬ область: сообщение {детали}`. Это те же данные, что
+ * в файле .sb/logs/plugin-log.jsonl, но пригодные для вставки в чат/отчёт —
+ * пользователь 2026-10-24 не мог передать лог разработчику (запрос «сделай
+ * возможность копировать»).
+ */
+export function formatEntriesForCopy(entries: LogEntry[], copiedAt: string): string {
+	const lines = entries.map((entry) => {
+		const base = `${entry.ts} ${entry.level.toUpperCase()} ${entry.area}: ${entry.message}`;
+		return entry.data !== undefined ? `${base} ${JSON.stringify(entry.data)}` : base;
+	});
+	return [`Second Brain — журнал плагина; записей: ${entries.length}; скопировано ${copiedAt}`, ...lines].join('\n');
+}

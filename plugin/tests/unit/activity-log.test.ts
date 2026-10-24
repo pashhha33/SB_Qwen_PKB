@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ActivityLog, DEFAULT_LOG_SETTINGS, LOG_PATH, type LogEntry } from '../../src/core/activity-log';
+import { ActivityLog, DEFAULT_LOG_SETTINGS, LOG_PATH, formatEntriesForCopy, type LogEntry } from '../../src/core/activity-log';
 import { FakeVault } from '../support/fake-vault';
 
 function makeSettings(overrides: Partial<typeof DEFAULT_LOG_SETTINGS> = {}) {
@@ -116,5 +116,18 @@ describe('activity-log — журнал плагина (DL-251)', () => {
 		const fn = log.fn;
 		fn('info', 'creation', 'через обёртку');
 		expect(log.tail(10)[0].message).toBe('через обёртку');
+	});
+
+	it('formatEntriesForCopy: заголовок со счётчиком и читаемые строки (DL-256)', () => {
+		const entries: LogEntry[] = [
+			{ ts: '2026-10-24T15:00:00', level: 'error', area: 'cache', message: 'Не удалось сохранить кэш реестра' },
+			{ ts: '2026-10-24T15:00:01', level: 'info', area: 'plugin', message: 'Загружен', data: { types: 7 } },
+		];
+		const text = formatEntriesForCopy(entries, '2026-10-24T15:01:00');
+		const lines = text.split('\n');
+		expect(lines).toHaveLength(3);
+		expect(lines[0]).toBe('Second Brain — журнал плагина; записей: 2; скопировано 2026-10-24T15:01:00');
+		expect(lines[1]).toBe('2026-10-24T15:00:00 ERROR cache: Не удалось сохранить кэш реестра');
+		expect(lines[2]).toBe('2026-10-24T15:00:01 INFO plugin: Загружен {"types":7}');
 	});
 });

@@ -127,10 +127,36 @@ export class ObsidianVaultAdapter implements VaultAdapter {
 	}
 
 	async dataWrite(path: string, content: string): Promise<void> {
+		// КОНТРАКТ (DL-255): dataWrite создаёт родительские папки, если их нет.
+		// DataAdapter.write их НЕ создаёт (obsidian.d.ts: «If the file exists its
+		// content will be overwritten, otherwise the file will be created» — про
+		// папки ни слова): без этой гарантии первая же запись в свежем хранилище
+		// (.sb/cache/registry.json, .sb/logs/plugin-log.jsonl) падает ENOENT —
+		// баг, пойманный пользователем 2026-10-24 («не удалось сохранить кэш
+		// реестра»). FakeVault.dataWrite создавал папки всегда (fs.mkdir
+		// recursive) — теперь обе реализации ведут себя одинаково (контракт-тест
+		// adapter-contract + юнит-тест obsidian-adapter.test.ts).
 		// ADR-010 M3: атомарная запись — ответственность сервисов .sb/ (этап C,
 		// relation-store); здесь базовая запись через DataAdapter.write
 		// (Obsidian сам пишет через временный файл).
-		await this.data.write(normalizePath(path), content);
+		const normalized = normalizePath(path);
+		await this.ensureDataParentFolders(normalized);
+		await this.data.write(normalized, content);
+	}
+
+	/** Создать цепочку родительских папок файла (по уровням, пропуская существующие). */
+	private async ensureDataParentFolders(filePath: string): Promise<void> {
+		const lastSlash = filePath.lastIndexOf('/');
+		if (lastSlash <= 0) {
+			return; // файл в корне хранилища — папок нет
+		}
+		let prefix = '';
+		for (const segment of filePath.slice(0, lastSlash).split('/')) {
+			prefix = prefix === '' ? segment : `${prefix}/${segment}`;
+			if (!(await this.data.exists(prefix))) {
+				await this.data.mkdir(prefix);
+			}
+		}
 	}
 
 	async dataRemove(path: string): Promise<void> {
