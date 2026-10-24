@@ -2,7 +2,7 @@
 doc_type: docs_index
 title: Структура документации проекта
 status: draft
-version: 0.3.8
+version: 0.3.9
 created: 2026-10-22
 updated: 2026-10-23
 ---
@@ -73,7 +73,8 @@ project-root/
 │   ├── roadmap/
 │   │   ├── phases.md             # этапы реализации: что в каждом, критерии готовности этапа
 │   │   ├── mvp-scope.md          # границы MVP: что точно входит и что точно не входит
-│   │   └── readiness-checklist.md# чек-лист «метамодель готова к реализации»
+│   │   ├── readiness-checklist.md# чек-лист «метамодель готова к реализации»
+│   │   └── readiness-report.md   # итоговый отчёт блока F: 32 пункта с доказательствами + отложенное
 │   ├── integrations/
 │   │   ├── research-front-matter-title-stability.md   # ✅ исследование стабильности
 │   │   ├── obsidian-bases.md     # ✅ карточка: использовать (генерация .base)

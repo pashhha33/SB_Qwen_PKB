@@ -4,10 +4,10 @@ relation_id: rel_part_of
 title: "Часть целого"
 status: actual
 inverse_of: contains
-version: 0.2.0
+version: 0.2.1
 created: 2026-10-22
-updated: 2026-10-22
-metamodel_version: 0.6.0
+updated: 2026-10-23
+metamodel_version: 0.29.2
 source_entity: chapter
 target_entity: work
 direction: directed
@@ -81,24 +81,34 @@ tags: [metamodel/relation]
 {"id":"01J8Z6M4K2Q7V9X3N5B0C1D2H0","type":"relation","title":"Chapter 3 of The Master and Margarita","subject":"01J8Z6M4K2Q7V9X3N5B0C1D2H1","relation_type":"01J8Z6M4K2Q7V9X3N5B0C1D2H2","object":"01J8Z6M4K2Q7V9X3N5B0C1D2F3","origin_property":null,"role":null,"order":3,"starts_on":null,"ends_on":null,"description":null,"created_at":"2026-10-22T14:35","updated_at":"2026-10-22T14:35"}
 ```
 
-`origin_property` пустое: это свободно стоящая связь, потому что тип `chapter` появится на этапе 2
-и свойство для неё ещё не объявлено.
+`origin_property` пустое: пример **свободно стоящей связи**. У реальных глав `contains`
+порождён свойством произведения (`origin_property` заполнен) — см. [[rel_contains]] §«Локальные
+свойства» и `examples/relations/valid-01-contains.jsonl` (батч 5, DL-236).
 
 ## Правила валидации, применимые к этой связи
 
 `relation.subject.exists`, `relation.object.exists`, `relation.subject_not_object`,
 `relation.allowed_subject_type`, `relation.allowed_object_type`,
 `relation.cardinality.subject_to_object` (не более одного целого), `relation.uniqueness`.
-Дополнительно на этапе 2: правило отсутствия цикла в цепочке «часть — целое».
+Дополнительно на этапе 2: **`relation.contains.no_cycle`** — правило зарегистрировано
+в [[../../validation/rules|rules.md]] («Правила, которых пока нет»); цикл проверяется
+по хранимому `contains` (`part_of` отдельной записью не хранится — DL-125).
 
 ## Открытые вопросы
 
-- [ ] Проверка отсутствия цикла в цепочке частей — правило появится на шаге 7 вместе с прочими
-      структурными проверками.
-- [ ] Дублирование `order` и номера в названии главы: что первично. Решается при описании типа `chapter`.
+- [x] ~~Проверка отсутствия цикла в цепочке частей~~ → **решено**: правило
+      `relation.contains.no_cycle` зарегистрировано в [[../../validation/rules|rules.md]]
+      и отложено на этап 2 (вложенность произведений появится позже); структурные проверки
+      шага 7 приняты (ADR-011). Закрыто в блоке F — DL-241.
+- [x] ~~Дублирование `order` и номера в названии главы: что первично~~ → **решено** карточкой
+      [[../entities/chapter|chapter]]: первичны данные связи — навигация Н1 идёт по
+      `contains.order` (или `chapter_number`), `order` обычно равен номеру главы
+      ([[rel_contains]] §«Локальные свойства»); заголовок — только представление.
+      Закрыто в блоке F — DL-241.
 
 ## История изменений
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-23 | 0.2.1 | Блок F (DL-241): два устаревших открытых вопроса закрыты со ссылками (`relation.contains.no_cycle` — этап 2; приоритет `order` — Н1 карточки `chapter`); имя правила отсутствия цикла вписано явно; пояснение к примеру приведено к факту (`chapter` в ядре с 0.6.0, `origin_property` у реальных глав заполнен — DL-236). Нормы не менялись | DL-241; [[../../roadmap/readiness-report\|отчёт блока F]] |
 | 2026-10-22 | 0.4.0 | Карточка создана | [[../../adr/ADR-009-relations-model\|ADR-009]] |

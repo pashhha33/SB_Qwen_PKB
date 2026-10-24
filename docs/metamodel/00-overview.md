@@ -3,10 +3,10 @@ doc_type: metamodel_section
 section: "00"
 title: "Обзор метамодели Second Brain: философия, принципы, схема целиком"
 status: actual
-version: 0.4.7
+version: 0.4.8
 created: 2026-10-23
 updated: 2026-10-23
-metamodel_version: 0.29.1
+metamodel_version: 0.29.2
 step: "8f"
 tags: [metamodel, overview, step8]
 ---
@@ -36,7 +36,7 @@ tags: [metamodel, overview, step8]
 иначе модель не на что опереть; метамодель читается одним универсальным механизмом; определения
 применяются только после проверки (8 шагов, v1.1 §15.4).
 
-## 2. Модель в числах (на 2026-10-23, метамодель 0.22.0)
+## 2. Модель в числах (на 2026-10-23, метамодель 0.29.2)
 
 | Что | Значение | Где норма |
 |---|---|---|
@@ -139,7 +139,15 @@ RDF-экспорт, автоматические миграции (движок)
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-23 | 0.29.2 | **Блок F стартовал**: создан итоговый отчёт готовности [[../roadmap/readiness-report|`readiness-report.md`]] (32 пункта чек-листа с доказательствами, явный список отложенного, формулировка подтверждения F1). Возвращён долг: добавлены строки истории 0.24.0–0.29.0 (батчи 1–6 обновляли frontmatter, таблица отставала); шапка «Модель в числах» 0.22.0 → 0.29.2 | DL-241 | [[../roadmap/readiness-report]], [[../roadmap/readiness-checklist]] v0.24.0 |
 | 2026-10-23 | 0.29.1 | E4: полный прогон глоссария — 13 пар дублей сняты, 3 устаревшие записи исправлены, +13 терминов; блок E чек-листа — 5/5. Строки истории за 0.24.0–0.29.0 не добавлялись (счётчики в frontmatter обновлялись батчами 4–6) — долг учтён в блоке F | DL-238…DL-240 | [[../glossary/glossary]], [[../roadmap/readiness-checklist]] |
+| 2026-10-23 | 0.29.0 | Батч 6 (сводный) — **шаг 9 завершён**: примеры до минимумов D3/D4 для всех 13 инстанцируемых типов (62 файла + 4 `.jsonl` = 72 проверки), шаблоны D5 (14 файлов), `property.schema` +`allowed_values`/`display.*`, §3.18 `display.renderer` зарегистрирован → **27 перечислений, 26 закрыто**; `precision` денормализован | DL-237 | [[../roadmap/readiness-checklist]] (D3/D4/D5), `examples/`, `schema/metamodel/property.schema.json` |
+| 2026-10-23 | 0.28.0 | Батч 5: **схема строки `.jsonl`** `schema/relations/relation-line.schema.json` (14 полей ядра обязательны, пустые — `null`, ссылки — голые ULID, ADR-010); прогонщик расширен на построчную валидацию `.jsonl` + BOM; **D1 закрыт** | DL-236 | `schema/relations/`, `examples/relations/` |
+| 2026-10-23 | 0.27.0 | Батч 4: схемы `project` + `knowledge` — **все 6 предметных типов ядра со схемами**; `project_status` закрыт (5 значений); `related_to` урегулирован (4 типа ядра на уровне типа отношения, свойства сужают цели; ключ `related_to`) | DL-234, DL-235 | `schema/entities/`, [[../metamodel/03-relations]] v0.3.0, `rel_related_to` v0.2.0 |
+| 2026-10-23 | 0.26.1 | Опечатка в `03-relations`: `uniqueness_rule` у `related_to` — `triple` → **`pair`** (консенсус принятых норм: карточка связи, ADR-009 Р5/DL-082) | DL-233 | [[../metamodel/03-relations]] v0.2.2 |
+| 2026-10-23 | 0.26.0 | Батч 3: схемы `media` (16+19+2 теневых; И8 вне схемы) и `chapter` (**условный required** `chapter_number` через if/then/else — ответ 9-8 А); `draft_status` зарегистрирован (§3.17.11); Windows-исправление прогонщика (`pathToFileURL`) | DL-229…DL-232 | `schema/entities/`, `scripts/check-examples.cjs` |
+| 2026-10-23 | 0.25.0 | Батч 2: схемы `book` + `person` (40 значений `person_role` зашиты), примеры, **прогонщик `npm run check`**; `read_status`/`gender` зарегистрированы (§3.17.9/10); теневые `cover_file`/`portrait_file`, `sb_issues`, `file_link`; housekeeping DL-192 | DL-224…DL-228 | `schema/entities/`, `scripts/`, `package.json` |
+| 2026-10-23 | 0.24.0 | **Шаг 9 стартовал**: соглашения схем приняты (А/А/А — Draft 2020-12, каталог `schema/`, TS-типы генерируются из схем); батч 1 — `common/defs.json` + 6 схем метамодели, ajv 27/27 | DL-222, DL-223 | `schema/common/`, `schema/metamodel/` |
 | 2026-10-23 | 0.23.1 | Счётчик реестра типов: **53 записи** (было «58» — подсчёт строк с повторными показами); пересчёт на аудите A9 | DL-220 | [[../metamodel/02-entities]] §2, [[../metamodel/analysis-contradictions]] §6 |
 | 2026-10-23 | 0.23.0 | Счётчики: карточек ядра **15 из 15** — все созданы | DL-217 | [[entities/taxonomy]], [[entities/facet]], [[entities/category]] |
 | 2026-10-23 | 0.22.0 | Счётчики: карточек ядра **12 из 15**; правил **167** (группа N утверждена, K1/K2 закрыты) | DL-215, DL-216 | [[entities/object_type]], [[../validation/rules]] v0.11.0 |
