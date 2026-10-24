@@ -42,7 +42,7 @@ class CreateObjectTypeModal extends Modal {
 			}),
 		);
 
-		new Setting(this.contentEl).setName('Префикс (TYPE_PREFIX)').setDesc('3–12 символов: A–Z, 0–9, дефис — например, BOOK').addText((text) =>
+		new Setting(this.contentEl).setName('Префикс (TYPE_PREFIX)').setDesc('3–20 символов: A–Z, 0–9, дефис, «_» — например, BOOK или WEB_PAGE').addText((text) =>
 			text.onChange((value) => {
 				this.typePrefix = value.trim().toUpperCase();
 			}),

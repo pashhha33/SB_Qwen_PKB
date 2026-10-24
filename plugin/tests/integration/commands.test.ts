@@ -96,12 +96,18 @@ describe('цепочка создания: тип → экземпляр → п�
 		await expect(
 			createObjectTypeDefinition(vault, registry, { typeKey: 'Book', label: 'Книга', typePrefix: 'NOVEL' }),
 		).rejects.toThrow(SbError); // заглавные в type_key
-		// Подчёркивание в пользовательском префиксе отклоняется строгой валидацией
-		// (схема defs#type_prefix) — до решения F5-7:
+		// F5-7 = А (DL-253): подчёркивание в префиксе легализовано схемой defs#type_prefix:
+		expect(isValidTypePrefix('WEB_PAGE')).toBe(true);
+		const webPage = await createObjectTypeDefinition(vault, registry, { typeKey: 'web_page', label: 'Страница', typePrefix: 'WEB_PAGE' });
+		// файл определения — OBJECT_TYPE-{ULID}.md (определение само является объектом
+		// типа object_type); префикс WEB_PAGE — значение поля type_prefix в нём:
+		expect(webPage.fileName.startsWith('OBJECT_TYPE-')).toBe(true);
+		const webPageContent = await vault.read(webPage.path);
+		expect(webPageContent).toContain('type_prefix: WEB_PAGE');
+		// слишком длинный префикс (21) по-прежнему отклоняется:
 		await expect(
-			createObjectTypeDefinition(vault, registry, { typeKey: 'web_page', label: 'Страница', typePrefix: 'WEB_PAGE' }),
+			createObjectTypeDefinition(vault, registry, { typeKey: 'long', label: 'Длинный', typePrefix: 'ABCDEFGHIJKLMNOPQRSTU' }),
 		).rejects.toThrow(SbError);
-		expect(isValidTypePrefix('WEB_PAGE')).toBe(false);
 	});
 
 	it('create-object отклоняет: абстрактный тип (И3), неизвестный тип, пустое название', async () => {

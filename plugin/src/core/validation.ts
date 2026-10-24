@@ -9,9 +9,9 @@
  * версии») в A2 НЕ проверяется: нужна история/снимок предыдущего состояния —
  * появится с backup-service (этап C). Осознанный пропуск, зафиксирован в architecture.md.
  *
- * `object.frontmatter.broken` — временный id: в реестре 167 правил нет id для
- * «frontmatter не разбирается» у заметки-объекта (у .base есть view.base.parsable).
- * Регистрация нового id — вместе с батчем F5-7/F5-8 (MINOR: правило-предупреждение).
+ * `object.frontmatter.broken` — постоянный id: зарегистрирован в реестре правил
+ * (rules.md v0.13.0, группа A, error, уровень 2; DL-254). До регистрации в 0.2.0–0.3.0
+ * id был временным (у .base аналог — view.base.parsable).
  */
 
 import type { VaultAdapter } from '../adapter/vault-adapter';

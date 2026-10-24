@@ -24,36 +24,34 @@ describe('identity — TYPE_PREFIX', () => {
 		}
 	});
 
-	it('НАХОДКА F5-7: snake_case-префиксы реестра 02-entities ныне отклоняются схемой', () => {
+	it('F5-7 = А (DL-253): snake_case-префиксы реестра 02-entities легализованы схемой', () => {
 		// Реестр 02-entities §6 содержит 12 префиксов с подчёркиванием (OBJECT_TYPE,
 		// PROPERTY_TYPE, RELATION_TYPE, SERIES_COLLECTION, AUDIOVISUAL_WORK, MUSIC_TRACK,
 		// MUSIC_ALBUM, VIDEO_GAME, WEB_PAGE, VIDEO_SOURCE, AUDIO_SOURCE, MUSIC_WORK),
 		// из них 4 длиннее 12 (PROPERTY_TYPE, RELATION_TYPE — 13; AUDIOVISUAL_WORK — 16;
-		// SERIES_COLLECTION — 17). Но схема defs.json#type_prefix (^[A-Z][A-Z0-9-]*$,
-		// утверждена в 1.0.0), правило ADR-001/02-entities §6 («только A–Z, 0–9, дефис»,
-		// 3–12) и примеры шага 9 (object_type/valid-03: «без подчёркивания!») underscore
-		// ЗАПРЕЩАЮТ. Противоречие вынесено пользователю (вопрос F5-7, блокирует A2 —
-		// бутстрап пишет файлы OBJECT_TYPE-….md). До решения код следует схеме.
-		expect(isValidTypePrefix('OBJECT_TYPE')).toBe(false);
-		expect(isValidTypePrefix('RELATION_TYPE')).toBe(false);
-		expect(isValidTypePrefix('SERIES_COLLECTION')).toBe(false);
-		// …но ЧИТАТЬ такие имена файлов парсер обязан (деликатный разбор, Postel):
+		// SERIES_COLLECTION — 17). Решение F5-7 = А: '_' и длина 3–20 легализованы
+		// (схема defs#type_prefix, ADR-001, 02-entities §6; метамодель 1.2.0) —
+		// реестр и схема согласованы, бутстрап (A2 часть 2) разблокирован.
+		for (const prefix of ['OBJECT_TYPE', 'PROPERTY_TYPE', 'RELATION_TYPE', 'SERIES_COLLECTION', 'AUDIOVISUAL_WORK', 'MUSIC_TRACK', 'MUSIC_ALBUM', 'VIDEO_GAME', 'WEB_PAGE', 'VIDEO_SOURCE', 'AUDIO_SOURCE', 'MUSIC_WORK']) {
+			expect(isValidTypePrefix(prefix), `${prefix} отклоняется`).toBe(true);
+		}
 		expect(parseFileName(`OBJECT_TYPE-${ULID}.md`)).toEqual({ typePrefix: 'OBJECT_TYPE', ulid: ULID });
 	});
 
-	it('отклоняет: нижний регистр, короче 3, длиннее 12, начало не с буквы, чужие символы', () => {
+	it('отклоняет: нижний регистр, короче 3, длиннее 20, начало не с буквы, чужие символы', () => {
 		expect(isValidTypePrefix('book')).toBe(false);
 		expect(isValidTypePrefix('AB')).toBe(false); // 2 символа
-		expect(isValidTypePrefix('ABCDEFGHIJKLM')).toBe(false); // 13 символов
+		expect(isValidTypePrefix('ABCDEFGHIJKLMNOPQRSTU')).toBe(false); // 21 символ
 		expect(isValidTypePrefix('1BOOK')).toBe(false); // начало с цифры
-		expect(isValidTypePrefix('BO_OK')).toBe(false); // подчёркивание…
+		expect(isValidTypePrefix('BO-OK.X')).toBe(false); // точка — чужой символ
 		expect(isValidTypePrefix('BOOK ')).toBe(false);
 	});
 
-	it('дефис в префиксе разрешён (ADR-001: A–Z, 0–9, дефис)', () => {
+	it('дефис и подчёркивание разрешены; границы длины 3 и 20 (ADR-001, F5-7 = А)', () => {
 		expect(isValidTypePrefix('WEB-PAGE')).toBe(true);
+		expect(isValidTypePrefix('ABCDEFGHIJKLM')).toBe(true); // 13 символов — теперь в границах
 		expect(isValidTypePrefix('ABC')).toBe(true); // ровно 3
-		expect(isValidTypePrefix('ABCDEFGHIJKL')).toBe(true); // ровно 12
+		expect(isValidTypePrefix('ABCDEFGHIJKLMNOPQRST')).toBe(true); // ровно 20
 	});
 });
 

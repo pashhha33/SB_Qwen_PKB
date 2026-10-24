@@ -3,10 +3,10 @@ doc_type: metamodel_section
 section: "04"
 title: "Атрибуты: системные, предметные, типы значений"
 status: actual
-version: 0.8.0
+version: 0.9.0
 created: 2026-10-22
 updated: 2026-10-24
-metamodel_version: 1.1.0
+metamodel_version: 1.2.0
 governing_adr:
   - docs/adr/ADR-006-system-attributes-value-types-media.md
   - docs/adr/ADR-008-media-property-type.md
@@ -289,7 +289,7 @@ definition: Current state of the activity.
 | Системные атрибуты | закрытый список, `snake_case` | `id`, `created_at` | сверка со списком раздела 3 |
 | Ключи свойств (`key`) | `snake_case`, только латиница | `parent_type`, `publication_year` | `^[a-z][a-z0-9_]*$` |
 | Имена типов (`type`) | `snake_case`, единственное число | `person`, `object_type` | то же |
-| Префиксы файлов (`TYPE_PREFIX`) | `UPPER_SNAKE_CASE`, 3–12 символов | `PERSON`, `OBJECT_TYPE` | `^[A-Z0-9_]{3,12}$` |
+| Префиксы файлов (`TYPE_PREFIX`) | `UPPER_SNAKE_CASE`, 3–20 символов (F5-7 = А, DL-253) | `PERSON`, `OBJECT_TYPE` | `^[A-Z][A-Z0-9_-]*$` + длина 3–20 (`defs#type_prefix`) |
 | Значения перечислений | `snake_case`, латиница | `in_progress`, `strict` | `^[a-z][a-z0-9_]*$` |
 | Подписи (`label`) | русский, с заглавной буквы | «Родительский тип» | непустая строка |
 
@@ -562,3 +562,5 @@ display:
 | 2026-10-22 | 0.7.0 | В таблицу настроек свойства добавлено поле **`create_from_link`** (`ask` / `forbid` / `auto`) — разрешение создавать объект из пустой ссылки в значении свойства. Норма в разделе [[12-links-and-aliases\|`12-links-and-aliases.md`]] (§5.4), раздел **принят** (DL-184…DL-188). Новое правило `property.create_from_link.auto_needs_single_target` в группе B реестра | Требование пользователя от 2026-10-22 (DL-177, DL-188) |
 | 2026-10-22 | 0.6.0 | У определения свойства добавлено поле **`service`** (по умолчанию `false`): служебное свойство ведёт плагин, в формы ввода оно не попадает. Первое такое свойство — `sb_issues` | Шаг 8b, DL-168 |
 | 2026-10-22 | 0.5.0 | **Восстановлен нормативный раздел `applies_when`** (М1–М7): текст был утерян в песочнице, хотя на него ссылались `book.md`, `rules.md` и `CHECKPOINT.md`. Добавлена операция **`includes_any`** для триггеров с мультивыбором; добавлены правила `property.applies_when.value_present` и `property.applies_when.operation_matches_cardinality`; раздел 11 (нумерация исправлена: пропущенный №10 восстановлен) | Требования пользователя по `person.role` и `media.creation_method` — оба мультивыбор | [[../decisions/decision-log\|DL-128, DL-139]] |
+| 2026-10-24 | 0.8.0 | **F5-8 = А (DL-250/252)**: §4.1 «Привязка свойства к типу» — поле `object_types` (таблица scope ↔ object_types, правила, разграничение с `target_types`/`applies_when`); строка поля в §4 (запись задним числом — строка истории отсутствовала) | Ответ пользователя F5-8 = А | [[../decisions/decision-log\|DL-250]], [[../validation/rules\|`rules.md`]] v0.12.0 |
+| 2026-10-24 | 0.9.0 | **F5-7 = А (DL-253)**: §7 — формат `TYPE_PREFIX`: 3–20 символов, `A–Z`, `0–9`, дефис, подчёркивание (приведено к `defs#type_prefix` и ADR-001 ревизии 0.2.0) | Ответ пользователя F5-7 = А | [[../decisions/decision-log\|DL-253]] |

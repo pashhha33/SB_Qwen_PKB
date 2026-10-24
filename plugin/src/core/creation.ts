@@ -24,8 +24,8 @@ export const TYPE_KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
  * Сборка имени файла БЕЗ строгой валидации префикса (только ULID проверяется).
  * Префикс берётся из существующих определений/системной таблицы — он уже легитимен
  * (реестр 02-entities). Строгая проверка isValidTypePrefix — для НОВОГО
- * пользовательского ввода (create-object-type). Разделение сознательное: F5-7
- * (подчёркивание в системных префиксах) не должно ломать чтение/запись существующего.
+ * пользовательского ввода (create-object-type). Разделение сознательное: чтение
+ * и запись существующего не должны ломаться из-за строгости к новому вводу.
  */
 export function assembleFileName(typePrefix: string, ulid: string): string {
 	if (!/^[A-Z][A-Z0-9_-]*$/.test(typePrefix)) {
@@ -65,8 +65,8 @@ function renderNote(adapter: VaultAdapter, frontmatter: Record<string, unknown>,
  * type: object_type в Metamodel/ObjectTypes/.
  *
  * Строгость к пользовательскому вводу: type_key — ^[a-z][a-z0-9_]*$; type_prefix —
- * по схеме defs#type_prefix (3–12, A–Z/0–9/дефис, БЕЗ подчёркивания) до решения
- * F5-7; уникальность type_key и type_prefix — по реестру (object_type.type_prefix.unique).
+ * по схеме defs#type_prefix (3–20, A–Z/0–9/дефис/подчёркивание — F5-7 = А, DL-253);
+ * уникальность type_key и type_prefix — по реестру (object_type.type_prefix.unique).
  */
 export async function createObjectTypeDefinition(
 	adapter: VaultAdapter,
@@ -84,7 +84,7 @@ export async function createObjectTypeDefinition(
 	if (!isValidTypePrefix(input.typePrefix)) {
 		throw new SbError(
 			'invalid_type_prefix',
-			`TYPE_PREFIX «${input.typePrefix}» не проходит: 3–12 символов, только A–Z, 0–9, дефис (подчёркивание временно запрещено — вопрос F5-7)`,
+			`TYPE_PREFIX «${input.typePrefix}» не проходит: 3–20 символов, A–Z, 0–9, дефис, подчёркивание; начало с буквы`,
 		);
 	}
 	if (registry.getType(input.typeKey)) {

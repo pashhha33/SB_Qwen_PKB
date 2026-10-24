@@ -66,19 +66,14 @@ describe('парсер × примеры репозитория (64 файла, 
 					expect(note.system.aliases[0], `${where}: И4 нарушен`).toBe(note.system.title);
 				}
 
-				// Префикс типа известен (реестр 02-entities). Каноническое имя строится
-				// для префиксов, проходящих валидацию схемы defs#type_prefix; для
-				// object_type/relation_type действует находка F5-7 (реестровые префиксы
-				// OBJECT_TYPE/RELATION_TYPE конфликтуют со схемой — имя экземпляров
-				// окончательно зафиксируется после решения, блокирует A2).
+				// Префикс типа известен (реестр 02-entities) и проходит валидацию схемы
+				// defs#type_prefix — для всех типов, включая snake_case OBJECT_TYPE и
+				// RELATION_TYPE (F5-7 = А, DL-253: '_' и длина 3–20 легализованы).
 				const prefix = TYPE_PREFIX_BY_TYPE[example.type];
 				expect(prefix, `${where}: нет префикса в реестре для ${example.type}`).toBeDefined();
-				if (isValidTypePrefix(prefix)) {
-					const canonical = buildFileName(prefix, note.system.id as string);
-					expect(canonical).toBe(`${prefix}-${note.system.id}.md`);
-				} else {
-					expect(['object_type', 'relation_type'], `${where}: F5-7 неожиданно затронул ${example.type}`).toContain(example.type);
-				}
+				expect(isValidTypePrefix(prefix), `${where}: префикс ${prefix} не проходит defs#type_prefix`).toBe(true);
+				const canonical = buildFileName(prefix, note.system.id as string);
+				expect(canonical).toBe(`${prefix}-${note.system.id}.md`);
 
 				// created_at/updated_at у корректных примеров — строки нормативного формата.
 				expect(note.system.created_at, `${where}: нет created_at`).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);

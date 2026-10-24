@@ -20,7 +20,7 @@ parent_type:
 | Нарушение | Правило | Кто ловит |
 |---|---|---|
 | `lifecycle: deprecated` без `superseded_by` | ADR-011/DL-107 | **схема** (if/then: required `superseded_by`) |
-| `type_prefix: episode` — строчные | формат префикса (A–Z, 0–9, дефис) | **схема** (паттерн `type_prefix`) |
+| `type_prefix: episode` — строчные | формат префикса (A–Z, 0–9, дефис, `_`; начало с буквы) | **схема** (паттерн `type_prefix`) |
 | `parent_type` → `[[WORK-….md]]` — ссылка на ЭКЗЕМПЛЯРНЫЙ префикс | находка батча 1: ссылка ведёт на файл **определения** типа (`OBJECT_TYPE-….md`); экземпляров у абстрактного `work` нет (И3) | **схема** (`link_object_type`) |
 
 Схема: `schema/metamodel/object_type.schema.json`.

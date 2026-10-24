@@ -2,10 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.12.0
+version: 0.13.0
 created: 2026-10-22
 updated: 2026-10-24
-metamodel_version: 1.1.0
+metamodel_version: 1.2.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -19,7 +19,7 @@ governing_documents:
   - docs/adr/ADR-009-relations-model.md
   - docs/adr/ADR-011-enumerations-dates-lifecycle.md
   - docs/metamodel/12-links-and-aliases.md
-rule_count: 169
+rule_count: 170
 tags: [validation, registry]
 ---
 
@@ -37,7 +37,7 @@ tags: [validation, registry]
 
 | Группа | Правил | Источник |
 |---|---|---|
-| A. Системные атрибуты объекта | 10 | `04-attributes` §3 |
+| A. Системные атрибуты объекта | **11** | `04-attributes` §3 |
 | B. Определения свойств | **16** | `04-attributes` §4, §11, `12-links-and-aliases` §9.1 |
 | C. Значения свойств | 5 | `04-attributes` §9 |
 | D. Медиа | 8 | `04-attributes` §11 |
@@ -51,7 +51,7 @@ tags: [validation, registry]
 | L. Тип `project` | **10** | `entities/project.md` §6 |
 | M. Ссылки и псевдонимы | **11** | [[../metamodel/12-links-and-aliases\|`12-links-and-aliases.md`]] §10 |
 | N. Тип `knowledge` | **1** | `entities/knowledge.md` §6 |
-| **Всего** | **169** | |
+| **Всего** | **170** | |
 
 ---
 
@@ -69,9 +69,10 @@ tags: [validation, registry]
 | `object.created_at.required` | `created_at` заполнен | warning | 2 |
 | `object.created_at.immutable` | `created_at` не изменился относительно предыдущей версии | error | 4 |
 | `object.updated_at.order` | `updated_at` ≥ `created_at` | error | 4 |
+| `object.frontmatter.broken` | Служебный блок (frontmatter) не разбирается — объект не применён; остальные правила группы к заметке не применяются | error | 2 |
 
 > [!note] Область действия
-> Правила A1–A10 применяются к **экземплярам объектов в Markdown**. У экземпляра связи
+> Правила A1–A11 применяются к **экземплярам объектов в Markdown**. У экземпляра связи
 > (`.sb/relations/`) действуют только `id`, `type`, `title`, `created_at`, `updated_at` —
 > правила про `aliases`, `categories`, `tags` и имя файла к связям не применяются (Р10 ADR-009).
 
@@ -387,6 +388,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-24 | 0.13.0 | **F5-7 = А (DL-253/254)**: `TYPE_PREFIX` — легализованы подчёркивание и длина 3–20 (схема `defs#type_prefix`, ADR-001 ревизия 0.2.0, `02-entities` §6); группа A **+1 правило** — `object.frontmatter.broken` (error, 2): постоянная регистрация id, который в плагине 0.2.0–0.3.0 был временным. Итого **170 правил** в 14 группах |
 | 2026-10-24 | 0.12.0 | **F5-8 = А (DL-250/252)**: группа B +2 правила — `property.object_types.scope_consistency` (error, 4) и `property.object_types.exists` (error, 3); поле `object_types` введено в `property.schema` и `04-attributes` §4.1. Итого **169 правил** в 14 группах |
 | 2026-10-23 | 0.11.2 | Батч 3 шага 9 (состав правил не менялся — **167**): область действия И7 и `chapter.title.fallback` уточнена по DL-230 (вопрос 9-8, ответ А) — только нумерованные части; `chapter_number` условно обязателен (схема `chapter.schema.json`, if/then/else); `draft_status` зарегистрирован (`05-enumerations` §3.17.11) |
 | 2026-10-23 | 0.11.1 | Батч 2 шага 9 (состав правил не менялся — **167**): `person.role.enum` — подсчёт значений исправлен на **40** (DL-228, по образцу DL-150); `person.role.suggested` переинтерпретировано (DL-224): info — для значений **внутри** перечисления без группы (`other_occupation`), значения вне перечисления — error `person.role.enum`; перечисление зашито в `schema/entities/person.schema.json` | [[../metamodel/05-enumerations\|`05-enumerations.md`]] §3.17.5, DL-224, DL-228 |

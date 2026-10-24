@@ -3,8 +3,8 @@
  *
  * Отвечает за:
  *  - имя файла объекта: {TYPE_PREFIX}-{ULID}.md;
- *  - TYPE_PREFIX: UPPER_SNAKE_CASE, 3–12 символов, только A–Z, 0–9, дефис
- *    (ADR-001; схема defs.json#$defs.type_prefix);
+ *  - TYPE_PREFIX: UPPER_SNAKE_CASE, 3–20 символов, A–Z, 0–9, дефис, подчёркивание
+ *    (ADR-001, 02-entities §6; F5-7 = А, DL-253; схема defs.json#$defs.type_prefix);
  *  - И1 (формат ULID; уникальность в хранилище — findDuplicateIds);
  *  - И2 (id из frontmatter совпадает с ULID в имени файла; при расхождении имя
  *    файла ЧИНИТСЯ ПО id — мера M5: repairFileNameById);
@@ -19,12 +19,12 @@ import { SbError } from './errors';
 import type { ObjectIdentity } from './model';
 import { generateUlid, isValidUlid } from './ulid';
 
-/** Паттерн TYPE_PREFIX — зеркало defs.json#$defs.type_prefix. */
-export const TYPE_PREFIX_PATTERN = /^[A-Z][A-Z0-9-]*$/;
+/** Паттерн TYPE_PREFIX — зеркало defs.json#$defs.type_prefix (F5-7 = А, DL-253). */
+export const TYPE_PREFIX_PATTERN = /^[A-Z][A-Z0-9_-]*$/;
 
-/** Границы длины TYPE_PREFIX (ADR-001: 3–12 символов). */
+/** Границы длины TYPE_PREFIX (ADR-001/02-entities §6: 3–20 символов, F5-7 = А). */
 export const TYPE_PREFIX_MIN_LENGTH = 3;
-export const TYPE_PREFIX_MAX_LENGTH = 12;
+export const TYPE_PREFIX_MAX_LENGTH = 20;
 
 /** Запрещённые в именах файлов символы (ADR-001): квадратные скобки, # ^ |. */
 export const FORBIDDEN_FILE_NAME_CHARS = /[#^[\]|]/;
@@ -36,10 +36,9 @@ export const FORBIDDEN_FILE_NAME_CHARS = /[#^[\]|]/;
  * гипотетический 'AUDIO-BOOK'). Примеры из реестра 02-entities: OBJECT_TYPE,
  * RELATION_TYPE, SERIES_COLLECTION, CHP, MEDIA.
  *
- * Разбор ДЕЛИКАТЕН (допускает '_'), хотя валидация строга (isValidTypePrefix
- * подчёркивание пока отклоняет): прочитать существующее имя — не значит одобрить
- * его. Это нужно, чтобы файлы с реестровыми префиксами (OBJECT_TYPE-…, вопрос
- * F5-7) читались уже сейчас; строгость живёт в создании и валидации.
+ * Разбор ДЕЛИКАТЕН: прочитать существующее имя — не значит одобрить его.
+ * С символьным составом префикса (включая '_' — F5-7 = А, DL-253) разбор и
+ * валидация согласованы; строгость (длины, начало с буквы) живёт в isValidTypePrefix.
  */
 const OBJECT_FILE_NAME_PATTERN = /^([A-Z][A-Z0-9_-]*)-([0-9A-HJKMNP-TV-Z]{26})\.md$/;
 
@@ -69,7 +68,7 @@ export function buildFileName(typePrefix: string, ulid: string): string {
 	if (!isValidTypePrefix(typePrefix)) {
 		throw new SbError(
 			'invalid_type_prefix',
-			`Некорректный TYPE_PREFIX «${typePrefix}»: 3–12 символов, только A–Z, 0–9, дефис; начало с буквы`,
+			`Некорректный TYPE_PREFIX «${typePrefix}»: 3–20 символов, A–Z, 0–9, дефис, подчёркивание; начало с буквы`,
 		);
 	}
 	if (!isValidUlid(ulid)) {
