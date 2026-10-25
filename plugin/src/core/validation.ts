@@ -1,9 +1,12 @@
 /**
  * validate-object — проверка одного объекта (этап A2).
  *
- * Объём A2: группа A реестра правил (docs/validation/rules.md) — системные атрибуты
- * и инварианты И1–И5, плюс И6-правило для определений свойств. Уровни контроля 2–4
- * (ADR-011). Группа B/C и полные свойства — этап B (schema-engine); связи — этап C.
+ * Объём: группа A реестра правил (docs/validation/rules.md) — системные атрибуты и
+ * инварианты И1–И5 (этап A2), плюс schema-engine (этап B1.1, DL-263): группа B —
+ * определения свойств (16 правил), группы C/G — значения и перечисления, группа H —
+ * даты (date-engine). Уровни контроля 2–4 (ADR-011); уровень 1 (модалка) — B1.2.
+ * Условные свойства (applies_when) в проверке значений пропускаются до части 2;
+ * связи — этап C.
  *
  * Правило `object.created_at.immutable` (И5, «не изменился относительно предыдущей
  * версии») в A2 НЕ проверяется: нужна история/снимок предыдущего состояния —
@@ -20,8 +23,8 @@ import { diagnostic, type SbDiagnostic } from './diagnostics';
 import { findDuplicateIds, fileNameMatchesId, parseFileName, repairFileNameById } from './identity';
 import type { LabelResolver } from './label-resolver';
 import { parseNote } from './markdown-parser';
-import { SYSTEM_KEYS } from './model';
 import type { TypeRegistry } from './registry';
+import { buildVaultIndex, validateInstanceValues, validatePropertyDefinition, type VaultIndex } from './schema-engine';
 import { isValidUlid } from './ulid';
 
 export interface ValidateObjectResult {
@@ -52,6 +55,8 @@ export async function validateObject(
 	path: string,
 	log?: LogFn,
 	logValidation = true,
+	/** Общий индекс хранилища (validate-vault строит один на прогон; здесь — по потребности). */
+	sharedIndex?: VaultIndex | null,
 ): Promise<ValidateObjectResult> {
 	const content = await adapter.read(path);
 	const note = parseNote({ path, content }, adapter);
@@ -298,22 +303,26 @@ export async function validateObject(
 		);
 	}
 
-	// ---- И6: определения свойств не занимают системные ключи (property.key.no_system_conflict, error, уровень 4) ----
-	if (typeKey === 'property') {
-		const key = typeof note.properties.key === 'string' ? note.properties.key : null;
-		if (key !== null && (SYSTEM_KEYS as readonly string[]).includes(key)) {
-			diagnostics.push(
-				diagnostic({
-					...base,
-					rule_id: 'property.key.no_system_conflict',
-					severity: 'error',
-					level: 4,
-					property_key: 'key',
-					actual_value: key,
-					message: `Ключ свойства «${key}» занят системным атрибутом (И6)`,
-					hint: 'Выберите другой ключ: системные атрибуты (id, type, title, aliases, created_at, updated_at, categories, tags) не переопределяются',
-				}),
-			);
+	// ---- B1.1: schema-engine — группы B (определения свойств), C/G (значения), H (даты) ----
+	// Определение свойства проверяется как определение, даже если метатип `property`
+	// сам не зарегистрирован (дух ADR-002: битое определение не мешает проверкам;
+	// object.type.exists на это уже пожаловался). Значения экземпляра — только для
+	// зарегистрированного неабстрактного типа.
+	if (typeKey === 'property' || (typeKey !== null && registry.getType(typeKey) !== null)) {
+		const typeDefForValues = typeKey === null ? null : registry.getType(typeKey);
+		const needsDefinitionCheck = typeKey === 'property';
+		const needsValueCheck = typeDefForValues !== null && !typeDefForValues.abstract;
+		if (needsDefinitionCheck || needsValueCheck) {
+			const index = sharedIndex !== undefined ? sharedIndex : await buildVaultIndex(adapter);
+			const ctx = { registry, labels, index };
+			if (needsDefinitionCheck) {
+				// Группа B — определение свойства (включая И6: property.key.no_system_conflict).
+				diagnostics.push(...validatePropertyDefinition(note, ctx));
+			}
+			if (needsValueCheck && typeKey !== null) {
+				// Группы C/G/H — значения предметных полей экземпляра.
+				diagnostics.push(...validateInstanceValues(note, typeKey, ctx));
+			}
 		}
 	}
 

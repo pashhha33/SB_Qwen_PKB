@@ -94,6 +94,20 @@ export interface PropertyDef {
 	 * покрытие всех потомков (DL-208); конкретные типы при scope=specific.
 	 */
 	objectTypes: string[];
+	/** Допустимые значения перечисления (`allowed_values`, 05-enumerations; пусто = не перечисление). */
+	allowedValues: string[];
+	/** Цели `target_types`: ULID определений (как в заметке). */
+	targetTypeIds: string[];
+	/** Цели `target_types`: ключи типов, разрешённые по ULID в reindex (висячие не входят). */
+	targetTypeKeys: string[];
+	/** ULID фасета из `target_facet` (для свойств-классификаторов) или null. */
+	targetFacetId: string | null;
+	/** `media_target` у media_reference ('object' | 'file' | 'both') или null. */
+	mediaTarget: string | null;
+	/** `create_from_link` ('ask' | 'forbid' | 'auto') или null (раздел 12). */
+	createFromLink: string | null;
+	/** Условие показа `applies_when` (М1–М7, 04-attributes §11) или null. */
+	appliesWhen: { property: string; operation: string; value: string[] } | null;
 }
 
 export type RegistryIssueCode =
@@ -136,6 +150,45 @@ function extractLinkId(value: unknown): string | null {
 
 function asString(value: unknown): string | null {
 	return typeof value === 'string' && value.trim() !== '' ? value : null;
+}
+
+/** Список строк из YAML-значения (строка → [строка]; не-строки отбрасываются). */
+function asStringList(value: unknown): string[] {
+	if (Array.isArray(value)) {
+		return value.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+	}
+	const single = asString(value);
+	return single === null ? [] : [single];
+}
+
+/** Список ULID-целей из поля-ссылки или списка ссылок (wikilink-и). */
+function linkIdList(value: unknown): string[] {
+	if (Array.isArray(value)) {
+		const ids: string[] = [];
+		for (const item of value) {
+			const linkId = extractLinkId(item);
+			if (linkId !== null) {
+				ids.push(linkId);
+			}
+		}
+		return ids;
+	}
+	const linkId = extractLinkId(value);
+	return linkId === null ? [] : [linkId];
+}
+
+/** Условие `applies_when` (04-attributes §11): property + operation + value (строка или список). */
+function parseAppliesWhen(value: unknown): { property: string; operation: string; value: string[] } | null {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+		return null;
+	}
+	const record = value as Record<string, unknown>;
+	const property = asString(record.property);
+	const operation = asString(record.operation);
+	if (property === null || operation === null) {
+		return null;
+	}
+	return { property, operation, value: asStringList(record.value) };
 }
 
 export class TypeRegistry {
@@ -273,6 +326,13 @@ export class TypeRegistry {
 			title: note.system.title ?? (key as string),
 			lifecycle: asString(note.properties.lifecycle),
 			objectTypes,
+			allowedValues: asStringList(note.properties.allowed_values),
+			targetTypeIds: linkIdList(note.properties.target_types),
+			targetTypeKeys: [], // разрешаются в reindex (после построения индекса типов)
+			targetFacetId: extractLinkId(note.properties.target_facet),
+			mediaTarget: asString(note.properties.media_target),
+			createFromLink: asString(note.properties.create_from_link),
+			appliesWhen: parseAppliesWhen(note.properties.applies_when),
 		});
 	}
 
@@ -308,6 +368,13 @@ export class TypeRegistry {
 			const list = this.propertiesByKey.get(def.key) ?? [];
 			list.push(def);
 			this.propertiesByKey.set(def.key, list);
+		}
+		// target_types: ULID определений → ключи типов (висячие цели не входят —
+		// проверяются отдельно правилами группы B при валидации определений).
+		for (const def of this.properties) {
+			def.targetTypeKeys = def.targetTypeIds
+				.map((id) => this.byId.get(id)?.typeKey)
+				.filter((key): key is string => key !== undefined);
 		}
 		// Висячие ссылки родителей/замен — после индексации.
 		for (const def of this.types) {

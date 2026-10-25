@@ -2,7 +2,7 @@
 doc_type: plugin_doc
 title: "Архитектура плагина: слои, модули, соответствие исходникам"
 status: actual
-version: 0.8.0
+version: 0.9.0
 created: 2026-10-24
 updated: 2026-10-25
 metamodel_version: 1.2.0
@@ -41,7 +41,7 @@ Runtime-импорт `obsidian` разрешён только в `src/main.ts`, 
 `src/commands/*` и `src/ui/*` (обёртки слоёв 4–5; ядро `src/core/**` среда-независимо —
 проверяется тестом `tests/integration/layering.test.ts`).
 
-## 2. Соответствие «модуль реестра → исходники» (этап A)
+## 2. Соответствие «модуль реестра → исходники» (этапы A–B)
 
 | Модуль (`09-modules` §4) | Этап | Файлы `plugin/` | Статус в A1 |
 |---|---|---|---|
@@ -57,11 +57,16 @@ Runtime-импорт `obsidian` разрешён только в `src/main.ts`, 
 | `log-viewer` | A | `src/commands/show-log.ts`, `src/commands/copy-log.ts`, `src/ui/clipboard.ts` | ✅ A2.5 (DL-251): окно журнала — фильтр по уровню, последние 300, очистка, **живой режим**; **0.3.2 (DL-256)**: кнопка «Скопировать» (видимые записи) + команда `copy-log` (весь буфер); формат дампа — `formatEntriesForCopy` (ядро) |
 | `settings-ui` (первая инкарнация) | A→E | `src/ui/settings-tab.ts` | ✅ A2.5: выключатели журнала, лимит, «писать результаты проверок», режим подписей; полный модуль — этап E |
 | (D2: генератор TS-типов) | A/B | `scripts/generate-schema-types.mjs` → `src/generated/*.ts` (13 файлов) | ✅ **A3** (2026-10-25, DL-258): `json-schema-to-typescript` (dev-зависимость), npm `generate:types` / `check:types-fresh`; файлы коммитятся; тест свежести `tests/unit/generated-freshness.test.ts` — «перегенерация == зафиксированное» (DL-222); канонические имена типов подставляются генератором (title схем содержит «(слой N)»); if/then/else уплощаются — типы приближение, норма — схема (M6) |
+| `property-definitions` | B1 | `src/core/registry.ts` (PropertyDef) | ✅ **B1.1 часть 1** (2026-10-25, DL-263): PropertyDef расширен — `allowedValues`, `targetTypeIds`/`targetTypeKeys` (разрешение ULID → ключи в reindex), `targetFacetId`, `mediaTarget`, `createFromLink`, `appliesWhen` |
+| `schema-engine` | B1 | `src/core/schema-engine.ts` | ✅ **B1.1 часть 1** (DL-263): группа B — 16 правил определений свойств (`validatePropertyDefinition`); группы C/G — значения экземпляров (`validateInstanceValues`: type_conformance, cardinality, references, перечисления с приоритетом специальных правил); `buildVaultIndex` — индекс хранилища для уровня 3 (канонические имена по ULID, прочие — по имени файла; псевдонимы — B2). Группы правил E — часть 2/B1.3 |
+| `date-engine` | B1 | `src/core/date-engine.ts` | ✅ **B1.1 часть 1** (DL-263): группа H уровня 2 (форматы, частичные даты П1, `00`-заполнители, диапазоны с високосными, секунды — warning); нормализация частичной даты в диапазон (П4/M4 ADR-011); сравнение по П3; `period.*` — этап C |
+| `validation-runner` | B1 | `src/core/validation.ts` (+ `src/core/diagnostics.ts`) | ✅ A2 часть 1 (группа A, 11-польный формат) + **B1.1 часть 1** (DL-263): подключён schema-engine; опциональный общий индекс (для validate-vault — часть 2); определения свойств проверяются и без зарегистрированного метатипа `property` (ADR-002) |
 
-Часть слоя 2 (схема и валидация) в объёме A2: `src/core/validation.ts`
-(validate-object — группа A реестра правил, уровни 2–4) и `src/core/diagnostics.ts`
-(формат 11 полей, severity-policy §4). Группы B/C и полные свойства — этап B
-(schema-engine); связи — этап C.
+Слой 2 (схема и валидация): `src/core/validation.ts` (validate-object — группа A
+реестра правил + schema-engine; уровни 2–4), `src/core/diagnostics.ts` (формат 11 полей,
+severity-policy §4), **B1.1 часть 1 (DL-263)**: `src/core/schema-engine.ts` (группы B, C, G)
+и `src/core/date-engine.ts` (группа H). В части 2 — движок `applies_when` (М1–М7),
+service-flags (`sb_issues`), команды `create-property`/`validate-vault`; связи — этап C.
 
 Вспомогательные файлы, не являющиеся модулями реестра:
 `src/core/errors.ts` (коды ошибок), `src/core/creation.ts` (сервис создания —
@@ -116,6 +121,9 @@ validation, registry), а не отрисовка окон.
 
 | # | Расхождение | Влияние | Статус |
 |---|---|---|---|
+| **B1.1-1** (2026-10-25, DL-263) | `value.allowed_values` (C) и `enum.value.in_set` (G) в runtime — одна и та же проверка: носитель множества — `allowed_values` определения свойства (посеянные из `05-enumerations`) | Диагностика выдаётся с id `enum.value.in_set` (специальное правило); id `value.allowed_values` в плагине 0.6.0 не используется | **Зафиксировано**; при появлении типовых перечислений (`book.format.enum` и др. — rules.md) специальные id добавятся вместе с сидами B1.3 |
+| **B1.1-2** (2026-10-25, DL-263) | Правило П2 (`0000-00-00` допустимо только в необязательном поле, warning — 06-time-and-intervals §2) не имеет собственного id в реестре правил | Дата «неизвестна» принимается молча (формат валиден) | **Пробел правил**: закрыть ревизией `rules.md` (новый id в группе H) или привязкой к существующему — решить в части 2/B1.2 |
+| **B1.1-3** (2026-10-25, DL-263) | Значения условных свойств (`applies_when`) в части 1 не проверяются (движок условий — часть 2); неканонические ссылки разрешаются только по имени файла (псевдонимы — B2); существование вложений `media_target: file` — этап D | «Скрытые» условные поля и ссылки на псевдонимы временно вне проверок | **Осознанные границы части 1** (rules.md: `value.cardinality` не применяется к скрытым условным свойствам) |
 | ~~**F5-8**~~ **РЕШЕНО 2026-10-24 (F5-8 = А, DL-250/252, метамодель 1.1.0)** | Привязка свойства к типу — поле `object_types` у `property` (universal+пусто = все; family = один абстрактный предок, потомки по DL-208; specific = конкретные типы) + правила `property.object_types.scope_consistency` / `.exists` (**169 правил**); в коде — `PropertyDef.objectTypes`, `getPropertiesForType`, типобластные подписи LabelResolver | Реализовано: `property.schema`, `04-attributes` §4.1, карточка `property`, примеры valid-05/valid-06/invalid-03 (прогон **74 OK**) |
 | ~~**F5-7**~~ **РЕШЕНО 2026-10-24 (F5-7 = А, DL-253, метамодель 1.2.0)** | Реестр `02-entities` §6 содержал 12 префиксов с `_` и 4 длиннее 12, а схема `defs.json#type_prefix` и ADR-001 подчёркивание запрещали (3–12). **Легализованы `_` и длина 3–20**: паттерн `^[A-Z][A-Z0-9_-]*$` + minLength/maxLength (включая паттерны `wikilink`/`file_link`), ADR-001 ревизия 0.2.0, `02-entities` §6, `04-attributes` §7; в коде — `TYPE_PREFIX_PATTERN`, `TYPE_PREFIX_MAX_LENGTH = 20`, сообщения creation/identity; таблицы `SYSTEM_TYPE_PREFIXES` и схемы ссылок не менялись (переименование не понадобилось) | **A2 часть 2 разблокирована**: бутстрап пишет `OBJECT_TYPE-{ULID}.md` по легальной схеме | **Закрыто** (плагин 0.3.1; тесты: реестровые snake_case-префиксы проходят валидацию) |
 | ~~(микро)~~ **РЕШЕНО 2026-10-24 (DL-254)** | Временный id `object.frontmatter.broken` не был зарегистрирован в реестре правил | validate-object выдавал диагностику с незарегистрированным id | **Закрыто**: id зарегистрирован постоянно — `rules.md` v0.13.0, группа A (error, уровень 2), **170 правил**; код не менялся (id тот же) |
@@ -124,6 +132,7 @@ validation, registry), а не отрисовка окон.
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-25 | 0.9.0 | **B1.1 часть 1 (плагин 0.6.0, DL-263)**: модули `property-definitions` (PropertyDef расширен), `schema-engine` (группы B/C/G + индекс хранилища), `date-engine` (группа H + нормализация П4), `validation-runner` (подключение движка); §5 + три записи границ (in_set/allowed_values, пробел П2, условные свойства/псевдонимы/вложения); тесты **206/206** | DL-263 |
 | 2026-10-25 | 0.8.0 | **A3 — этап A закрыт (плагин 0.5.0, DL-258)**: `front-matter-title-adapter` → `core/front-matter-title.ts` + защитное обнаружение в `main.ts`; D2 — генератор `scripts/generate-schema-types.mjs` → 13 файлов `src/generated/` (коммитятся) + тест свежести; devDependency `json-schema-to-typescript` (первый батч, где нужен `npm ci`); настройки +`fmtAdviceShown`; тесты **165/165** | DL-258 |
 | 2026-10-25 | 0.7.0 | **A2 часть 2 — бутстрап `Metamodel/` (плагин 0.4.0, DL-257)**: модуль `metamodel-bootstrap` → `src/core/bootstrap.ts` (слой 1, среда-независим); семенные данные — статические строки (LF, без BOM, без токенов Templater — DL-190); фиксированные ULID как системные константы — примечание-исключение в ADR-001 (рев. 0.2.1); тесты +14 (157/157): рецепт ULID, формат семян, DoD «пустое хранилище → 7 типов», идемпотентность, частичное состояние, сохранность пользовательских определений, отказоустойчивость | DL-257 |
 | 2026-10-24 | 0.6.0 | **Плагин 0.3.2 (DL-255/256)**: контракт `VaultAdapter.dataWrite` — создаёт родительские папки (прод-адаптер строит цепочку `.sb/` по уровням; `DataAdapter.write` в Obsidian папки не создаёт — инцидент «не удалось сохранить кэш реестра»); юнит-тест прод-адаптера на стабе `obsidian-stub.ts` (исключение M4/DL-244); копирование журнала — кнопка «Скопировать» в `show-log` + команда `copy-log` (`ui/clipboard.ts`, `formatEntriesForCopy` в ядре); §1 — список файлов с правом импорта `obsidian` приведён к факту (commands/*, ui/*); тесты **137 → 143** | DL-255…DL-256 |
