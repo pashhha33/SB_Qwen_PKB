@@ -15,7 +15,9 @@
 	 *     хранятся в данных (М1/DL-117).
 	 */
 	import { untrack } from 'svelte';
+	import { nowStamp } from '../../core/datetime';
 	import { renderNumberDisplay } from '../../core/display-renderer';
+	import type { PropertyDef } from '../../core/registry';
 	import { coerceFormInput, initialEditRows, validateFieldValues, type FormModel, type FormValues } from '../../core/object-service';
 
 	interface Props {
@@ -23,10 +25,17 @@
 		categories: string[];
 		labelMode: 'view' | 'source';
 		computeVisibility: (values: FormValues) => Set<string>;
+		/** Подбор цели ссылки окном поиска (оболочка передаёт link-picker); null — только ручной ввод. */
+		pickReference?: ((def: PropertyDef) => Promise<string | null>) | null;
 		onSave: (title: string, values: FormValues) => void | Promise<void>;
 	}
 
-	let { model, labelMode, computeVisibility, onSave }: Props = $props();
+	let { model, labelMode, computeVisibility, pickReference = null, onSave }: Props = $props();
+
+	// Локальный режим подписей (B1.2 часть 2): переключается прямо в форме,
+	// стартовое значение — глобальный режим (toggle-label-mode). Глобальная команда
+	// применяется к вновь открываемым формам (открытая форма — снимок, DL-271).
+	let localLabelMode = $state<'view' | 'source'>(untrack(() => labelMode));
 
 	// Модель формы неизменна, пока модалка открыта: локальное состояние —
 	// снимок начальных значений (untrack — осознанный захват, без подписки).
@@ -123,6 +132,35 @@
 		}
 	}
 
+	function labelOf(key: string, viewLabel: string): string {
+		return localLabelMode === 'source' ? key : viewLabel;
+	}
+
+	/** Кнопка «Выбрать…» — для ссылок на объекты (media_target: file — этап D, граница B1.2-7). */
+	function pickerAvailable(valueType: string, mediaTarget: string | null): boolean {
+		if (pickReference === null) {
+			return false;
+		}
+		if (valueType === 'object_reference') {
+			return true;
+		}
+		return valueType === 'media_reference' && mediaTarget !== 'file';
+	}
+
+	async function pickInto(key: string, index: number, def: PropertyDef): Promise<void> {
+		if (pickReference === null) {
+			return;
+		}
+		const link = await pickReference(def);
+		if (link !== null) {
+			updateRow(key, index, link);
+		}
+	}
+
+	function quickDate(kind: 'today' | 'unknown'): string {
+		return kind === 'today' ? nowStamp().slice(0, 10) : '0000-00-00';
+	}
+
 	function placeholderFor(valueType: string): string {
 		switch (valueType) {
 			case 'date':
@@ -141,6 +179,17 @@
 </script>
 
 <div class="sb-form">
+	<div class="sb-toolbar">
+		<button
+			type="button"
+			class="sb-mode"
+			title="Как показывать подписи полей в этой форме (глобальный режим — команда toggle-label-mode)"
+			onclick={() => (localLabelMode = localLabelMode === 'view' ? 'source' : 'view')}
+		>
+			Подписи: {localLabelMode === 'view' ? 'русские' : 'ключи'}
+		</button>
+	</div>
+
 	<div class="sb-field">
 		<span class="sb-label">Название <span class="sb-required" title="Обязательный системный атрибут">*</span></span>
 		<input type="text" value={title} oninput={(e) => (title = e.currentTarget.value)} />
@@ -150,13 +199,13 @@
 		{#if visible.has(field.def.key)}
 			<div class="sb-field">
 				<span class="sb-label">
-					{field.label}
+					{labelOf(field.def.key, field.label)}
 					{#if field.def.required}
 						<span class="sb-optional-hint" title="Сохранить без него можно: недостающее покажет проверка (validate-object)">обязательное</span>
 					{:else}
 						<span class="sb-optional-hint">необязательное</span>
 					{/if}
-					{#if labelMode === 'view' && field.label !== field.def.key}
+					{#if localLabelMode === 'view' && field.label !== field.def.key}
 						<span class="sb-key">{field.def.key}</span>
 					{/if}
 				</span>
@@ -204,6 +253,17 @@
 									value={row}
 									oninput={(e) => updateRow(field.def.key, index, e.currentTarget.value)}
 								/>
+								{#if pickerAvailable(field.def.valueType, field.def.mediaTarget)}
+									<button type="button" class="sb-pick" title="Найти объект хранилища и вставить каноническую ссылку" onclick={() => pickInto(field.def.key, index, field.def)}>Выбрать…</button>
+								{/if}
+								{#if field.def.valueType === 'date'}
+									<button type="button" class="sb-pick" title="Текущая дата (локальное время, ADR-006)" onclick={() => updateRow(field.def.key, index, quickDate('today'))}>Сегодня</button>
+									{#if !field.def.required}
+										<button type="button" class="sb-pick" title="Дата неизвестна целиком — допустимо в необязательном поле (П2)" onclick={() => updateRow(field.def.key, index, quickDate('unknown'))}>Неизвестна</button>
+									{/if}
+								{:else if field.def.valueType === 'datetime'}
+									<button type="button" class="sb-pick" title="Текущие дата и время (точность до минут)" onclick={() => updateRow(field.def.key, index, nowStamp())}>Сейчас</button>
+								{/if}
 							{/if}
 							{#if field.multiple}
 								<button type="button" class="sb-remove" title="Удалить значение" onclick={() => removeRow(field.def.key, index)}>×</button>
@@ -303,9 +363,18 @@
 		font-weight: 400;
 	}
 	.sb-add,
-	.sb-remove {
+	.sb-remove,
+	.sb-pick,
+	.sb-mode {
 		font-size: 0.85em;
 		padding: 2px 8px;
+	}
+	.sb-toolbar {
+		display: flex;
+		justify-content: flex-end;
+	}
+	.sb-pick {
+		white-space: nowrap;
 	}
 	.sb-actions {
 		display: flex;

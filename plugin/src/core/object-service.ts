@@ -33,10 +33,11 @@ import type { LogFn } from './activity-log';
 import { isPropertyVisible } from './applies-when';
 import { validateDateTimeValue, validateDateValue } from './date-engine';
 import { nowStamp } from './datetime';
+import { parseFileName } from './identity';
 import type { LabelResolver } from './label-resolver';
 import type { SbNote } from './model';
 import type { PropertyDef, TypeRegistry } from './registry';
-import { CYRILLIC_PATTERN, ENUM_VALUE_PATTERN } from './schema-engine';
+import { CYRILLIC_PATTERN, ENUM_VALUE_PATTERN, type VaultIndex } from './schema-engine';
 
 /** Одно поле формы (по определению свойства). */
 export interface FormField {
@@ -347,4 +348,94 @@ export function initialEditRows(values: unknown[], multiple: boolean): string[] 
 		return [''];
 	}
 	return rows;
+}
+
+// ---------------------------------------------------------------------------
+// Подбор цели ссылки (B1.2 часть 2): поиск кандидатов для object_reference
+// ---------------------------------------------------------------------------
+
+/** Кандидат подборщика ссылок (link-picker). */
+export interface ReferenceCandidate {
+	path: string;
+	/** Заголовок (system.title; резерв — имя файла). */
+	title: string;
+	/** Ключ типа цели или null (тип не зарегистрирован/отсутствует). */
+	typeKey: string | null;
+	/** Подпись типа для показа («Человек») или ключ. */
+	typeLabel: string | null;
+	/** Готовая каноническая ссылка для записи в поле (ADR-001 + DL-186: всегда с псевдонимом). */
+	canonicalLink: string;
+}
+
+/**
+ * Ищет объекты-цели ссылки для подборщика (B1.2 часть 2, закрывает границу
+ * B1.2-1): индекс с типами и заголовками (buildVaultIndex readTypes — один на
+ * открытие подборщика), фильтр по `target_types` определения, нечёткий поиск
+ * не нужен — простое вхождение подстроки в заголовок или имя файла (регистр
+ * не важен). Сортировка: сначала совпадения с начала заголовка, далее по
+ * алфавиту (ru). Псевдонимы в поиске не участвуют — alias-index это B2
+ * (остаток границы B1.2-1).
+ *
+ * `media_target: file` (вложения) подборщиком не покрывается — файлы не
+ * Markdown, индекс их не видит; медиа-этап D (граница B1.2-7).
+ */
+export function searchReferenceTargets(
+	index: VaultIndex,
+	registry: TypeRegistry,
+	targetTypeKeys: readonly string[],
+	query: string,
+	options?: { limit?: number; excludePath?: string | null },
+): ReferenceCandidate[] {
+	const limit = options?.limit ?? 50;
+	const excludePath = options?.excludePath ?? null;
+	const noteTypes = index.noteTypes;
+	const titles = index.titleByPath;
+	if (noteTypes === undefined) {
+		return []; // индекс без типов (readTypes не заказан) — подбор невозможен
+	}
+	const needle = query.trim().toLowerCase();
+	const starts: ReferenceCandidate[] = [];
+	const contains: ReferenceCandidate[] = [];
+	for (const [path, typeKey] of noteTypes) {
+		if (typeKey === null || path === excludePath) {
+			continue;
+		}
+		if (targetTypeKeys.length > 0 && !targetTypeKeys.includes(typeKey)) {
+			continue;
+		}
+		const fileName = path.slice(path.lastIndexOf('/') + 1);
+		const baseName = fileName.replace(/\.md$/i, '');
+		const title = titles?.get(path) ?? baseName;
+		if (needle !== '') {
+			const titleLower = title.toLowerCase();
+			const isStart = titleLower.startsWith(needle) || baseName.toLowerCase().startsWith(needle);
+			if (!isStart && !titleLower.includes(needle) && !baseName.toLowerCase().includes(needle)) {
+				continue;
+			}
+			const candidate = toCandidate(path, title, typeKey, registry);
+			(isStart ? starts : contains).push(candidate);
+		} else {
+			contains.push(toCandidate(path, title, typeKey, registry));
+		}
+	}
+	const byTitle = (a: ReferenceCandidate, b: ReferenceCandidate) => a.title.localeCompare(b.title, 'ru');
+	starts.sort(byTitle);
+	contains.sort(byTitle);
+	return [...starts, ...contains].slice(0, limit);
+}
+
+function toCandidate(path: string, title: string, typeKey: string, registry: TypeRegistry): ReferenceCandidate {
+	const typeDef = registry.getType(typeKey);
+	const fileName = path.slice(path.lastIndexOf('/') + 1);
+	const identity = parseFileName(fileName);
+	// Каноническая ссылка (ADR-001): {TYPE_PREFIX}-{ULID}.md|title; для заметок с
+	// неканоническим именем — ссылка по имени файла (псевдоним всегда — DL-186).
+	const target = identity !== null ? `${identity.typePrefix}-${identity.ulid}.md` : fileName.replace(/\.md$/i, '');
+	return {
+		path,
+		title,
+		typeKey,
+		typeLabel: typeDef ? typeDef.label : typeKey,
+		canonicalLink: `[[${target}|${title}]]`,
+	};
 }

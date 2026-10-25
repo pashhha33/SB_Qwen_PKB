@@ -10,8 +10,10 @@
 import { Modal, Notice } from 'obsidian';
 import { mount, unmount } from 'svelte';
 import type { SbNote } from '../core/model';
+import type { PropertyDef } from '../core/registry';
 import { computeVisibleKeys, saveObjectForm, type FormModel, type FormValues } from '../core/object-service';
 import type { PluginContext } from '../commands/context';
+import { LinkPickerModal } from './link-picker-modal';
 import PropertyEditor from './svelte/property-editor.svelte';
 
 export class PropertyEditorModal extends Modal {
@@ -36,6 +38,12 @@ export class PropertyEditorModal extends Modal {
 				categories,
 				labelMode: this.context.settings.labelMode,
 				computeVisibility: (values: FormValues) => computeVisibleKeys(this.model, values, categories),
+				// Подбор цели ссылки (B1.2 часть 2): окно SuggestModal, результат —
+				// каноническая ссылка; null — отказ (Esc), поле остаётся как было.
+				pickReference: (def: PropertyDef) =>
+					new Promise<string | null>((resolve) => {
+						new LinkPickerModal(this.context, def, this.model.path, resolve).open();
+					}),
 				onSave: async (title: string, values: FormValues) => {
 					await saveObjectForm(this.context.adapter, this.model, this.note, { title, values }, this.context.logger.fn);
 					new Notice(`Сохранено: ${this.model.path}`);

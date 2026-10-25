@@ -2,7 +2,7 @@
 doc_type: project_map
 title: Карта проекта
 status: actual
-version: 1.44.0
+version: 1.45.0
 created: 2026-10-22
 updated: 2026-10-25
 update_policy: обновляется после каждого утверждённого решения и в начале каждого сообщения ассистента
@@ -132,9 +132,18 @@ SVELTE** (B1-2 = А: Svelte 5 runes + esbuild-svelte, тот же main.js, runti
 формы, запись: title+И4, updated_at, неизвестные поля сохраняются); команды `edit-object`
 (**21-я команда реестра — DL-269, ожидает подтверждения**) и `toggle-label-mode`;
 `create-object` открывает форму после создания; `create-property` + `display.*`. Тесты
-**299/299** (матрица 5 TZ), сборка без предупреждений. Патч
-`b1-2-part1-forms.patch` ждёт применения (**npm ci обязателен** — +3 dev-зависимости).
-**Дальше — B1.2 часть 2** (suggest-контрол ссылки, помощник частичных дат), затем B1.3
+**299/299** (матрица 5 TZ), сборка без предупреждений. Патч применён и запушен
+(`c1d34b7`, npm ci выполнен). Ручная проверка поймала два дефекта — оба исправлены:
+**0.8.1** (`78b2886`, DL-270: `initialEditRows` — контрол одиночного поля рисуется
+и для незаполненного свойства; подтверждён пользователем «Работает») и **0.8.2**
+(`98b8bf7`, DL-271/272: `LabelResolver.setRegistry` — подписи созданных в сессии
+определений не деградируют до ключей).
+**B1.2 ЧАСТЬ 2 ДОСТАВЛЕНА (2026-10-25, DL-273) — плагин `0.9.0`, ПОД-БАТЧ B1.2 ЗАКРЫТ**:
+подбор цели ссылки (`searchReferenceTargets` в ядре + `LinkPickerModal`-SuggestModal +
+`titleByPath` в индексе readTypes; кнопка «Выбрать…» у object_reference/media_reference),
+быстрые кнопки дат («Сегодня»/«Сейчас»/«Неизвестна» — П2), локальный переключатель
+подписей в форме (русские/ключи). Тесты **321/321**. Патч `b1-2-part2-reference-picker.patch`
+ждёт применения (npm ci не нужен). **Дальше — B1.3** (классификация и библиотека)
 (классификация + библиотека book/person).
 
 > [!tip] Быстрый старт новой сессии
@@ -485,8 +494,24 @@ flowchart LR
     (B1.1-9 сужена). Границы — architecture §5 (B1.2-1…5). Тесты **263 → 299** (+36),
     матрица TZ ×5, сборка без предупреждений, 74 OK, check:docs 0. **npm ci ОБЯЗАТЕЛЕН
     при переносе** (+svelte, esbuild-svelte, svelte-preprocess). Патч
-    `b1-2-part1-forms.patch` (база — `7a3267a`) ждёт применения. **Дальше — B1.2 часть 2**
-    (suggest-контрол ссылки, частичные даты).
+    `b1-2-part1-forms.patch` (база — `7a3267a`) применён и запушен (`c1d34b7`).
+25. **Ручная проверка 0.8.0 поймала дефект формы — фикс 0.8.1 в main (`78b2886`,
+    2026-10-25, DL-270)**: пустые одиночные поля рисовали подпись без контрола
+    (`{#each []}`); логика строк ввода вынесена в ядро (`initialEditRows` + 4 теста,
+    303). Подтверждён пользователем: «Работает».
+26. **Вопрос о toggle-label-mode вскрыл дефект устаревшего реестра LabelResolver —
+    фикс 0.8.2 в main (`98b8bf7`, 2026-10-25, DL-271/272)**: `setRegistry()` +
+    переподключение в `reloadRegistry` (+5 тестов, 308); конвенция architecture §4 —
+    сервисы-долгожители со снимком реестра переподключаются. Перенос подтверждён:
+    песочница побайтово равна `origin/main`.
+27. **B1.2 часть 2 доставлена (2026-10-25, DL-273) — плагин `0.9.0`, ПОД-БАТЧ B1.2
+    ЗАКРЫТ**: подбор цели ссылки (`searchReferenceTargets` + `titleByPath` +
+    `LinkPickerModal`/SuggestModal + кнопка «Выбрать…»), быстрые кнопки дат
+    («Сегодня»/«Сейчас»/«Неизвестна» — П2), локальный переключатель подписей в форме;
+    границы B1.2-1 закрыта, +B1.2-6/7 (architecture §5). Тесты **308 → 321** (+13:
+    `reference-search.test.ts`), матрица TZ — 321/321, сборка 0 предупреждений.
+    Патч `b1-2-part2-reference-picker.patch` (база — `98b8bf7`) ждёт применения;
+    критерий B1 подтверждается ручной проверкой пользователя. **Дальше — B1.3**.
 
 ## 9. Инвентарь артефактов
 
@@ -562,10 +587,10 @@ flowchart LR
 | `docs/project-map/PROJECT_MAP.md` | карта проекта (этот файл) | actual | 1.38.0 |
 | `docs/glossary/glossary.md` | глоссарий — **300 записей = 283 активных + 17 исторических** (v1.29.1 — правка представления: 8 разрывов таблицы удалены, DL-262; +«Переводы строк (LF / CRLF)» — DL-259; +«Хеш-функция (SHA-256)» — DL-257) | actual | 1.29.1 |
 | `docs/decisions/decision-log.md` | decision log — **263 записи** (DL-001…DL-263) + раздел отменённых и пересмотренных | draft | 1.47.0 |
-| `docs/handoff/*.md` (30 файлов) | handoff-документы: списки файлов патча, команды PowerShell построчно, сообщения коммита, проверки E2E; по каждому переносу (включая **b1-1-part1-schema-engine**) | actual |
+| `docs/handoff/*.md` (35 файлов) | handoff-документы: списки файлов патча, команды PowerShell построчно, сообщения коммита, проверки E2E; по каждому переносу (включая **b1-1-part1-schema-engine**) | actual |
 | `docs/plugin/dev-setup.md` | **dev-связка плагина с хранилищем**: вариант А — junction (рекомендуется), вариант Б — `SB_VAULT_PATH`; цикл разработки, troubleshooting Windows/PS 5.1 (§6 — EPERM esbuild; **+ устаревший `manifest.json` в хранилище → старая версия в Notice**), §7 — что уже есть (0.5.0) | actual | 0.2.1 |
 | `docs/plugin/architecture.md` | **архитектура плагина**: слои, соответствие «модуль `09-modules` → файлы `plugin/src/`» (этапы A–B: +property-definitions/schema-engine/date-engine/validation-runner), тесты и отклонения М4, конвенции кода, реестр расхождений норм (+3 границы B1.1 части 1) | actual | 0.9.0 |
-| `plugin/**` (код) | **плагин Obsidian `second-brain` 0.6.0** (этап A закрыт + **B1.1 часть 1**): `src/adapter/`, `src/core/` (ulid, identity, datetime, markdown-parser, model, errors, registry + кэш (**PropertyDef расширен** — allowedValues/targetTypes/appliesWhen…), label-resolver, diagnostics, validation (+schema-engine), creation, activity-log, settings, bootstrap, front-matter-title, **date-engine**, **schema-engine** (+buildVaultIndex)), `src/commands/` (5 команд + context), `src/ui/`, `src/generated/` (13 файлов D2), `scripts/` (generate-schema-types, link-vault), `src/main.ts`; `tests/` — **206 тестов** (+date-engine ×11, группа B ×17, значения C/G/H ×13); runtime-зависимостей ноль | actual (DL-244…DL-263) | 0.6.0 |
+| `plugin/**` (код) | **плагин Obsidian `second-brain` 0.9.0** (этап A закрыт + **B1.1 закрыт** + **B1.2 закрыт**): `src/adapter/`, `src/core/` (ulid, identity, datetime, markdown-parser, model, errors, registry + кэш, label-resolver, diagnostics, validation (+schema-engine, date-engine), creation, activity-log, settings, bootstrap, front-matter-title, applies-when, service-flags, object-service (+searchReferenceTargets), display-renderer), `src/commands/` (9 команд + context), `src/ui/` (property-editor-modal, **link-picker-modal**, svelte/property-editor + shim, settings-tab, show-log, vanilla-модалки, clipboard), `src/generated/` (13 файлов D2), `scripts/`, `src/main.ts`; `tests/` — **321 тест** (32 файла: юнит + интеграционные на FakeVault); dev-зависимости: svelte, esbuild-svelte, svelte-preprocess (B1-2 = А); runtime-зависимостей ноль | actual (DL-244…DL-273) | 0.9.0 |
 | `docs/changelog/CHANGELOG.md` | changelog: история метамодели **0.1.0 → 1.2.0** + учётные [1.2.1]…[1.2.5] (0.3.2 / 0.4.0 бутстрап / 0.5.0 D2+FMT / таблицы+check:docs / 0.6.0 schema-engine) | draft | 0.38.0 |
 | `docs/roadmap/readiness-checklist.md` | чек-лист готовности — **ВЫПОЛНЕН ЦЕЛИКОМ: 32 из 32** (D2 закрыт 2026-10-25 — A3/DL-258: генератор TS-типов из схем + тест свежести) | **actual** | 0.26.0 |
 | `docs/roadmap/readiness-report.md` | **итоговый отчёт блока F** (DL-241): 32 пункта чек-листа с доказательствами, метамодель в числах, явный список отложенного (§8), последствия 1.0.0 (§10); v0.2.1 — закрытие F1–F3 (DL-242) и орг-позиции §8.3 решены (DL-243) | actual | 0.2.1 |

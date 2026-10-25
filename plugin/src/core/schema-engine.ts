@@ -85,6 +85,12 @@ export interface VaultIndex {
 	 * Заполняется только при `readTypes: true`.
 	 */
 	sbObjectPaths?: Set<string>;
+	/**
+	 * Заголовок (system.title, резерв — имя файла) по пути — для подборщика ссылок
+	 * (B1.2 часть 2, object-service#searchReferenceTargets). Заполняется только
+	 * при `readTypes: true`.
+	 */
+	titleByPath?: Map<string, string>;
 }
 
 export interface BuildVaultIndexOptions {
@@ -120,17 +126,22 @@ export async function buildVaultIndex(adapter: VaultAdapter, options?: BuildVaul
 	if (options?.readTypes === true) {
 		index.noteTypes = new Map();
 		index.sbObjectPaths = new Set();
+		index.titleByPath = new Map();
 		for (const path of paths) {
+			const fileName = path.slice(path.lastIndexOf('/') + 1);
+			const fallbackTitle = fileName.replace(/\.md$/i, '');
 			try {
 				const content = await adapter.read(path);
 				const note = parseNote({ path, content }, adapter);
 				const type = typeof note.system.type === 'string' ? note.system.type : null;
 				index.noteTypes.set(path, type);
+				index.titleByPath.set(path, typeof note.system.title === 'string' && note.system.title !== '' ? note.system.title : fallbackTitle);
 				if (!note.frontmatterBroken && (type !== null || typeof note.system.id === 'string')) {
 					index.sbObjectPaths.add(path);
 				}
 			} catch {
 				index.noteTypes.set(path, null); // файл не читается — validate-object пожалуется отдельно
+				index.titleByPath.set(path, fallbackTitle);
 			}
 		}
 	}

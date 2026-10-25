@@ -156,6 +156,9 @@ describe('группа E — определения типов (object_type.*)',
 		expect(index.sbObjectPaths?.has('Обычная.md')).toBe(false);
 		// 7 системных типов + sb_issues (бутстрап) + определение book.
 		expect(index.sbObjectPaths?.size).toBe(9);
+		// B1.2 часть 2 (DL-273): titleByPath — system.title, резерв имя файла без расширения.
+		expect(index.titleByPath?.get(`${METAMODEL_SUBFOLDERS.objectTypes}/OBJECT_TYPE-${UL.book}.md`)).toBe('book');
+		expect(index.titleByPath?.get('Обычная.md')).toBe('Обычная');
 	});
 });
 
