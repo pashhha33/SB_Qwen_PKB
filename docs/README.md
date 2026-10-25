@@ -2,7 +2,7 @@
 doc_type: docs_index
 title: Структура документации проекта
 status: draft
-version: 0.3.12
+version: 0.3.13
 created: 2026-10-22
 updated: 2026-10-24
 ---
@@ -110,6 +110,7 @@ project-root/
 │   ├── relations/                # ✅ примеры строк .jsonl: valid/invalid + README с разбором (батч 5)
 │   └── templates/                # ✅ шаблоны заметок для команд создания (D5 — батч 6): 12 Markdown-типов + relation-row.json + README
 ├── scripts/check-examples.cjs    # ✅ прогонщик примеров: npm run check (ajv + js-yaml, DL-227)
+├── scripts/check-docs-tables.cjs # ✅ защита от пустых строк внутри таблиц: npm run check:docs (DL-262)
 ├── package.json / .gitignore     # ✅ dev-зависимости прогонщика (ajv, js-yaml)
 └── plugin/                       # ✅ код плагина Obsidian (Фаза 5, монорепозиторий — F5-3 = А, DL-244)
     ├── manifest.json             # ✅ паспорт плагина: id second-brain (F5-1), minAppVersion 1.9.0

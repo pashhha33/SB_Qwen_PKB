@@ -4,7 +4,8 @@
   "private": true,
   "description": "Second Brain — метамодель личной базы знаний для Obsidian. Документационная фаза: проверка JSON Schema и примеров (шаг 9). В Фазе 5 здесь появится плагин (TypeScript + Svelte + esbuild).",
   "scripts": {
-    "check": "node scripts/check-examples.cjs"
+    "check": "node scripts/check-examples.cjs",
+    "check:docs": "node scripts/check-docs-tables.cjs"
   },
   "devDependencies": {
     "ajv": "^8.17.1",

@@ -2,7 +2,7 @@
 doc_type: project_map
 title: Карта проекта
 status: actual
-version: 1.41.0
+version: 1.41.1
 created: 2026-10-22
 updated: 2026-10-25
 update_policy: обновляется после каждого утверждённого решения и в начале каждого сообщения ассистента
@@ -393,10 +393,16 @@ flowchart LR
     три под-батча B1 (таблица — `phases.md` v0.10.0); Svelte 5 + `esbuild-svelte` (B1.2);
     библиотека поэтапно — book+person в B1.3; PROPERTY-сиды — статические семена
     (фиксированные ULID, рецепт SHA-256 от `second-brain/system-property/{type_key}.{property_key}`)
-    + тест согласованности со `schema/**`. Патч `b1-answers.patch` (docs-only) ждёт
-    применения. **Следующий батч — B1.1 часть 1** (schema-engine, группы B/C/G/H, date-engine,
-    расширенный validate-object); часть 2 — applies-when, service-flags, команды
-    create-property/validate-vault.
+    + тест согласованности со `schema/**`. Патч `b1-answers.patch` **применён и запушен
+    пользователем (`a89f5e3`)**.
+19. **Замечание пользователя исправлено (2026-10-25, DL-262)**: пустые строки внутри
+    Markdown-таблиц ломают рендер — скан нашёл **12 разрывов** (глоссарий 8, decision-log 4;
+    происхождение — долг прежних батчей, проверено по дереву `463bdb2`); удалены + защита
+    `scripts/check-docs-tables.cjs` (`npm run check:docs`; 187 файлов, 0 разрывов); включена
+    в dev-setup §5 (v0.2.2). Патч `docs-tables-fix.patch` ждёт применения (docs+скрипт; код
+    плагина не менялся — 0.5.0). **Следующий батч — B1.1 часть 1** (schema-engine, группы
+    B/C/G/H — 37 правил, date-engine, расширенный validate-object); часть 2 — applies-when,
+    service-flags, команды create-property/validate-vault.
 
 ## 9. Инвентарь артефактов
 
@@ -453,13 +459,13 @@ flowchart LR
 | `schema/relations/relation-line.schema.json`, `examples/relations/*` | **схема строки `.jsonl`** (батч 5, DL-236): 14 полей ядра обязательны (пустые — `null`, ADR-010), ссылки — голые ULID; примеры: contains (глава/интерлюдия 7.5/пролог order null — предложение по Н2), свободно стоящая, 6 невалидных строк + README с разбором «схема/runner» | actual | 0.28.0 |
 | `examples/instances/*` (64 файла, 13 типов) | примеры D3/D4 (DL-227…DL-237) + **F5-8 (DL-252)**: valid-05 +`object_types`, valid-06 (family), invalid-03; **минимумы чек-листа выполнены** — ≥3 корректных + ≥2 некорректных на каждый инстанцируемый тип (6 предметных + 6 слоя 2 + `object_type`); некорректные — с разбором «правило → кто ловит (схема/runner)»; у media — И8 в теле, у knowledge — тезис в теле; интерлюдия 7.5 согласована со строкой `.jsonl`; **прогон — 74 проверки** | actual | 0.30.0 |
 | `examples/templates/*` (14 файлов) | **шаблоны заметок (D5, DL-237; property +`object_types` — DL-252)**: 12 заготовок Markdown-типов + `relation-row.json` + README; плейсхолдеры `{ULID}`/`{NOW}`/`{TITLE}`/`{PREFIX}` подставляют команды создания (ADR-004, Фаза 5); прогонщик каталог не проверяет (плейсхолдеры — не данные) | actual | 0.29.0 |
-| `scripts/check-examples.cjs`, `package.json`, `.gitignore` | прогонщик примеров (`npm run check`, ajv + js-yaml): Markdown+YAML и построчно `.jsonl` (+BOM); `pathToFileURL` — Windows-фикс (DL-232); зачаток тестового харнеса Фазы 5 (DL-227) | actual | 0.28.0 |
+| `scripts/check-examples.cjs`, `scripts/check-docs-tables.cjs`, `package.json`, `.gitignore` | прогонщик примеров (`npm run check`, ajv + js-yaml): Markdown+YAML и построчно `.jsonl` (+BOM); `pathToFileURL` — Windows-фикс (DL-232); **защита таблиц** (`npm run check:docs`, чистый Node): пустые строки внутри Markdown-таблиц ломают рендер — 12 разрывов исправлено по замечанию пользователя (DL-262) | actual | 0.29.0 |
 | `docs/validation/rules.md` | единый реестр **170 правил** валидации в 14 группах (A–N); +2 правила `property.object_types.*` (F5-8 = А, DL-250/252); +`object.frontmatter.broken` (группа A — DL-254); И7 уточнено (DL-230) | actual | 0.13.0 |
 | `docs/validation/severity-policy.md` | политика уровней и формат диагностики; **4 случая автоисправления** | actual | 0.2.0 |
 | `docs/adr/ADR-009-relations-model.md` | ADR: модель связей | accepted | 0.1.0 |
 | `docs/adr/ADR-010-relation-storage.md` | ADR: хранение связей | accepted | 0.1.0 |
 | `docs/adr/ADR-011-enumerations-dates-lifecycle.md` | ADR: перечисления, даты, `lifecycle`, уровни контроля | accepted | 0.1.0 |
-| `docs/CHECKPOINT.md` | контрольная точка для новой сессии (самодостаточная) | actual | 50.0.0 |
+| `docs/CHECKPOINT.md` | контрольная точка для новой сессии (самодостаточная) | actual | 50.1.0 |
 | `README.md` | точка входа репозитория; стадия — Фаза 5: **этап A закрыт** (плагин 0.5.0, чек-лист 32/32), следующий — этап B (B1) | actual | 0.7.0 |
 | `docs/integrations/research-front-matter-title-stability.md` | исследование | actual | 0.1.0 |
 | `docs/integrations/obsidian-bases.md` | карточка интеграции: **использовать** (факты проверены 2026-10-23) | actual | 0.1.0 |
@@ -470,9 +476,9 @@ flowchart LR
 | `docs/integrations/metadata-menu.md` | карточка интеграции: **референс, не зависимость** (ориентир ADR-006/008); 0.8.12 (2026-02) | actual | 0.1.0 |
 | `docs/integrations/quickadd.md` | карточка интеграции: **deferred** (DL-194/197); этап 2 — «быстрый захват» | actual | 0.1.0 |
 | `docs/project-map/PROJECT_MAP.md` | карта проекта (этот файл) | actual | 1.38.0 |
-| `docs/glossary/glossary.md` | глоссарий — **300 записей = 283 активных + 17 исторических** (v1.29.0; +«Переводы строк (LF / CRLF)» — DL-259; «Генерация кода» приведена к факту D2 — DL-258; +«Хеш-функция (SHA-256)» — DL-257) | actual | 1.29.0 |
-| `docs/decisions/decision-log.md` | decision log — **261 запись** (DL-001…DL-261) + раздел отменённых и пересмотренных | draft | 1.45.0 |
-| `docs/handoff/*.md` (28 файлов) | handoff-документы: списки файлов патча, команды PowerShell построчно, сообщения коммита, проверки E2E; по каждому переносу (включая **b1-answers**) | actual |
+| `docs/glossary/glossary.md` | глоссарий — **300 записей = 283 активных + 17 исторических** (v1.29.1 — правка представления: 8 разрывов таблицы удалены, DL-262; +«Переводы строк (LF / CRLF)» — DL-259; +«Хеш-функция (SHA-256)» — DL-257) | actual | 1.29.1 |
+| `docs/decisions/decision-log.md` | decision log — **262 записи** (DL-001…DL-262) + раздел отменённых и пересмотренных; v1.46.0 (4 разрыва таблицы исправлены — DL-262) | draft | 1.46.0 |
+| `docs/handoff/*.md` (29 файлов) | handoff-документы: списки файлов патча, команды PowerShell построчно, сообщения коммита, проверки E2E; по каждому переносу (включая **docs-tables-fix**) | actual |
 | `docs/plugin/dev-setup.md` | **dev-связка плагина с хранилищем**: вариант А — junction (рекомендуется), вариант Б — `SB_VAULT_PATH`; цикл разработки, troubleshooting Windows/PS 5.1 (§6 — EPERM esbuild; **+ устаревший `manifest.json` в хранилище → старая версия в Notice**), §7 — что уже есть (0.5.0) | actual | 0.2.1 |
 | `docs/plugin/architecture.md` | **архитектура плагина**: слои, соответствие «модуль `09-modules` → файлы `plugin/src/`» (все модули этапа A реализованы, +D2-генератор → `src/generated/`), тесты и отклонения М4, конвенции кода, реестр расхождений норм (все закрыты) | actual | 0.8.0 |
 | `plugin/**` (код) | **плагин Obsidian `second-brain` 0.5.0 — ЭТАП A ЗАКРЫТ** (A1 + фикс DL-245 + A2ч1 + A2.5 + F5-7 + фикс `.sb/` DL-255/256 + бутстрап DL-257 + **A3 DL-258**): manifest/versions/esbuild/tsconfig/vitest; `src/adapter/`, `src/core/` (ulid, identity, datetime, markdown-parser, model, errors, registry + кэш, label-resolver, diagnostics, validation, creation, activity-log, settings (+`fmtAdviceShown`), bootstrap, **front-matter-title**), `src/commands/` (5 команд + context), `src/ui/` (settings-tab, clipboard), **`src/generated/` — 13 файлов TS-типов из схем (D2)**, **`scripts/generate-schema-types.mjs`**, `src/main.ts`; `tests/` — **165 тестов** (+свежесть типов, FMT-матрица, настройки); runtime-зависимостей ноль; devDep +`json-schema-to-typescript` | actual (DL-244…DL-258) | 0.5.0 |
