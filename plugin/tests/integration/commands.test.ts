@@ -65,7 +65,11 @@ describe('цепочка создания: тип → экземпляр → п�
 
 		// 4. validate-object: чисто.
 		const labels = new LabelResolver(registry);
-		const result = await validateObject(vault, registry, labels, object.path);
+		// checkServiceDeclaration: false — фикстура без бутстрапа (sb_issues не объявлен);
+		// служебный слой диагностик проверяется отдельными тестами части 2.
+		const result = await validateObject(vault, registry, labels, object.path, undefined, true, undefined, {
+			checkServiceDeclaration: false,
+		});
 		expect(result.diagnostics).toEqual([]);
 	});
 
@@ -181,7 +185,9 @@ describe('цепочка создания: тип → экземпляр → п�
 		});
 		registry = await TypeRegistry.load(vault);
 		const labels = new LabelResolver(registry);
-		const result = await validateObject(vault, registry, labels, type.path);
+		const result = await validateObject(vault, registry, labels, type.path, undefined, true, undefined, {
+			checkServiceDeclaration: false, // фикстура без бутстрапа — служебный слой вне предмета теста
+		});
 		// Определение типа — объект типа object_type; самого object_type в реестре
 		// ещё нет (бутстрап — часть 2), поэтому type.exists законно срабатывает;
 		// системные атрибуты и инварианты — чистые.

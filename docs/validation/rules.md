@@ -2,10 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.13.0
+version: 0.14.0
 created: 2026-10-22
-updated: 2026-10-24
-metamodel_version: 1.2.0
+updated: 2026-10-25
+metamodel_version: 1.3.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -19,7 +19,7 @@ governing_documents:
   - docs/adr/ADR-009-relations-model.md
   - docs/adr/ADR-011-enumerations-dates-lifecycle.md
   - docs/metamodel/12-links-and-aliases.md
-rule_count: 170
+rule_count: 171
 tags: [validation, registry]
 ---
 
@@ -44,14 +44,14 @@ tags: [validation, registry]
 | E. Классификация | 19 | `01-classification` §6, ADR-005, ADR-007 |
 | F. Связи и типы отношений | 33 | `03-relations` §9, ADR-009 |
 | G. Перечисления | 5 | `05-enumerations` §5 |
-| H. Даты и интервалы | 11 | `06-time-and-intervals` §6 |
+| H. Даты и интервалы | **12** | `06-time-and-intervals` §2, §6 |
 | I. Тип `person` | **12** | `entities/person.md` §6 |
 | J. Тип `media` (обёртка) | **18** | `entities/media.md` §6 |
 | K. Представления и служебный слой | **10** | `08-views.md` §7–§8 |
 | L. Тип `project` | **10** | `entities/project.md` §6 |
 | M. Ссылки и псевдонимы | **11** | [[../metamodel/12-links-and-aliases\|`12-links-and-aliases.md`]] §10 |
 | N. Тип `knowledge` | **1** | `entities/knowledge.md` §6 |
-| **Всего** | **170** | |
+| **Всего** | **171** | |
 
 ---
 
@@ -207,6 +207,7 @@ tags: [validation, registry]
 | `date.partial.no_gap` | Неизвестный компонент не идёт после известного | error | 2 |
 | `date.partial.unknown_only_zero` | Неизвестный компонент записан как `00` | error | 2 |
 | `date.range.valid` | День и месяц допустимы для указанного года, с учётом високосных | error | 2 |
+| `date.all_unknown.optional_only` | Дата, неизвестная целиком (`0000-00-00`), допустима только в необязательном поле (П2) | warning | 2 |
 | `period.order` | `starts_on` не позже `ends_on` | error | 4 |
 | `period.open_end` | `ends_on: null` трактуется как открытый период | info | 4 |
 | `period.overlap` | При `forbid_overlap: true` интервалы не пересекаются | error | 4 |
@@ -388,6 +389,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-25 | 0.14.0 | **Ч2-3 = А (DL-265)**: закрыт пробел правила П2 (`06-time-and-intervals` §2) — группа H **+1 правило** `date.all_unknown.optional_only` (warning, 2): дата, неизвестная целиком (`0000-00-00`), допустима только в необязательном поле. Поведение утверждено ранее (ADR-011), добавлен отсутствовавший id (architecture.md §5, B1.1-2 — закрыт); новое правило-warning → MINOR метамодели (**1.3.0**, классификация `10-migration-rules` §3). Реализация — плагин 0.7.0 (date-engine + schema-engine, DL-266). Итого **171 правило** в 14 группах | Ответ пользователя Ч2-3 = А (2026-10-25); DL-265/DL-266; [[../metamodel/06-time-and-intervals\|06-time-and-intervals]] §2 |
 | 2026-10-24 | 0.13.0 | **F5-7 = А (DL-253/254)**: `TYPE_PREFIX` — легализованы подчёркивание и длина 3–20 (схема `defs#type_prefix`, ADR-001 ревизия 0.2.0, `02-entities` §6); группа A **+1 правило** — `object.frontmatter.broken` (error, 2): постоянная регистрация id, который в плагине 0.2.0–0.3.0 был временным. Итого **170 правил** в 14 группах |
 | 2026-10-24 | 0.12.0 | **F5-8 = А (DL-250/252)**: группа B +2 правила — `property.object_types.scope_consistency` (error, 4) и `property.object_types.exists` (error, 3); поле `object_types` введено в `property.schema` и `04-attributes` §4.1. Итого **169 правил** в 14 группах |
 | 2026-10-23 | 0.11.2 | Батч 3 шага 9 (состав правил не менялся — **167**): область действия И7 и `chapter.title.fallback` уточнена по DL-230 (вопрос 9-8, ответ А) — только нумерованные части; `chapter_number` условно обязателен (схема `chapter.schema.json`, if/then/else); `draft_status` зарегистрирован (`05-enumerations` §3.17.11) |

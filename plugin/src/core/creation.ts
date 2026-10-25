@@ -14,8 +14,18 @@ import type { LogFn } from './activity-log';
 import { nowStamp } from './datetime';
 import { SbError } from './errors';
 import { buildFileName, isValidTypePrefix } from './identity';
+import { SYSTEM_KEYS } from './model';
+import { METAMODEL_SUBFOLDERS, SYSTEM_TYPE_PREFIXES, TypeRegistry, type PropertyDef } from './registry';
+import {
+	APPLIES_OPERATIONS,
+	CARDINALITIES,
+	coverageIntersects,
+	coverageOf,
+	ENUM_VALUE_PATTERN,
+	PROPERTY_KEY_PATTERN,
+	VALUE_TYPES,
+} from './schema-engine';
 import { generateUlid, isValidUlid } from './ulid';
-import { METAMODEL_SUBFOLDERS, SYSTEM_TYPE_PREFIXES, TypeRegistry } from './registry';
 
 /** Паттерн type_key (ADR-003, defs.json#$defs.type_key). */
 export const TYPE_KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
@@ -201,5 +211,276 @@ export async function createObjectInstance(
 	}
 	await adapter.create(path, renderNote(adapter, frontmatter, body));
 	log?.('info', 'creation', `Создан объект «${title}» типа «${typeDef.label}»`, { path, id, type: typeDef.typeKey });
+	return { path, id, fileName };
+}
+
+// ---------------------------------------------------------------------------
+// create-property (B1.1 часть 2, DL-261/266): определение свойства командой
+// ---------------------------------------------------------------------------
+
+/** Область применения свойства (defs.json#$defs.scope, 04-attributes §4). */
+export const SCOPES = ['universal', 'family', 'specific'] as const;
+
+/** Способ хранения связи (defs.json; обязателен для object_reference — ADR-009/010). */
+export const LINK_MODES = ['direct', 'reified'] as const;
+
+/** Цель ссылки media_reference (ADR-008). */
+export const MEDIA_TARGETS = ['object', 'file', 'both'] as const;
+
+/** `required` производно от `cardinality` (таблица 04-attributes §4) — не вводится вручную. */
+export function requiredFromCardinality(cardinality: string): boolean {
+	return cardinality === '1' || cardinality === '1..N';
+}
+
+export interface CreatePropertyInput {
+	/** Ключ свойства (английский snake_case, ADR-003). */
+	key: string;
+	/** Русская подпись (label свободен — ADR-003). */
+	label: string;
+	/** Тип значения из закрытого набора семи (ADR-006). */
+	valueType: string;
+	/** Кардинальность: 1, 0..1, 0..N, 1..N (required выводится из неё). */
+	cardinality: string;
+	/** Область: universal | family | specific (04-attributes §4). */
+	scope: string;
+	/** Ключи типов для family (ровно один абстрактный предок) / specific. */
+	objectTypeKeys?: string[];
+	/** Ключи целевых типов для object_reference / media_reference. */
+	targetTypeKeys?: string[];
+	/** direct | reified — обязателен для object_reference (ADR-009/010). */
+	linkMode?: string | null;
+	/** object | file | both — обязателен для media_reference (ADR-008). */
+	mediaTarget?: string | null;
+	/** Закрытый список значений перечисления (05-enumerations §5). */
+	allowedValues?: string[];
+	/** Условие показа (04-attributes §11, М1–М7) или null. */
+	appliesWhen?: { property: string; operation: string; value: string[] } | null;
+	/** Пояснение (поле definition схемы property). */
+	definition?: string;
+}
+
+/**
+ * Команда create-property: создаёт определение свойства — заметку type: property
+ * в Metamodel/Properties/ (ADR-004: элементы метамодели создаются только командами).
+ *
+ * Проверки уровня 1 (до записи, ADR-011) зеркалят группу B реестра правил — созданное
+ * определение проходит validate-object без диагностик. Осознанные отличия:
+ *   - `required` не вводится, а ВЫВОДИТСЯ из cardinality (04-attributes §4) —
+ *     рассогласование невозможно по построению;
+ *   - `service: true` не предлагается: служебные свойства объявляет плагин
+ *     (08-views §7; в MVP одно — sb_issues, сеется бутстрапом);
+ *   - `target_facet` и `default_value` в части 2 не вводятся (фасеты появляются
+ *     с classification-service в B1.3 — граница architecture.md §5, B1.1-9);
+ *   - триггер applies_when должен быть уже объявлен (property.applies_when.
+ *     property_exists — error; «объявить позже» в MVP не поддерживается).
+ */
+export async function createPropertyDefinition(
+	adapter: VaultAdapter,
+	registry: TypeRegistry,
+	input: CreatePropertyInput,
+	log?: LogFn,
+): Promise<CreationResult> {
+	// --- ключ и подпись ---
+	const key = input.key.trim();
+	if (!PROPERTY_KEY_PATTERN.test(key)) {
+		throw new SbError('not_supported', `Ключ свойства «${key}» не соответствует формату: строчная латиница, цифры, «_» (^[a-z][a-z0-9_]*$)`);
+	}
+	if ((SYSTEM_KEYS as readonly string[]).includes(key)) {
+		throw new SbError('not_supported', `Ключ «${key}» занят системным атрибутом (И6): id, type, title, aliases, created_at, updated_at, categories, tags не переопределяются`);
+	}
+	const label = input.label.trim();
+	if (label === '') {
+		throw new SbError('not_supported', 'Русская подпись (label) обязательна');
+	}
+
+	// --- закрытые наборы ---
+	if (!(VALUE_TYPES as readonly string[]).includes(input.valueType)) {
+		throw new SbError('not_supported', `Тип значения «${input.valueType}» вне закрытого набора семи (ADR-006): ${VALUE_TYPES.join(', ')}`);
+	}
+	if (!(CARDINALITIES as readonly string[]).includes(input.cardinality)) {
+		throw new SbError('not_supported', `Кардинальность «${input.cardinality}» вне закрытого набора: ${CARDINALITIES.join(', ')}`);
+	}
+	if (!(SCOPES as readonly string[]).includes(input.scope)) {
+		throw new SbError('not_supported', `Область «${input.scope}» вне закрытого набора: ${SCOPES.join(', ')}`);
+	}
+
+	// --- область и привязка к типам (04-attributes §4.1, F5-8 = А) ---
+	const objectTypeKeys = (input.objectTypeKeys ?? []).map((k) => k.trim()).filter((k) => k !== '');
+	if (input.scope === 'universal' && objectTypeKeys.length > 0) {
+		throw new SbError('not_supported', 'scope: universal — список типов (object_types) должен быть пуст');
+	}
+	if (input.scope === 'family') {
+		if (objectTypeKeys.length !== 1) {
+			throw new SbError('not_supported', `scope: family — ровно один абстрактный предок (указано ${objectTypeKeys.length})`);
+		}
+		const ancestor = registry.getType(objectTypeKeys[0]);
+		if (!ancestor) {
+			throw new SbError('not_supported', `Тип-предок «${objectTypeKeys[0]}» не найден в реестре`);
+		}
+		if (!ancestor.abstract) {
+			throw new SbError('not_supported', `scope: family ссылается на неабстрактный тип «${ancestor.label}»; для конкретных типов — scope: specific`);
+		}
+	}
+	if (input.scope === 'specific') {
+		if (objectTypeKeys.length === 0) {
+			throw new SbError('not_supported', 'scope: specific — укажите минимум один конкретный тип');
+		}
+		for (const typeKey of objectTypeKeys) {
+			const target = registry.getType(typeKey);
+			if (!target) {
+				throw new SbError('not_supported', `Тип «${typeKey}» не найден в реестре`);
+			}
+			if (target.abstract) {
+				throw new SbError('not_supported', `scope: specific ссылается на абстрактный тип «${target.label}»; для абстрактного предка — scope: family`);
+			}
+		}
+	}
+
+	// --- уникальность ключа с учётом покрытия типов (property.key.unique_in_type, F5-8) ---
+	const objectTypes = objectTypeKeys.map((typeKey) => registry.getType(typeKey)?.id).filter((id): id is string => id !== undefined);
+	const draft: Pick<PropertyDef, 'scope' | 'objectTypes'> = { scope: input.scope, objectTypes };
+	const draftCoverage = coverageOf(draft, registry);
+	for (const other of registry.properties) {
+		if (other.key === key && coverageIntersects(draftCoverage, coverageOf(other, registry))) {
+			throw new SbError('not_supported', `Ключ «${key}» уже объявлен свойством (${other.path}) с пересекающимся покрытием типов`);
+		}
+	}
+
+	// --- ссылки: target_types, link_mode, media_target (ADR-006/008/009) ---
+	const targetTypeKeys = (input.targetTypeKeys ?? []).map((k) => k.trim()).filter((k) => k !== '');
+	const isReference = input.valueType === 'object_reference' || input.valueType === 'media_reference';
+	if (isReference && targetTypeKeys.length === 0) {
+		throw new SbError('not_supported', `Для свойства-ссылки (${input.valueType}) обязателен target_types — минимум один тип цели`);
+	}
+	if (!isReference && targetTypeKeys.length > 0) {
+		throw new SbError('not_supported', 'target_types имеет смысл только для object_reference и media_reference (property.target_types.for_reference)');
+	}
+	const targetTypes = targetTypeKeys.map((typeKey) => {
+		const target = registry.getType(typeKey);
+		if (!target) {
+			throw new SbError('not_supported', `Целевой тип «${typeKey}» не найден в реестре`);
+		}
+		return target;
+	});
+	let linkMode: string | null = null;
+	if (input.valueType === 'object_reference') {
+		if (input.linkMode !== 'direct' && input.linkMode !== 'reified') {
+			throw new SbError('not_supported', 'object_reference требует link_mode: direct (значение-ссылка в поле) или reified (отношение-объект) — ADR-009/010');
+		}
+		linkMode = input.linkMode;
+	} else if (input.linkMode) {
+		throw new SbError('not_supported', `link_mode задаётся только у object_reference (у «${input.valueType}» поле не используется)`);
+	}
+	let mediaTarget: string | null = null;
+	if (input.valueType === 'media_reference') {
+		if (input.mediaTarget !== 'object' && input.mediaTarget !== 'file' && input.mediaTarget !== 'both') {
+			throw new SbError('not_supported', 'media_reference требует media_target: object (обёртки media), file (вложения) или both — ADR-008');
+		}
+		mediaTarget = input.mediaTarget;
+	} else if (input.mediaTarget) {
+		throw new SbError('not_supported', `media_target задаётся только у media_reference (у «${input.valueType}» поле не используется)`);
+	}
+
+	// --- перечисление (05-enumerations §5) ---
+	const allowedValues = (input.allowedValues ?? []).map((v) => v.trim()).filter((v) => v !== '');
+	if (allowedValues.length > 0) {
+		for (const value of allowedValues) {
+			if (!ENUM_VALUE_PATTERN.test(value)) {
+				throw new SbError('not_supported', `Значение перечисления «${value}» не соответствует формату ^[a-z][a-z0-9_]*$ (строчная латиница, цифры, «_»)`);
+			}
+		}
+		if (new Set(allowedValues).size !== allowedValues.length) {
+			throw new SbError('not_supported', 'В списке allowed_values есть повторы');
+		}
+	}
+
+	// --- условие applies_when (04-attributes §11, М3–М5) ---
+	let appliesWhen: { property: string; operation: string; value: string[] } | null = null;
+	if (input.appliesWhen !== null && input.appliesWhen !== undefined) {
+		const trigger = input.appliesWhen.property.trim();
+		const operation = input.appliesWhen.operation;
+		const values = input.appliesWhen.value.map((v) => v.trim()).filter((v) => v !== '');
+		if (!PROPERTY_KEY_PATTERN.test(trigger)) {
+			throw new SbError('not_supported', `Свойство-триггер «${trigger}» не соответствует формату ключа (^[a-z][a-z0-9_]*$)`);
+		}
+		if (!(APPLIES_OPERATIONS as readonly string[]).includes(operation)) {
+			throw new SbError('not_supported', `Операция «${operation}» вне закрытого набора (М4): ${APPLIES_OPERATIONS.join(', ')}`);
+		}
+		if (values.length === 0) {
+			throw new SbError('not_supported', 'Значение условия applies_when пусто (property.applies_when.value_present)');
+		}
+		if (!registry.properties.some((p) => p.key === trigger)) {
+			throw new SbError('not_supported', `Свойство-триггер «${trigger}» не объявлено в Metamodel/Properties/ — сначала создайте его (property.applies_when.property_exists)`);
+		}
+		appliesWhen = { property: trigger, operation, value: values };
+	}
+
+	// --- запись (ADR-001: PROPERTY-{ULID}.md; И4: aliases[0] == title) ---
+	const id = generateUlid();
+	const fileName = assembleFileName(SYSTEM_TYPE_PREFIXES.property, id);
+	const path = `${METAMODEL_SUBFOLDERS.properties}/${fileName}`;
+	if (await adapter.exists(path)) {
+		throw new SbError('file_exists', `Файл уже существует: ${path}`);
+	}
+
+	const stamp = nowStamp();
+	const frontmatter: Record<string, unknown> = {
+		id,
+		type: 'property',
+		title: key,
+		aliases: [key],
+		created_at: stamp,
+		updated_at: stamp,
+		key,
+		label,
+		value_type: input.valueType,
+		cardinality: input.cardinality,
+		required: requiredFromCardinality(input.cardinality),
+		scope: input.scope,
+	};
+	const typeLink = (typeKey: string): string => {
+		const target = registry.getType(typeKey);
+		return target
+			? `[[${SYSTEM_TYPE_PREFIXES.object_type}-${target.id}.md|${target.label}]]`
+			: `[[${SYSTEM_TYPE_PREFIXES.object_type}-${typeKey}]]`;
+	};
+	if (objectTypeKeys.length > 0) {
+		frontmatter.object_types = objectTypeKeys.map(typeLink);
+	}
+	if (targetTypeKeys.length > 0) {
+		frontmatter.target_types = targetTypeKeys.map(typeLink);
+	}
+	if (linkMode !== null) {
+		frontmatter.link_mode = linkMode;
+	}
+	if (mediaTarget !== null) {
+		frontmatter.media_target = mediaTarget;
+	}
+	if (allowedValues.length > 0) {
+		frontmatter.allowed_values = allowedValues;
+	}
+	if (appliesWhen !== null) {
+		frontmatter.applies_when = {
+			property: appliesWhen.property,
+			operation: appliesWhen.operation,
+			// одно значение — строка, несколько — список (defs.json#$defs.applies_when)
+			value: appliesWhen.value.length === 1 ? appliesWhen.value[0] : appliesWhen.value,
+		};
+	}
+	if (input.definition && input.definition.trim() !== '') {
+		frontmatter.definition = input.definition.trim();
+	}
+	const body = `\n<!-- Смысл свойства, примеры значений, источник нормы (карточка типа / 04-attributes) -->\n`;
+
+	await adapter.createFolder(METAMODEL_SUBFOLDERS.properties);
+	await adapter.create(path, renderNote(adapter, frontmatter, body));
+	log?.('info', 'creation', `Создано свойство «${label}» (${key})`, {
+		path,
+		id,
+		key,
+		value_type: input.valueType,
+		cardinality: input.cardinality,
+		scope: input.scope,
+	});
 	return { path, id, fileName };
 }

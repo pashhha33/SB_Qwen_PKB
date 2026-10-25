@@ -10,7 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { VaultAdapter } from '../../src/adapter/vault-adapter';
 import type { LogLevel } from '../../src/core/activity-log';
-import { bootstrapMetamodel, SYSTEM_TYPE_SEEDS } from '../../src/core/bootstrap';
+import { bootstrapMetamodel, SB_ISSUES_PROPERTY_ULID, SYSTEM_PROPERTY_SEEDS, SYSTEM_TYPE_SEEDS } from '../../src/core/bootstrap';
 import { createObjectTypeDefinition } from '../../src/core/creation';
 import { METAMODEL_SUBFOLDERS, SYSTEM_TYPE_PREFIXES, TypeRegistry } from '../../src/core/registry';
 import { FakeVault } from '../support/fake-vault';
@@ -43,7 +43,7 @@ function failCreateOn(adapter: VaultAdapter, failPath: string): VaultAdapter {
 	});
 }
 
-describe('bootstrapMetamodel — DoD: пустое хранилище → Metamodel/ с 7 системными типами', () => {
+describe('bootstrapMetamodel — DoD: пустое хранилище → Metamodel/ с 7 системными типами и sb_issues', () => {
 	let vault: FakeVault;
 
 	beforeEach(async () => {
@@ -53,15 +53,15 @@ describe('bootstrapMetamodel — DoD: пустое хранилище → Metamo
 		await vault.cleanup();
 	});
 
-	it('в свежем хранилище создаёт все 7 определений байт-в-байт из семени', async () => {
+	it('в свежем хранилище создаёт все 8 семян (7 типов + sb_issues) байт-в-байт', async () => {
 		const spy = logSpy();
 		const report = await bootstrapMetamodel(vault, spy.fn);
 
-		expect(report.created).toHaveLength(7);
+		expect(report.created).toHaveLength(SYSTEM_TYPE_SEEDS.length + SYSTEM_PROPERTY_SEEDS.length);
 		expect(report.skipped).toHaveLength(0);
 		expect(report.failed).toHaveLength(0);
 
-		for (const seed of SYSTEM_TYPE_SEEDS) {
+		for (const seed of [...SYSTEM_TYPE_SEEDS, ...SYSTEM_PROPERTY_SEEDS]) {
 			expect(await vault.exists(seed.path), `${seed.path} существует`).toBe(true);
 			expect(await vault.read(seed.path), `${seed.path} содержимое из семени`).toBe(seed.content);
 		}
@@ -69,7 +69,7 @@ describe('bootstrapMetamodel — DoD: пустое хранилище → Metamo
 		// Журналирование: info-запись области bootstrap с итогами (DL-251).
 		const info = spy.records.filter((r) => r.level === 'info' && r.area === 'bootstrap');
 		expect(info).toHaveLength(1);
-		expect(info[0].data?.created).toBe(7);
+		expect(info[0].data?.created).toBe(SYSTEM_TYPE_SEEDS.length + SYSTEM_PROPERTY_SEEDS.length);
 	});
 
 	it('реестр после бутстрапа видит 7 типов без проблем; все — корни дерева', async () => {
@@ -89,6 +89,17 @@ describe('bootstrapMetamodel — DoD: пустое хранилище → Metamo
 			expect(type?.parentId, `${seed.typeKey}: без родителя (02-entities §3)`).toBeNull();
 		}
 		expect(registry.getTypeByPrefix('OBJECT_TYPE')?.typeKey).toBe('object_type');
+
+		// Часть 2: служебное свойство sb_issues сеется бутстрапом и читается реестром.
+		expect(registry.properties).toHaveLength(1);
+		const sbIssues = registry.properties[0];
+		expect(sbIssues.key).toBe('sb_issues');
+		expect(sbIssues.id).toBe(SB_ISSUES_PROPERTY_ULID);
+		expect(sbIssues.service).toBe(true);
+		expect(sbIssues.scope).toBe('universal');
+		expect(sbIssues.valueType).toBe('text');
+		expect(sbIssues.cardinality).toBe('0..N');
+		expect(sbIssues.required).toBe(false);
 	});
 
 	it('идемпотентен: повторный запуск ничего не создаёт и не перезаписывает (F5-9 = А)', async () => {
@@ -101,7 +112,7 @@ describe('bootstrapMetamodel — DoD: пустое хранилище → Metamo
 		const spy = logSpy();
 		const second = await bootstrapMetamodel(vault, spy.fn);
 		expect(second.created).toHaveLength(0);
-		expect(second.skipped).toHaveLength(7);
+		expect(second.skipped).toHaveLength(SYSTEM_TYPE_SEEDS.length + SYSTEM_PROPERTY_SEEDS.length);
 		expect(second.failed).toHaveLength(0);
 
 		for (const seed of SYSTEM_TYPE_SEEDS) {
@@ -121,7 +132,7 @@ describe('bootstrapMetamodel — DoD: пустое хранилище → Metamo
 
 		const report = await bootstrapMetamodel(vault);
 		expect(report.created).toEqual([taxonomy.path, facet.path]);
-		expect(report.skipped).toHaveLength(5);
+		expect(report.skipped).toHaveLength(SYSTEM_TYPE_SEEDS.length + SYSTEM_PROPERTY_SEEDS.length - 2);
 		expect(report.failed).toHaveLength(0);
 
 		const registry = await TypeRegistry.load(vault);
@@ -141,7 +152,7 @@ describe('bootstrapMetamodel — DoD: пустое хранилище → Metamo
 		const bookBefore = await vault.read(book.path);
 
 		const report = await bootstrapMetamodel(vault);
-		expect(report.created).toHaveLength(7);
+		expect(report.created).toHaveLength(SYSTEM_TYPE_SEEDS.length + SYSTEM_PROPERTY_SEEDS.length);
 
 		expect(await vault.read(book.path), 'определение пользователя не перезаписано').toBe(bookBefore);
 		const registry = await TypeRegistry.load(vault);
@@ -178,13 +189,14 @@ describe('bootstrapMetamodel — DoD: пустое хранилище → Metamo
 
 		expect(report.failed).toHaveLength(1);
 		expect(report.failed[0].path).toBe(victim.path);
-		expect(report.created).toHaveLength(6);
+		expect(report.created).toHaveLength(SYSTEM_TYPE_SEEDS.length + SYSTEM_PROPERTY_SEEDS.length - 1);
 		expect(report.skipped).toHaveLength(0);
 		expect(spy.records.some((r) => r.level === 'error' && r.area === 'bootstrap')).toBe(true);
 
-		// Реестр читает созданные 6; отсутствующее определение просто не индексируется.
+		// Реестр читает созданные 6 типов; отсутствующее определение просто не индексируется.
 		const registry = await TypeRegistry.load(vault);
 		expect(registry.types).toHaveLength(6);
+		expect(registry.properties).toHaveLength(1); // sb_issues не пострадал
 		expect(registry.issues).toEqual([]);
 		expect(registry.getType('relation')).toBeNull();
 	});

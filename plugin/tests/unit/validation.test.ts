@@ -55,7 +55,11 @@ describe('validate-object — правила группы A', () => {
 	});
 
 	it('чистый объект, созданный командой: 0 диагностик', async () => {
-		const result = await validateObject(vault, registry, labels, bookPath);
+		// checkServiceDeclaration: false — фикстура без бутстрапа (sb_issues не объявлен);
+		// служебный слой диагностик (группа K) проверяется тестами части 2.
+		const result = await validateObject(vault, registry, labels, bookPath, undefined, true, undefined, {
+			checkServiceDeclaration: false,
+		});
 		expect(result.diagnostics).toEqual([]);
 		expect(result.errors).toBe(0);
 	});

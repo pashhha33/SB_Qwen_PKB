@@ -1,24 +1,21 @@
 /**
  * Second Brain — точка входа плагина Obsidian.
  *
- * Этап A, под-батч A2 (части 1+2) + журнализация (A2.5, DL-251) + фикс 0.3.2:
- *   - БУТСТРАП Metamodel/ (A2 часть 2, DL-250/257): при загрузке плагин создаёт
- *     отсутствующие определения 7 системных типов (F5-9 = А — фиксированные ULID,
- *     F5-10 = Б — 7 OBJECT_TYPE-заметок); идемпотентен по существованию файлов;
- *   - реестр типов из Metamodel/ + кэш .sb/cache/registry.json;
- *   - LabelResolver (режим из настроек);
- *   - ЖУРНАЛ: .sb/logs/plugin-log.jsonl + настройки .sb/settings.json (ADR-002:
- *     настройки в .sb/, не в data.json); уровни error/warning/info/debug с
- *     выключателями; команда show-log — окно журнала с живым режимом (live);
- *   - 0.3.2 (DL-255): dataWrite прод-адаптера создаёт родительские папки .sb/ —
- *     DataAdapter.write сам этого не делает, из-за чего кэш реестра и файл
- *     журнала не записывались в свежем хранилище («не удалось сохранить кэш»);
- *   - 0.3.2 (DL-256): копирование журнала в буфер обмена — кнопка «Скопировать»
- *     в окне show-log (копирует видимое) + команда copy-log (копирует весь буфер);
- *   - команды: create-object-type, create-object, validate-object, show-log,
- *     copy-log (тонкие обёртки над ядром — DL-244/9.5).
- * Дальше — A3: D2 (генератор TS-типов из схем + тест свежести, конструкция DL-222)
- * и front-matter-title-adapter; закрытие DoD этапа A (phases.md §4).
+ * Состояние (B1.1 часть 2, DL-266): этап A закрыт (каркас, реестр, бутстрап,
+ * D2, front-matter-title-adapter); этап B — под-батч B1.1 «определения и
+ * валидация» доставлен обеими частями:
+ *   - часть 1 (0.6.0): schema-engine (группы правил B/C/G) + date-engine (H);
+ *   - часть 2 (0.7.0): движок условных свойств applies-when (М1–М7), служебный
+ *     слой диагностик service-flags (метки sb/* + свойство sb_issues, группа K),
+ *     команда create-property (vanilla-модалка, ADR-004), команда validate-vault
+ *     (общий индекс на прогон, сводка), правила группы E (object_type.*),
+ *     правило П2 — date.all_unknown.optional_only (rules.md v0.14.0, DL-265);
+ *   - бутстрап Metamodel/ сеёт 7 системных типов и служебное свойство sb_issues
+ *     (B1-4 = А: фиксированные ULID, байт-стабильность, идемпотентность);
+ *   - журнал .sb/logs/plugin-log.jsonl + настройки .sb/settings.json (ADR-002);
+ *   - команды: create-object-type, create-object, create-property, validate-object,
+ *     validate-vault, show-log, copy-log (тонкие обёртки над ядром — DL-244/9.5).
+ * Дальше — B1.2 «формы и контролы»: первое включение Svelte (B1-2 = А, DL-261).
  *
  * Архитектура: 'obsidian' импортируют только main.ts, adapter/obsidian-adapter.ts,
  * commands/* и ui/* (слои 4–5); ядро (core/**) — среда-независимо (правило М2,
@@ -30,9 +27,11 @@ import { ObsidianVaultAdapter } from './adapter/obsidian-adapter';
 import { registerCopyLogCommand } from './commands/copy-log';
 import { registerCreateObjectCommand } from './commands/create-object';
 import { registerCreateObjectTypeCommand } from './commands/create-object-type';
+import { registerCreatePropertyCommand } from './commands/create-property';
 import type { PluginContext } from './commands/context';
 import { registerShowLogCommand } from './commands/show-log';
 import { registerValidateObjectCommand } from './commands/validate-object';
+import { registerValidateVaultCommand } from './commands/validate-vault';
 import { ActivityLog } from './core/activity-log';
 import { bootstrapMetamodel } from './core/bootstrap';
 import {
@@ -100,7 +99,9 @@ export default class SecondBrainPlugin extends Plugin implements PluginContext, 
 		// Команды получают сам плагин как контекст (он реализует PluginContext).
 		registerCreateObjectTypeCommand(this, (cmd) => this.addCommand(cmd));
 		registerCreateObjectCommand(this, (cmd) => this.addCommand(cmd));
+		registerCreatePropertyCommand(this, (cmd) => this.addCommand(cmd));
 		registerValidateObjectCommand(this, (cmd) => this.addCommand(cmd));
+		registerValidateVaultCommand(this, (cmd) => this.addCommand(cmd));
 		registerShowLogCommand(this, (cmd) => this.addCommand(cmd));
 		registerCopyLogCommand(this, (cmd) => this.addCommand(cmd));
 

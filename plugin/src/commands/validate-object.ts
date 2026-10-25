@@ -68,9 +68,13 @@ export function registerValidateObjectCommand(context: PluginContext, addCommand
 						file.path,
 						context.logger.fn,
 						context.settings.logging.logValidation,
+						undefined,
+						// Часть 2 (08-views §7): служебные метки и sb_issues обновляются
+						// по итогам проверки (только на объектах Second Brain).
+						{ applyServiceFlags: true },
 					);
 					if (result.diagnostics.length === 0) {
-						new Notice(`Проверка «${file.path}»: нарушений нет (уровни 2–4, группа A)`);
+						new Notice(`Проверка «${file.path}»: нарушений нет (уровни 2–4, 6; группы A/B/C/E/G/H/K)`);
 					} else {
 						new ValidationResultModal(context, result.path, result.diagnostics).open();
 					}

@@ -5,7 +5,10 @@
  *
  * Сценарий: в FakeVault строятся тип `book` + `person`, определения свойств книги
  * и экземпляры; validate-object прогоняется целиком (группа A + schema-engine).
- * Условные свойства (applies_when) в части 1 пропускаются — проверяется и это.
+ * Часть 2 (DL-266): условные свойства (applies_when) проверяются движком applies-when
+ * (М1–М7): скрытое свойство не проверяется на обязательность (М6), сохранённые
+ * значения скрытых свойств проверяются (М2). В фикстуру добавлено объявление
+ * служебного свойства sb_issues (в реальном хранилище его сеет бутстрап).
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -30,6 +33,8 @@ const UL = {
 	propSummary: '01J8Z6M4K2Q7V9X3N5B0C1D2P7',
 	propFormat: '01J8Z6M4K2Q7V9X3N5B0C1D2P8',
 	propFileSize: '01J8Z6M4K2Q7V9X3N5B0C1D2P9',
+	propPlatform: '01J8Z6M4K2Q7V9X3N5B0C1D2PA',
+	propSbIssues: '01J8Z6M4K2Q7V9X3N5B0C1D2SB',
 };
 
 const objectTypeNote = (ulid: string, typeKey: string, label: string): string =>
@@ -116,7 +121,39 @@ const PROPS: PropSpec[] = [
 		required: false,
 		extra: ['applies_when:', '  property: format', '  operation: equals', '  value: file'],
 	},
+	{
+		// Обязательное УСЛОВНОЕ свойство (М6): обязательность проверяется, только
+		// когда условие выполнено (format: web_novel).
+		ulid: UL.propPlatform,
+		key: 'platform',
+		label: 'Площадка',
+		value_type: 'text',
+		cardinality: '1',
+		required: true,
+		extra: ['applies_when:', '  property: format', '  operation: equals', '  value: web_novel'],
+	},
 ];
+
+/** Объявление служебного свойства sb_issues — в реальном хранилище его сеет бутстрап (часть 2). */
+function sbIssuesDefinitionNote(): string {
+	return [
+		'---',
+		`id: ${UL.propSbIssues}`,
+		'type: property',
+		'title: sb_issues',
+		'created_at: "2026-10-25T10:00"',
+		'updated_at: "2026-10-25T10:00"',
+		'key: sb_issues',
+		'label: Проблемы',
+		'value_type: text',
+		'cardinality: "0..N"',
+		'required: false',
+		'scope: universal',
+		'service: true',
+		'---',
+		'',
+	].join('\n');
+}
 
 function bookNote(ulid: string, fields: string[]): string {
 	return [
@@ -148,6 +185,7 @@ describe('schema-engine — значения экземпляров (групп�
 		for (const spec of PROPS) {
 			await vault.put(`${METAMODEL_SUBFOLDERS.properties}/PROPERTY-${spec.ulid}.md`, propertyDefinitionNote(spec));
 		}
+		await vault.put(`${METAMODEL_SUBFOLDERS.properties}/PROPERTY-${UL.propSbIssues}.md`, sbIssuesDefinitionNote());
 		// Экземпляр person — цель ссылки author.
 		await vault.put(
 			`Persons/PERSON-${UL.person}.md`,
@@ -287,14 +325,56 @@ describe('schema-engine — значения экземпляров (групп�
 		expect(result.diagnostics.filter((d) => d.rule_id === 'datetime.format')).toEqual([]);
 	});
 
-	it('условные свойства (applies_when) в части 1 пропускаются — скрытые поля не проверяются', async () => {
-		// file_size — условное (триггер format): значение-строка вместо числа НЕ даёт диагностик.
+	it('условное свойство ВИДИМО (условие выполнено): значения проверяются полностью', async () => {
+		// format: file → file_size видно; строка вместо числа — value.type_conformance.
 		await vault.put(
 			BOOK_PATH,
 			bookNote(UL.bookOk, [`author: "[[PERSON-${UL.person}.md|Автор]]"`, 'read_status: reading', 'format: file', 'file_size: много']),
 		);
 		const result = await validate(BOOK_PATH);
-		expect(result.diagnostics.filter((d) => d.property_key === 'file_size')).toEqual([]);
+		const fileSize = result.diagnostics.filter((d) => d.property_key === 'file_size');
+		expect(fileSize.map((d) => d.rule_id)).toEqual(['value.type_conformance']);
+	});
+
+	it('условное свойство СКРЫТО (М6): обязательность не проверяется — platform не заполнен, формат не web_novel', async () => {
+		// platform обязательно при format: web_novel; здесь format: file — свойство скрыто,
+		// value.cardinality не применяется (rules.md «Перекрывающиеся правила», М6).
+		await vault.put(
+			BOOK_PATH,
+			bookNote(UL.bookOk, [`author: "[[PERSON-${UL.person}.md|Автор]]"`, 'read_status: reading', 'format: file']),
+		);
+		const result = await validate(BOOK_PATH);
+		expect(result.diagnostics.filter((d) => d.property_key === 'platform')).toEqual([]);
+	});
+
+	it('условие выполнено: обязательное условное свойство проверяется (М6 — вторая половина)', async () => {
+		// format: web_novel → platform видно и обязательно: не заполнено — value.cardinality.
+		await vault.put(
+			BOOK_PATH,
+			bookNote(UL.bookOk, [`author: "[[PERSON-${UL.person}.md|Автор]]"`, 'read_status: reading', 'format: web_novel']),
+		);
+		const ids = await ruleIds(BOOK_PATH);
+		expect(ids).toContain('value.cardinality');
+		const result = await validate(BOOK_PATH);
+		const platform = result.diagnostics.filter((d) => d.property_key === 'platform');
+		expect(platform).toHaveLength(1);
+	});
+
+	it('скрытое свойство с СОХРАНЁННЫМ значением: качество данных проверяется (М2 — значения не удаляются)', async () => {
+		// format: web_novel → file_size скрыто, но испорченное сохранённое значение видно проверке.
+		await vault.put(
+			BOOK_PATH,
+			bookNote(UL.bookOk, [
+				`author: "[[PERSON-${UL.person}.md|Автор]]"`,
+				'read_status: reading',
+				'format: web_novel',
+				'platform: author.today',
+				'file_size: много',
+			]),
+		);
+		const result = await validate(BOOK_PATH);
+		const fileSize = result.diagnostics.filter((d) => d.property_key === 'file_size');
+		expect(fileSize.map((d) => d.rule_id)).toEqual(['value.type_conformance']);
 	});
 
 	it('неизвестные поля игнорируются (схема не ограничивает состав frontmatter)', async () => {

@@ -16,23 +16,29 @@
  *     из `05-enumerations.md`; расхождение id зафиксировано в architecture.md §5);
  *   - для ссылок — `value.reference.exists` / `value.reference.target_type`.
  *
- * Границы части 1 (честно, M6):
- *   - условные свойства (`applies_when`) в проверке ЗНАЧЕНИЙ пропускаются — движок
- *     условий (М1–М7) доставляется в части 2 (правило `value.cardinality` «не применяется
- *     к скрытым условным свойствам» — rules.md);
- *   - существование файлов-вложений для `media_target: file` — этап D (media-service);
- *   - правила `period.*` — этап C (интервалы в `.sb/relations/`); `display_template.*`
- *     (уровень 5) — B1.2; правила группы E (`object_type.*`, классификация) — часть 2/B1.3.
+ * Границы части 1 (честно, M6) — сняты в части 2 (DL-266):
+ *   - условные свойства (`applies_when`) проверяются движком applies-when (М1–М7):
+ *     скрытое свойство не проверяется на обязательность (М6), но качество его
+ *     сохранённых значений проверяется (М2 — данные не удаляются);
+ *   - правило П2 реализовано как `date.all_unknown.optional_only` (rules.md v0.14.0);
+ *   - правила группы E для определений типов (`object_type.*`) — здесь
+ *     (validateObjectTypeDefinition); классификация (`category.*`, `facet.*`,
+ *     `taxonomy.*`, `assignment.*`) — B1.3 с classification-service.
+ * По-прежнему вне объёма: существование файлов-вложений для `media_target: file` —
+ * этап D (media-service); правила `period.*` — этап C (интервалы в `.sb/relations/`);
+ * `display_template.*` (уровень 5) — B1.2; разрешение ссылок по псевдонимам — B2.
  */
 
 import type { VaultAdapter } from '../adapter/vault-adapter';
-import { validateDateTimeValue, validateDateValue } from './date-engine';
+import { isPropertyVisible } from './applies-when';
+import { isFullyUnknownDate, validateDateTimeValue, validateDateValue } from './date-engine';
 import { diagnostic, type SbDiagnostic } from './diagnostics';
 import { parseFileName } from './identity';
 import type { LabelResolver } from './label-resolver';
+import { parseNote } from './markdown-parser';
 import type { SbNote } from './model';
 import { SYSTEM_KEYS } from './model';
-import type { PropertyDef, TypeRegistry } from './registry';
+import { linkIdList, type PropertyDef, type TypeRegistry } from './registry';
 
 /** Закрытый набор типов значений (ADR-006; `defs.json#$defs.value_type`). */
 export const VALUE_TYPES = ['text', 'number', 'date', 'datetime', 'boolean', 'object_reference', 'media_reference'] as const;
@@ -67,6 +73,27 @@ export interface VaultIndex {
 	byUlid: Map<string, VaultIndexEntry>;
 	/** Имя файла без расширения (нижний регистр) → пути (коллизии имён возможны). */
 	byBaseName: Map<string, string[]>;
+	/**
+	 * Тип из frontmatter по пути (null — типа нет/файл не разобрался). Заполняется
+	 * только при `readTypes: true` (validate-vault); нужно для правила
+	 * `object_type.abstract.no_instance` (уровень 4 — проверка масштаба хранилища).
+	 */
+	noteTypes?: Map<string, string | null>;
+	/**
+	 * Заметки — объекты Second Brain (во frontmatter есть `id` или `type`): область
+	 * действия validate-vault и служебного слоя (service-flags, решение 3).
+	 * Заполняется только при `readTypes: true`.
+	 */
+	sbObjectPaths?: Set<string>;
+}
+
+export interface BuildVaultIndexOptions {
+	/**
+	 * Читать frontmatter всех заметок (типы + признак SB-объекта). Дороже именного
+	 * прохода (чтение каждого файла), поэтому по умолчанию выключено: validate-object
+	 * строит индекс имён, validate-vault — полный индекс (один на прогон).
+	 */
+	readTypes?: boolean;
 }
 
 /**
@@ -76,9 +103,10 @@ export interface VaultIndex {
  * этап B2 (alias-index); до этого неканоническая ссылка на заметку с другим именем
  * считается несуществующей (честное ограничение, architecture.md §5).
  */
-export async function buildVaultIndex(adapter: VaultAdapter): Promise<VaultIndex> {
+export async function buildVaultIndex(adapter: VaultAdapter, options?: BuildVaultIndexOptions): Promise<VaultIndex> {
 	const index: VaultIndex = { byUlid: new Map(), byBaseName: new Map() };
-	for (const path of await adapter.listMarkdown()) {
+	const paths = await adapter.listMarkdown();
+	for (const path of paths) {
 		const fileName = path.slice(path.lastIndexOf('/') + 1);
 		const baseName = fileName.replace(/\.md$/i, '').toLowerCase();
 		const list = index.byBaseName.get(baseName) ?? [];
@@ -87,6 +115,23 @@ export async function buildVaultIndex(adapter: VaultAdapter): Promise<VaultIndex
 		const identity = parseFileName(fileName);
 		if (identity !== null) {
 			index.byUlid.set(identity.ulid, { path, typePrefix: identity.typePrefix });
+		}
+	}
+	if (options?.readTypes === true) {
+		index.noteTypes = new Map();
+		index.sbObjectPaths = new Set();
+		for (const path of paths) {
+			try {
+				const content = await adapter.read(path);
+				const note = parseNote({ path, content }, adapter);
+				const type = typeof note.system.type === 'string' ? note.system.type : null;
+				index.noteTypes.set(path, type);
+				if (!note.frontmatterBroken && (type !== null || typeof note.system.id === 'string')) {
+					index.sbObjectPaths.add(path);
+				}
+			} catch {
+				index.noteTypes.set(path, null); // файл не читается — validate-object пожалуется отдельно
+			}
 		}
 	}
 	return index;
@@ -119,8 +164,9 @@ interface DefinitionContext {
  * Множество id типов, которые покрывает определение свойства (F5-8 = А):
  * universal без object_types — все типы ('ALL'); иначе — указанные типы + потомки
  * (семантика family: ссылка на абстрактного предка включает потомков, DL-208).
+ * Экспортируется для creation.ts (проверка уникальности ключа до записи, уровень 1).
  */
-function coverageOf(def: PropertyDef, registry: TypeRegistry): Set<string> | 'ALL' {
+export function coverageOf(def: Pick<PropertyDef, 'scope' | 'objectTypes'>, registry: TypeRegistry): Set<string> | 'ALL' {
 	if (def.scope === 'universal' && def.objectTypes.length === 0) {
 		return 'ALL';
 	}
@@ -138,7 +184,7 @@ function coverageOf(def: PropertyDef, registry: TypeRegistry): Set<string> | 'AL
 	return covered;
 }
 
-function coverageIntersects(a: Set<string> | 'ALL', b: Set<string> | 'ALL'): boolean {
+export function coverageIntersects(a: Set<string> | 'ALL', b: Set<string> | 'ALL'): boolean {
 	if (a === 'ALL' || b === 'ALL') {
 		return true;
 	}
@@ -494,6 +540,120 @@ export function validatePropertyDefinition(note: SbNote, ctx: DefinitionContext)
 }
 
 // ---------------------------------------------------------------------------
+// Группа E (часть): определения типов объектов — object_type.* (4 правила)
+// ---------------------------------------------------------------------------
+
+/**
+ * Проверяет заметку-определение типа (type: object_type) по правилам группы E
+ * реестра (`object_type.*`); правила классификации (`category.*`, `facet.*`,
+ * `taxonomy.*`, `assignment.*`) — B1.3 вместе с classification-service.
+ *
+ *   - object_type.parent.exists      (error, 3) — родитель существует в реестре;
+ *   - object_type.parent.no_cycle    (error, 3) — в цепочке родителей нет цикла;
+ *   - object_type.type_prefix.unique (error, 2) — префикс уникален как целая строка;
+ *   - object_type.abstract.no_instance (error, 4) — у абстрактного типа нет экземпляров.
+ *     Правило масштаба хранилища: работает, когда индекс построен с `readTypes: true`
+ *     (validate-vault); в одиночном validate-object без типов в индексе пропускается
+ *     (честная граница — architecture.md §5, B1.1-7).
+ *
+ * Как и группа B в части 1: определение проверяется, даже если метатип `object_type`
+ * не зарегистрирован (дух ADR-002 — object.type.exists уже пожаловался).
+ */
+export function validateObjectTypeDefinition(note: SbNote, ctx: DefinitionContext): SbDiagnostic[] {
+	const { registry, index } = ctx;
+	const out: SbDiagnostic[] = [];
+	const base = {
+		object_id: typeof note.system.id === 'string' ? note.system.id : null,
+		object_path: note.path,
+	};
+	const push = (input: Omit<Parameters<typeof diagnostic>[0], 'object_id' | 'object_path'>) =>
+		out.push(diagnostic({ ...base, ...input }));
+
+	const self = registry.types.find((t) => t.path === note.path) ?? null;
+
+	// object_type.parent.exists (error, 3) — по wikilink-ам parent_type (список или одиночная ссылка)
+	for (const parentId of linkIdList(note.properties.parent_type)) {
+		if (registry.getTypeById(parentId) === null) {
+			push({
+				rule_id: 'object_type.parent.exists',
+				severity: 'error',
+				level: 3,
+				property_key: 'parent_type',
+				actual_value: parentId,
+				message: 'Родительский тип не найден среди определений метамодели',
+				hint: 'Проверьте wikilink parent_type: цель — файл OBJECT_TYPE-{ULID}.md из Metamodel/ObjectTypes/',
+			});
+		}
+	}
+
+	if (self !== null) {
+		// object_type.parent.no_cycle (error, 3) — обход цепочки родителей с посещёнными id
+		const visited = new Set<string>([self.id]);
+		let current = self;
+		for (;;) {
+			if (current.parentId === null) {
+				break;
+			}
+			if (visited.has(current.parentId)) {
+				push({
+					rule_id: 'object_type.parent.no_cycle',
+					severity: 'error',
+					level: 3,
+					property_key: 'parent_type',
+					actual_value: current.parentId,
+					message: `В цепочке родителей типа «${self.label}» есть цикл (${self.typeKey} → … → ${current.typeKey} → …)`,
+					hint: 'Иерархия типов — дерево (07-hierarchy): уберите одну из ссылок parent_type',
+				});
+				break;
+			}
+			const parent = registry.getTypeById(current.parentId);
+			if (parent === null) {
+				break; // висячий родитель — уже отмечен parent.exists
+			}
+			visited.add(parent.id);
+			current = parent;
+		}
+
+		// object_type.type_prefix.unique (error, 2) — префикс уникален как целая строка (ADR-001)
+		const prefixTwins = registry.types.filter((t) => t.path !== self.path && t.typePrefix === self.typePrefix);
+		if (prefixTwins.length > 0) {
+			push({
+				rule_id: 'object_type.type_prefix.unique',
+				severity: 'error',
+				level: 2,
+				property_key: 'type_prefix',
+				actual_value: self.typePrefix,
+				message: `TYPE_PREFIX «${self.typePrefix}» уже занят типом «${prefixTwins.map((t) => t.typeKey).join(', ')}»`,
+				hint: 'Префикс уникален как целая строка (ADR-001, реестр 02-entities §6); выберите другой',
+			});
+		}
+
+		// object_type.abstract.no_instance (error, 4) — только с полным индексом (readTypes)
+		if (self.abstract && index?.noteTypes !== undefined) {
+			const instances: string[] = [];
+			for (const [path, type] of index.noteTypes) {
+				if (type === self.typeKey && path !== self.path) {
+					instances.push(path);
+				}
+			}
+			if (instances.length > 0) {
+				const examples = instances.slice(0, 3).join(', ');
+				push({
+					rule_id: 'object_type.abstract.no_instance',
+					severity: 'error',
+					level: 4,
+					property_key: 'abstract',
+					actual_value: instances.length,
+					message: `У абстрактного типа «${self.label}» (${self.typeKey}) найдено экземпляров: ${instances.length} (${examples}${instances.length > 3 ? ', …' : ''})`,
+					hint: 'Экземпляры абстрактного типа невозможны (И3): смените тип экземпляров на конкретного потомка или снимите abstract у типа',
+				});
+			}
+		}
+	}
+	return out;
+}
+
+// ---------------------------------------------------------------------------
 // Группы C/G/H: значения экземпляров
 // ---------------------------------------------------------------------------
 
@@ -528,8 +688,15 @@ function resolveReference(target: string, ctx: DefinitionContext): ResolvedRefer
 
 /**
  * Проверяет значения предметных полей экземпляра (группы C, G и форматная часть H)
- * по определениям свойств типа. Условные свойства (applies_when) пропускаются —
- * движок условий в части 2 (см. шапку).
+ * по определениям свойств типа.
+ *
+ * Условные свойства (`applies_when`) — часть 2 (движок applies-when, М1–М7):
+ *   - условие ВЫПОЛНЕНО (свойство видимо) — проверки в полном объёме, включая
+ *     обязательность (М6: обязательность проверяется только когда условие выполнено);
+ *   - условие НЕ выполнено (свойство скрыто) — `value.cardinality` не применяется
+ *     (rules.md «Перекрывающиеся правила»), но качество СОХРАНЁННЫХ значений
+ *     проверяется (М2: значения «погасших» свойств не удаляются — испорченные
+ *     данные должны быть видны независимо от видимости поля).
  */
 export function validateInstanceValues(
 	note: SbNote,
@@ -546,41 +713,42 @@ export function validateInstanceValues(
 		out.push(diagnostic({ ...base, ...input }));
 
 	for (const def of registry.getPropertiesForType(typeKey)) {
-		if (def.appliesWhen !== null) {
-			continue; // часть 2: условные свойства проверяются движком applies-when (М1–М7)
-		}
+		const visible = isPropertyVisible(def, note);
 		const rawValue = note.properties[def.key];
 		const multiple = def.cardinality === '0..N' || def.cardinality === '1..N';
 		const present = rawValue !== undefined && rawValue !== null && !(Array.isArray(rawValue) && rawValue.length === 0);
 		const items: unknown[] = present ? (Array.isArray(rawValue) ? rawValue : [rawValue]) : [];
 		const propertyLabel = labels.forPropertyKey(def.key, typeKey);
 
-		// value.cardinality (error, уровень 4): обязательность и количество
-		if (def.required && items.length === 0) {
-			push({
-				rule_id: 'value.cardinality',
-				severity: 'error',
-				level: 4,
-				property_key: def.key,
-				message: `Обязательное свойство «${propertyLabel}» не заполнено`,
-				hint: `Заполните поле «${propertyLabel}» (кардинальность ${def.cardinality})`,
-			});
-			continue;
-		}
-		if (!multiple && items.length > 1) {
-			push({
-				rule_id: 'value.cardinality',
-				severity: 'error',
-				level: 4,
-				property_key: def.key,
-				actual_value: items.length,
-				message: `Свойство «${propertyLabel}» допускает одно значение (кардинальность ${def.cardinality}), найдено ${items.length}`,
-				hint: 'Оставьте одно значение или измените кардинальность в определении свойства',
-			});
+		// value.cardinality (error, уровень 4): обязательность и количество.
+		// М6: к скрытым условным свойствам правило не применяется.
+		if (visible) {
+			if (def.required && items.length === 0) {
+				push({
+					rule_id: 'value.cardinality',
+					severity: 'error',
+					level: 4,
+					property_key: def.key,
+					message: `Обязательное свойство «${propertyLabel}» не заполнено`,
+					hint: `Заполните поле «${propertyLabel}» (кардинальность ${def.cardinality})`,
+				});
+				continue;
+			}
+			if (!multiple && items.length > 1) {
+				push({
+					rule_id: 'value.cardinality',
+					severity: 'error',
+					level: 4,
+					property_key: def.key,
+					actual_value: items.length,
+					message: `Свойство «${propertyLabel}» допускает одно значение (кардинальность ${def.cardinality}), найдено ${items.length}`,
+					hint: 'Оставьте одно значение или измените кардинальность в определении свойства',
+				});
+			}
 		}
 
 		for (const item of items) {
-			checkValueItem(item, def, propertyLabel, push, ctx);
+			checkValueItem(item, def, propertyLabel, push, ctx, visible);
 		}
 	}
 	return out;
@@ -588,7 +756,7 @@ export function validateInstanceValues(
 
 type PushFn = (input: Omit<Parameters<typeof diagnostic>[0], 'object_id' | 'object_path'>) => void;
 
-function checkValueItem(item: unknown, def: PropertyDef, propertyLabel: string, push: PushFn, ctx: DefinitionContext): void {
+function checkValueItem(item: unknown, def: PropertyDef, propertyLabel: string, push: PushFn, ctx: DefinitionContext, visible = true): void {
 	switch (def.valueType) {
 		case 'text': {
 			if (typeof item !== 'string') {
@@ -628,6 +796,21 @@ function checkValueItem(item: unknown, def: PropertyDef, propertyLabel: string, 
 								: 'Формат: YYYY-MM-DDTHH:mm, локальное время, точность до минут (04-attributes §6)',
 					});
 				}
+			}
+			// П2 → date.all_unknown.optional_only (warning, 2; rules.md v0.14.0, DL-265):
+			// дата, неизвестная целиком, допустима только в необязательном поле.
+			// Обязательность проверяется только для видимых свойств (М6 — скрытое
+			// условное свойство не «обязательное» в момент, когда условие не выполнено).
+			if (def.valueType === 'date' && visible && def.required && isFullyUnknownDate(item)) {
+				push({
+					rule_id: 'date.all_unknown.optional_only',
+					severity: 'warning',
+					level: 2,
+					property_key: def.key,
+					actual_value: item,
+					message: `Обязательное свойство «${propertyLabel}» содержит дату, неизвестную целиком (0000-00-00)`,
+					hint: 'Дата «неизвестна целиком» допустима только в необязательном поле (П2, 06-time-and-intervals §2): укажите хотя бы год или очистите поле',
+				});
 			}
 			return;
 		}

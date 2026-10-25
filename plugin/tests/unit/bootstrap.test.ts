@@ -12,7 +12,9 @@
 import { createHash } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+	SB_ISSUES_PROPERTY_ULID,
 	SEED_TIME_MS,
+	SYSTEM_PROPERTY_SEEDS,
 	SEED_TIMESTAMP,
 	SYSTEM_TYPE_SEEDS,
 	SYSTEM_TYPE_ULIDS,
@@ -135,6 +137,71 @@ describe('bootstrap — состав и формат семенных замет
 			const identity = parseFileName(seed.fileName);
 			expect(identity?.typePrefix).toBe('OBJECT_TYPE');
 			expect(identity?.ulid).toBe(seed.ulid);
+		}
+	});
+});
+
+describe('bootstrap — семя служебного свойства sb_issues (часть 2, B1-4 = А, DL-266)', () => {
+	let vault: FakeVault;
+	beforeEach(async () => {
+		vault = await FakeVault.create();
+	});
+	afterEach(async () => {
+		await vault.cleanup();
+	});
+
+	/** Рецепт из шапки bootstrap.ts: SHA-256 от «second-brain/system-property/{type_key}.{property_key}». */
+	function recipeUlid(recipe: string): string {
+		const digest = createHash('sha256').update(recipe).digest();
+		return generateUlid(SEED_TIME_MS, digest.subarray(0, 16));
+	}
+
+	it('фиксированный ULID воспроизводится по документированному рецепту', () => {
+		expect(recipeUlid('second-brain/system-property/universal.sb_issues')).toBe(SB_ISSUES_PROPERTY_ULID);
+		expect(isValidUlid(SB_ISSUES_PROPERTY_ULID)).toBe(true);
+		expect(decodeUlidTime(SB_ISSUES_PROPERTY_ULID)).toBe(SEED_TIME_MS);
+	});
+
+	it('одно семя; путь и имя файла канонические (PROPERTY-{ULID}.md в Metamodel/Properties/)', () => {
+		expect(SYSTEM_PROPERTY_SEEDS).toHaveLength(1);
+		const seed = SYSTEM_PROPERTY_SEEDS[0];
+		expect(seed.key).toBe('sb_issues');
+		expect(seed.label).toBe('Проблемы');
+		expect(seed.fileName).toBe(`PROPERTY-${SB_ISSUES_PROPERTY_ULID}.md`);
+		expect(seed.path).toBe(`${METAMODEL_SUBFOLDERS.properties}/${seed.fileName}`);
+		expect(seed.fileName).toBe(buildFileName(SYSTEM_TYPE_PREFIXES.property, SB_ISSUES_PROPERTY_ULID));
+	});
+
+	it('содержимое семени разбирается и соответствует норме 08-views §7', () => {
+		const seed = SYSTEM_PROPERTY_SEEDS[0];
+		const note = parseNote({ path: seed.path, content: seed.content }, vault);
+		expect(note.frontmatterBroken).toBe(false);
+		expect(note.issues).toEqual([]);
+
+		// Системные атрибуты + И4.
+		expect(note.system.type).toBe('property');
+		expect(note.system.id).toBe(SB_ISSUES_PROPERTY_ULID);
+		expect(note.system.title).toBe('sb_issues');
+		expect(note.system.aliases?.[0]).toBe('sb_issues');
+		expect(note.system.created_at).toBe(SEED_TIMESTAMP);
+		expect(note.system.updated_at).toBe(SEED_TIMESTAMP);
+
+		// Норма: ключ sb_issues, подпись «Проблемы», text, 0..N, universal, service: true.
+		expect(note.properties.key).toBe('sb_issues');
+		expect(note.properties.label).toBe('Проблемы');
+		expect(note.properties.value_type).toBe('text');
+		expect(note.properties.cardinality).toBe('0..N');
+		expect(note.properties.required).toBe(false);
+		expect(note.properties.scope).toBe('universal');
+		expect(note.properties.service).toBe(true);
+		expect(note.properties.lifecycle).toBe('standard');
+	});
+
+	it('статичность: LF, без BOM, без токенов Templater (DL-190)', () => {
+		for (const seed of SYSTEM_PROPERTY_SEEDS) {
+			expect(seed.content).not.toContain('\r');
+			expect(seed.content.charCodeAt(0)).not.toBe(0xfeff);
+			expect(seed.content).not.toMatch(/<%|\{\{/);
 		}
 	});
 });

@@ -15,10 +15,17 @@
  *     во всех хранилищах.
  *   - F5-10 = Б — объём семени: 7 OBJECT_TYPE-заметок системных типов
  *     (object_type, property, relation_type, relation, taxonomy, facet, category).
- *     Определения свойств системных типов появятся в B1 вместе со schema-engine;
- *     предметная библиотека (book, person, …) — отдельной командой «установить
- *     основные типы» в B1. `property_type` не сеется: абстрактный, без карточки
- *     (ADR-004), 8 значений закрыты и заданы кодом (слой 1).
+ *     Определения свойств системных типов появятся в B1.3 (статические PROPERTY-сиды,
+ *     B1-4 = А); предметная библиотека (book, person, …) — отдельной командой
+ *     «установить основные типы» в B1.3. `property_type` не сеется: абстрактный,
+ *     без карточки (ADR-004), 8 значений закрыты и заданы кодом (слой 1).
+ *   - Часть 2 (DL-266): добавлено ОДНО семя PROPERTY — служебное свойство
+ *     `sb_issues` (08-views §7, DL-168): без него не работает служебный слой
+ *     диагностик (service-flags, правило diagnostics.service_property.declared).
+ *     Механизм тот же, что примет B1.3 (B1-4 = А): фиксированный ULID по рецепту
+ *     SHA-256 от «second-brain/system-property/{type_key}.{property_key}»
+ *     (для универсального свойства type_key = «universal»), временная часть та же —
+ *     2026-10-23; байт-стабильное содержимое; идемпотентность по существованию.
  *
  * РЕЦЕПТ фиксированных ULID (воспроизводим, проверен тестом bootstrap.test.ts):
  *   - временная часть: Date.UTC(2026, 9, 23) = 1792713600000 — дата утверждения
@@ -187,9 +194,97 @@ function buildSeed(typeKey: (typeof SEED_ORDER)[number]): SystemTypeSeed {
 /** Семь семенных определений системных типов — данные плагина (ADR-004). */
 export const SYSTEM_TYPE_SEEDS: readonly SystemTypeSeed[] = SEED_ORDER.map(buildSeed);
 
+// ---------------------------------------------------------------------------
+// Семена PROPERTY (часть 2 — служебное свойство sb_issues; полный набор сидов
+// системных типов — B1.3, механизм B1-4 = А тот же)
+// ---------------------------------------------------------------------------
+
+/** Одно семя-определение свойства (PROPERTY-заметка). */
+export interface SystemPropertySeed {
+	/** Ключ свойства (ADR-003). */
+	readonly key: string;
+	/** Русская подпись (08-views §7). */
+	readonly label: string;
+	/** Фиксированный «известный» ULID (рецепт — в шапке модуля). */
+	readonly ulid: string;
+	/** Имя файла: PROPERTY-{ulid}.md (ADR-001). */
+	readonly fileName: string;
+	/** Путь: Metamodel/Properties/{fileName} (DL-029). */
+	readonly path: string;
+	/** Полное содержимое заметки (frontmatter + тело), LF, без BOM. */
+	readonly content: string;
+}
+
+/**
+ * Фиксированный ULID служебного свойства `sb_issues` (B1-4 = А).
+ * Рецепт: SHA-256 от «second-brain/system-property/universal.sb_issues»,
+ * первые 16 байт → generateUlid(SEED_TIME_MS, bytes). НЕ МЕНЯТЬ — константа
+ * воспроизводится тестом (bootstrap.test.ts) и одинакова во всех хранилищах.
+ */
+export const SB_ISSUES_PROPERTY_ULID = '01M5K0XB00T6WT7SFWZBG4M9NB';
+
+/**
+ * Содержимое семени `sb_issues` — детерминированная конкатенация (байт-стабильно).
+ * Нормы: 08-views §7 (ключ, подпись «Проблемы», text, 0..N, universal, service: true,
+ * формат значения «{rule_id}: {severity}»); формат полей — как у create-property
+ * (creation.ts) и PROPERTY-примеров шага 9.
+ */
+function renderSbIssuesSeedContent(): string {
+	const frontmatter = [
+		'---',
+		`id: ${SB_ISSUES_PROPERTY_ULID}`,
+		'type: property',
+		'title: sb_issues',
+		'aliases:',
+		'  - sb_issues',
+		`created_at: "${SEED_TIMESTAMP}"`,
+		`updated_at: "${SEED_TIMESTAMP}"`,
+		'key: sb_issues',
+		'label: Проблемы',
+		'value_type: text',
+		'cardinality: 0..N',
+		'required: false',
+		'scope: universal',
+		'service: true',
+		'lifecycle: standard',
+		'definition: "Служебный список диагностик последней проверки в формате «rule_id: severity». Ведёт плагин; вручную не редактируется (08-views §7, DL-168)."',
+		'---',
+	].join('\n');
+	const body = [
+		'',
+		'Служебное свойство: колонка «Проблемы» в таблицах и карточках представлений (Bases).',
+		'Заполняется плагином по результатам проверки (уровни 2–4, 6) синхронно со служебными',
+		'метками `sb/error`, `sb/warning`, `sb/info` в `tags` (08-views §7).',
+		'',
+		'---',
+		'',
+		'Определение создано бутстрапом плагина Second Brain (ADR-004; фиксированный ULID —',
+		'рецепт B1-4 = А: SHA-256 от «second-brain/system-property/universal.sb_issues»; DL-266).',
+		'',
+		'- `service: true` — свойство не предлагается в формах ввода (08-views §7).',
+		'- Не удаляйте заметку: без неё правило `diagnostics.service_property.declared`',
+		'  выдаст ошибку, а колонка «Проблемы» перестанет работать.',
+		'- Заметка — источник истины (ADR-002): правки подписи подхватываются при перечитывании реестра.',
+		'',
+	].join('\n');
+	return `${frontmatter}\n${body}`;
+}
+
+const SB_ISSUES_SEED: SystemPropertySeed = {
+	key: 'sb_issues',
+	label: 'Проблемы',
+	ulid: SB_ISSUES_PROPERTY_ULID,
+	fileName: `PROPERTY-${SB_ISSUES_PROPERTY_ULID}.md`,
+	path: `${METAMODEL_SUBFOLDERS.properties}/PROPERTY-${SB_ISSUES_PROPERTY_ULID}.md`,
+	content: renderSbIssuesSeedContent(),
+};
+
+/** Семена-определения свойств (часть 2: только `sb_issues`; системные PROPERTY-сиды — B1.3). */
+export const SYSTEM_PROPERTY_SEEDS: readonly SystemPropertySeed[] = [SB_ISSUES_SEED];
+
 /** Итог бутстрапа: что создано, что уже существовало, что не удалось. */
 export interface BootstrapReport {
-	/** Пути созданных файлов (в порядке SEED_ORDER). */
+	/** Пути созданных файлов (сначала типы в порядке SEED_ORDER, затем семена свойств). */
 	created: string[];
 	/** Пути пропущенных файлов: уже существовали — не перезаписываются (идемпотентность F5-9). */
 	skipped: string[];
@@ -198,7 +293,8 @@ export interface BootstrapReport {
 }
 
 /**
- * Бутстрап Metamodel/: создаёт отсутствующие семенные определения 7 системных типов.
+ * Бутстрап Metamodel/: создаёт отсутствующие семенные определения — 7 системных
+ * типов и служебное свойство `sb_issues` (часть 2).
  *
  * Идемпотентен: существующие файлы не трогает (проверка существования — F5-9 = А).
  * Ошибка записи одного семени не прерывает остальные (отказоустойчивость как у
@@ -209,46 +305,63 @@ export interface BootstrapReport {
  */
 export async function bootstrapMetamodel(adapter: VaultAdapter, log?: LogFn): Promise<BootstrapReport> {
 	const report: BootstrapReport = { created: [], skipped: [], failed: [] };
-	const missing: SystemTypeSeed[] = [];
-	for (const seed of SYSTEM_TYPE_SEEDS) {
+	const typeEntries = SYSTEM_TYPE_SEEDS.map((seed) => ({
+		path: seed.path,
+		content: seed.content,
+		label: seed.label,
+		folder: METAMODEL_SUBFOLDERS.objectTypes,
+	}));
+	const propertyEntries = SYSTEM_PROPERTY_SEEDS.map((seed) => ({
+		path: seed.path,
+		content: seed.content,
+		label: seed.label,
+		folder: METAMODEL_SUBFOLDERS.properties,
+	}));
+	const allSeeds = [...typeEntries, ...propertyEntries];
+	const toCreate: typeof allSeeds = [];
+
+	for (const seed of allSeeds) {
 		if (await adapter.exists(seed.path)) {
 			report.skipped.push(seed.path);
 		} else {
-			missing.push(seed);
+			toCreate.push(seed);
 		}
 	}
 
-	if (missing.length === 0) {
-		log?.('debug', 'bootstrap', `Бутстрап Metamodel/: все ${SYSTEM_TYPE_SEEDS.length} определений уже существуют — пропуск`, {
+	if (toCreate.length === 0) {
+		log?.('debug', 'bootstrap', `Бутстрап Metamodel/: все ${allSeeds.length} семян уже существуют — пропуск`, {
 			skipped: report.skipped.length,
 		});
 		return report;
 	}
 
-	// Папка создаётся один раз (createFolder идемпотентен и создаёт промежуточные — контракт интерфейса).
-	try {
-		await adapter.createFolder(METAMODEL_SUBFOLDERS.objectTypes);
-	} catch (error) {
-		log?.('error', 'bootstrap', `Не удалось создать папку ${METAMODEL_SUBFOLDERS.objectTypes}: ${String(error)}`);
+	// Папки создаются один раз (createFolder идемпотентен и создаёт промежуточные — контракт интерфейса).
+	const folders = [...new Set(toCreate.map((seed) => seed.folder))];
+	for (const folder of folders) {
+		try {
+			await adapter.createFolder(folder);
+		} catch (error) {
+			log?.('error', 'bootstrap', `Не удалось создать папку ${folder}: ${String(error)}`);
+		}
 	}
 
-	for (const seed of missing) {
+	for (const seed of toCreate) {
 		try {
 			await adapter.create(seed.path, seed.content);
 			report.created.push(seed.path);
 		} catch (error) {
 			report.failed.push({ path: seed.path, error: String(error) });
-			log?.('error', 'bootstrap', `Не удалось создать определение «${seed.label}» (${seed.typeKey}): ${String(error)}`, {
+			log?.('error', 'bootstrap', `Не удалось создать определение «${seed.label}»: ${String(error)}`, {
 				path: seed.path,
 			});
 		}
 	}
 
-	log?.('info', 'bootstrap', `Бутстрап Metamodel/: создано определений системных типов — ${report.created.length}`, {
+	log?.('info', 'bootstrap', `Бутстрап Metamodel/: создано семян определений — ${report.created.length}`, {
 		created: report.created.length,
 		skipped: report.skipped.length,
 		failed: report.failed.length,
-		folder: METAMODEL_SUBFOLDERS.objectTypes,
+		folders,
 	});
 	return report;
 }

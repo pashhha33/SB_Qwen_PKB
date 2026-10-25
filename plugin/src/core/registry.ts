@@ -108,6 +108,11 @@ export interface PropertyDef {
 	createFromLink: string | null;
 	/** Условие показа `applies_when` (М1–М7, 04-attributes §11) или null. */
 	appliesWhen: { property: string; operation: string; value: string[] } | null;
+	/**
+	 * Служебное свойство (`service: true`, 08-views §7, DL-168): значение ведёт
+	 * плагин, в формы не предлагается. В MVP одно — `sb_issues` (сеется бутстрапом).
+	 */
+	service: boolean;
 }
 
 export type RegistryIssueCode =
@@ -162,7 +167,7 @@ function asStringList(value: unknown): string[] {
 }
 
 /** Список ULID-целей из поля-ссылки или списка ссылок (wikilink-и). */
-function linkIdList(value: unknown): string[] {
+export function linkIdList(value: unknown): string[] {
 	if (Array.isArray(value)) {
 		const ids: string[] = [];
 		for (const item of value) {
@@ -333,6 +338,7 @@ export class TypeRegistry {
 			mediaTarget: asString(note.properties.media_target),
 			createFromLink: asString(note.properties.create_from_link),
 			appliesWhen: parseAppliesWhen(note.properties.applies_when),
+			service: note.properties.service === true,
 		});
 	}
 

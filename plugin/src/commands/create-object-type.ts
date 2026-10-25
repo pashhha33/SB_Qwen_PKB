@@ -11,7 +11,7 @@
 
 import { Modal, Notice, Setting } from 'obsidian';
 import { SbError } from '../core/errors';
-import { TYPE_KEY_PATTERN, createObjectTypeDefinition } from '../core/creation';
+import { createObjectTypeDefinition } from '../core/creation';
 import type { PluginContext } from './context';
 
 class CreateObjectTypeModal extends Modal {
@@ -84,10 +84,6 @@ class CreateObjectTypeModal extends Modal {
 				.setCta()
 				.onClick(async () => {
 					try {
-						if (!TYPE_KEY_PATTERN.test(this.typeKey)) {
-							new Notice('Ключ типа: строчная латиница, цифры и «_», первая буква — строчная (^[a-z][a-z0-9_]*$)');
-							return;
-						}
 						const result = await createObjectTypeDefinition(
 							this.context.adapter,
 							this.context.registry,
@@ -106,6 +102,9 @@ class CreateObjectTypeModal extends Modal {
 						new Notice(`Тип создан: ${result.path}`);
 						this.close();
 					} catch (error) {
+						// Все отказы создания (включая формат ключа — раньше это был
+						// незалогируемый пред-чек формы, инцидент 2026-10-25) проходят
+						// через ядро и ВИДНЫ В ЖУРНАЛЕ: уровень 1 контроля (ADR-011).
 						const message = error instanceof SbError ? error.message : `Не удалось создать тип: ${String(error)}`;
 						this.context.logger.log('error', 'creation', message, { typeKey: this.typeKey });
 						new Notice(message);

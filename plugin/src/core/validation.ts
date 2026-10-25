@@ -1,12 +1,18 @@
 /**
- * validate-object — проверка одного объекта (этап A2).
+ * validate-object / validate-vault — проверка объектов (этапы A2 + B1.1).
  *
  * Объём: группа A реестра правил (docs/validation/rules.md) — системные атрибуты и
- * инварианты И1–И5 (этап A2), плюс schema-engine (этап B1.1, DL-263): группа B —
+ * инварианты И1–И5 (этап A2), плюс schema-engine (этап B1.1): группа B —
  * определения свойств (16 правил), группы C/G — значения и перечисления, группа H —
- * даты (date-engine). Уровни контроля 2–4 (ADR-011); уровень 1 (модалка) — B1.2.
- * Условные свойства (applies_when) в проверке значений пропускаются до части 2;
- * связи — этап C.
+ * даты (date-engine), группа E — определения типов (`object_type.*`, часть 2).
+ * Уровни контроля 2–4 (ADR-011); уровень 1 (модалка) — B1.2.
+ *
+ * Часть 2 (DL-266): условные свойства (`applies_when`) проверяются движком
+ * applies-when (М1–М7: скрытое свойство не проверяется на обязательность — М6,
+ * качество сохранённых значений проверяется — М2); служебный слой диагностик —
+ * правила группы K (`diagnostics.*`) и запись служебных меток + `sb_issues`
+ * (service-flags, 08-views §7); validate-vault — прогон всего хранилища с общим
+ * индексом (один на прогон) и сводкой. Связи — этап C.
  *
  * Правило `object.created_at.immutable` (И5, «не изменился относительно предыдущей
  * версии») в A2 НЕ проверяется: нужна история/снимок предыдущего состояния —
@@ -23,8 +29,23 @@ import { diagnostic, type SbDiagnostic } from './diagnostics';
 import { findDuplicateIds, fileNameMatchesId, parseFileName, repairFileNameById } from './identity';
 import type { LabelResolver } from './label-resolver';
 import { parseNote } from './markdown-parser';
-import type { TypeRegistry } from './registry';
-import { buildVaultIndex, validateInstanceValues, validatePropertyDefinition, type VaultIndex } from './schema-engine';
+import { METAMODEL_SUBFOLDERS, type TypeRegistry } from './registry';
+import {
+	buildVaultIndex,
+	validateInstanceValues,
+	validateObjectTypeDefinition,
+	validatePropertyDefinition,
+	type VaultIndex,
+} from './schema-engine';
+import {
+	applyServiceFlags,
+	baseIssues,
+	checkServiceFlags,
+	expectedTagFor,
+	isSbObjectNote,
+	SB_ISSUES_KEY,
+	sbIssuesDeclarationProblem,
+} from './service-flags';
 import { isValidUlid } from './ulid';
 
 export interface ValidateObjectResult {
@@ -34,6 +55,24 @@ export interface ValidateObjectResult {
 	unparsable: boolean;
 	errors: number;
 	warnings: number;
+	/** Служебные метки/`sb_issues` были перезаписаны по итогам этой проверки (часть 2). */
+	flagsWritten: boolean;
+}
+
+/** Опции проверки одного объекта (часть 2). */
+export interface ValidateObjectOptions {
+	/**
+	 * Записать служебные метки и `sb_issues` по итогам проверки (08-views §7).
+	 * По умолчанию false — ядро ничего не пишет; запись включают команды
+	 * (validate-object, validate-vault).
+	 */
+	applyServiceFlags?: boolean;
+	/**
+	 * Выдавать ли `diagnostics.service_property.declared` на этой заметке.
+	 * По умолчанию true; validate-vault передаёт false — проверка объявления
+	 * делается один раз на прогон (vault-уровень), а не на каждой заметке.
+	 */
+	checkServiceDeclaration?: boolean;
 }
 
 /** Сравнивает метки 'YYYY-MM-DDTHH:mm[:ss]' лексически по минутам. */
@@ -57,6 +96,7 @@ export async function validateObject(
 	logValidation = true,
 	/** Общий индекс хранилища (validate-vault строит один на прогон; здесь — по потребности). */
 	sharedIndex?: VaultIndex | null,
+	options?: ValidateObjectOptions,
 ): Promise<ValidateObjectResult> {
 	const content = await adapter.read(path);
 	const note = parseNote({ path, content }, adapter);
@@ -303,27 +343,67 @@ export async function validateObject(
 		);
 	}
 
-	// ---- B1.1: schema-engine — группы B (определения свойств), C/G (значения), H (даты) ----
-	// Определение свойства проверяется как определение, даже если метатип `property`
+	// ---- B1.1: schema-engine — группы B (определения свойств), E (определения типов),
+	// C/G (значения), H (даты) ----
+	// Определение проверяется как определение, даже если соответствующий метатип
 	// сам не зарегистрирован (дух ADR-002: битое определение не мешает проверкам;
 	// object.type.exists на это уже пожаловался). Значения экземпляра — только для
 	// зарегистрированного неабстрактного типа.
-	if (typeKey === 'property' || (typeKey !== null && registry.getType(typeKey) !== null)) {
+	{
 		const typeDefForValues = typeKey === null ? null : registry.getType(typeKey);
-		const needsDefinitionCheck = typeKey === 'property';
+		const needsPropertyDefinitionCheck = typeKey === 'property';
+		const needsObjectTypeDefinitionCheck = typeKey === 'object_type';
 		const needsValueCheck = typeDefForValues !== null && !typeDefForValues.abstract;
-		if (needsDefinitionCheck || needsValueCheck) {
+		if (needsPropertyDefinitionCheck || needsObjectTypeDefinitionCheck || needsValueCheck) {
 			const index = sharedIndex !== undefined ? sharedIndex : await buildVaultIndex(adapter);
 			const ctx = { registry, labels, index };
-			if (needsDefinitionCheck) {
+			if (needsPropertyDefinitionCheck) {
 				// Группа B — определение свойства (включая И6: property.key.no_system_conflict).
 				diagnostics.push(...validatePropertyDefinition(note, ctx));
 			}
+			if (needsObjectTypeDefinitionCheck) {
+				// Группа E (object_type.*) — определение типа (часть 2).
+				diagnostics.push(...validateObjectTypeDefinition(note, ctx));
+			}
 			if (needsValueCheck && typeKey !== null) {
-				// Группы C/G/H — значения предметных полей экземпляра.
+				// Группы C/G/H — значения предметных полей экземпляра (условные свойства —
+				// с движком applies-when: М1–М7, часть 2).
 				diagnostics.push(...validateInstanceValues(note, typeKey, ctx));
 			}
 		}
+	}
+
+	// ---- B1.1 часть 2: служебный слой диагностик (группа K) и служебные метки ----
+	// Порядок (service-flags, решение 1): «базовые» диагностики (все, кроме diagnostics.*)
+	// определяют содержимое sb_issues и метку; проверки readonly/synced сравнивают с
+	// текущим состоянием заметки; запись — когда команды её включили (applyServiceFlags).
+	let flagsWritten = false;
+	if (isSbObjectNote(note)) {
+		const issues = baseIssues(diagnostics);
+		const declaredProblem = sbIssuesDeclarationProblem(registry);
+		if (declaredProblem !== null && options?.checkServiceDeclaration !== false) {
+			diagnostics.push(
+				diagnostic({
+					...base,
+					rule_id: 'diagnostics.service_property.declared',
+					severity: 'error',
+					level: 3,
+					property_key: SB_ISSUES_KEY,
+					message: declaredProblem,
+					hint: 'Свойство объявляется бутстрапом плагина (B1-4 = А): перезагрузите плагин — определение PROPERTY-…sb_issues будет восстановлено в Metamodel/Properties/',
+				}),
+			);
+		}
+		if (options?.applyServiceFlags === true) {
+			flagsWritten = await applyServiceFlags(adapter, note, issues, declaredProblem === null);
+			if (flagsWritten) {
+				log?.('debug', 'service-flags', `Служебные метки и sb_issues обновлены по итогам проверки «${path}»`, {
+					issues: issues.length,
+					tag: expectedTagFor(issues),
+				});
+			}
+		}
+		diagnostics.push(...checkServiceFlags(note, issues, declaredProblem, flagsWritten));
 	}
 
 	if (logValidation) {
@@ -336,15 +416,133 @@ export async function validateObject(
 			{ rules: diagnostics.slice(0, MAX_ERROR_LINES_PER_RUN).map((d) => d.rule_id) },
 		);
 	}
-	return finish(path, diagnostics, false);
+	return finish(path, diagnostics, false, flagsWritten);
 }
 
-function finish(path: string, diagnostics: SbDiagnostic[], unparsable: boolean): ValidateObjectResult {
+function finish(path: string, diagnostics: SbDiagnostic[], unparsable: boolean, flagsWritten = false): ValidateObjectResult {
 	return {
 		path,
 		diagnostics,
 		unparsable,
 		errors: diagnostics.filter((d) => d.severity === 'error').length,
 		warnings: diagnostics.filter((d) => d.severity === 'warning').length,
+		flagsWritten,
+	};
+}
+
+// ---------------------------------------------------------------------------
+// validate-vault — проверка всего хранилища (команда реестра, mvp-scope §2.3)
+// ---------------------------------------------------------------------------
+
+/** Сводка прогона validate-vault (команда показывает Notice + окно сводки). */
+export interface VaultValidationSummary {
+	/** Сколько заметок-объектов проверено (заметки без `id`/`type` во frontmatter не входят). */
+	checked: number;
+	/** Сколько заметок имеют хотя бы одну диагностику. */
+	withIssues: number;
+	errors: number;
+	warnings: number;
+	infos: number;
+	/** Скольким заметкам обновлены служебные метки/`sb_issues`. */
+	flagsWritten: number;
+	/** Диагностики уровня хранилища (не привязаны к одной заметке): объявленность sb_issues. */
+	vaultDiagnostics: SbDiagnostic[];
+	/** Самые проблемные заметки (не более 10) — для окна сводки. */
+	worst: { path: string; errors: number; warnings: number }[];
+}
+
+/**
+ * Проверяет все объекты Second Brain в хранилище (уровни 2–4, 6 — mvp-scope §2.3).
+ *
+ * Общий индекс хранилища строится ОДИН на прогон (с типами заметок — задел для
+ * `object_type.abstract.no_instance`); каждая заметка читается проверкой отдельно
+ * (двойное чтение — осознанное упрощение MVP, architecture.md §5, B1.1-8).
+ * Область прогона — заметки с признаком объекта (`id` или `type` во frontmatter):
+ * произвольные заметки пользователя (дневники, MOC) не проверяются и служебными
+ * метками не помечаются (service-flags, решение 3).
+ * Журнал: одна сводная запись (записи на каждую заметку подавлены — защита от флуда).
+ */
+export async function validateVault(
+	adapter: VaultAdapter,
+	registry: TypeRegistry,
+	labels: LabelResolver,
+	log?: LogFn,
+	options?: { logPerNote?: boolean },
+): Promise<VaultValidationSummary> {
+	const index = await buildVaultIndex(adapter, { readTypes: true });
+	const vaultDiagnostics: SbDiagnostic[] = [];
+
+	// diagnostics.service_property.declared — один раз на прогон (уровень хранилища).
+	const declaredProblem = sbIssuesDeclarationProblem(registry);
+	if (declaredProblem !== null) {
+		vaultDiagnostics.push(
+			diagnostic({
+				rule_id: 'diagnostics.service_property.declared',
+				severity: 'error',
+				level: 3,
+				object_path: METAMODEL_SUBFOLDERS.properties,
+				property_key: SB_ISSUES_KEY,
+				message: declaredProblem,
+				hint: 'Свойство объявляется бутстрапом плагина (B1-4 = А): перезагрузите плагин — определение будет восстановлено',
+			}),
+		);
+	}
+
+	const targets = [...(index.sbObjectPaths ?? new Set<string>())].sort();
+	let checked = 0;
+	let withIssues = 0;
+	let errors = 0;
+	let warnings = 0;
+	let infos = 0;
+	let flagsWritten = 0;
+	const worst: { path: string; errors: number; warnings: number }[] = [];
+
+	for (const path of targets) {
+		const result = await validateObject(adapter, registry, labels, path, log, options?.logPerNote ?? false, index, {
+			applyServiceFlags: true,
+			checkServiceDeclaration: false,
+		});
+		checked += 1;
+		errors += result.errors;
+		warnings += result.warnings;
+		infos += result.diagnostics.filter((d) => d.severity === 'info').length;
+		if (result.diagnostics.length > 0) {
+			withIssues += 1;
+		}
+		if (result.flagsWritten) {
+			flagsWritten += 1;
+		}
+		if (result.errors > 0 || result.warnings > 0) {
+			worst.push({ path, errors: result.errors, warnings: result.warnings });
+		}
+	}
+
+	for (const d of vaultDiagnostics) {
+		if (d.severity === 'error') {
+			errors += 1;
+			withIssues += 1;
+		} else if (d.severity === 'warning') {
+			warnings += 1;
+		} else {
+			infos += 1;
+		}
+	}
+	worst.sort((a, b) => b.errors - a.errors || b.warnings - a.warnings || a.path.localeCompare(b.path));
+
+	log?.(
+		errors > 0 ? 'error' : warnings > 0 ? 'warning' : 'info',
+		'validation',
+		`Проверка хранилища: заметок ${checked}, ошибок ${errors}, предупреждений ${warnings}`,
+		{ checked, with_issues: withIssues, errors, warnings, infos, flags_written: flagsWritten },
+	);
+	return {
+		checked,
+		withIssues,
+		errors,
+		warnings,
+		infos,
+		flagsWritten,
+		vaultDiagnostics,
+		worst: worst.slice(0, 10),
 	};
 }

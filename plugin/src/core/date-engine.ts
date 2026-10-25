@@ -20,12 +20,22 @@
  *                                         «Перекрывающиеся правила»).
  * Правила `period.*` — этап C (интервалы живут в строках `.sb/relations/`, ADR-010);
  * `display_template.*` (уровень 5) — B1.2 (слой отображения). Правило П2 (`0000-00-00`
- * только в необязательном поле, warning) не реализуется: в реестре нет отдельного id —
- * расхождение зафиксировано в `docs/plugin/architecture.md` §5.
+ * только в необязательном поле, warning) с части 2 зарегистрировано как
+ * `date.all_unknown.optional_only` (rules.md v0.14.0, DL-265); форматная часть —
+ * здесь (`isFullyUnknownDate`), выдача диагностики — в schema-engine, потому что
+ * обязательность поля знает только он (по определению свойства).
  */
 
 /** Паттерн даты (включая частичные `00`) — зеркало `defs.json#$defs.date`. */
 export const DATE_PATTERN = /^\d{4}-(00|0[1-9]|1[0-2])-(00|0[1-9]|[12]\d|3[01])$/;
+
+/** Дата, неизвестная целиком (П2, 06-time-and-intervals §2): все компоненты — `00`. */
+export const FULLY_UNKNOWN_DATE = '0000-00-00';
+
+/** Значение — дата, неизвестная целиком (`0000-00-00`); основа правила П2. */
+export function isFullyUnknownDate(value: unknown): boolean {
+	return typeof value === 'string' && value.trim() === FULLY_UNKNOWN_DATE;
+}
 
 /** Паттерн datetime минутной точности — зеркало `defs.json#$defs.datetime` (без секунд). */
 export const DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
