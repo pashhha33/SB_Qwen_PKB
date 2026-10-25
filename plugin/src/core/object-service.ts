@@ -332,3 +332,19 @@ export function coerceFormInput(def: PropertyDef, raw: string): CoerceResult {
 			return { ok: true, value: raw };
 	}
 }
+
+/**
+ * Начальные строки ввода для поля формы (фикс 0.8.1, DL-270): значения →
+ * строки контролов; булевы — 'true'/'false'. Одиночное поле (0..1 / 1) ВСЕГДА
+ * получает ровно одну строку — пустую, если значения нет: иначе контрол
+ * одиночного поля не отрисуется (дефект 0.8.0: {#each []} не рисует ничего,
+ * а кнопка «+ добавить» есть только у множественных). Множественное поле без
+ * значений — ноль строк + кнопка добавления.
+ */
+export function initialEditRows(values: unknown[], multiple: boolean): string[] {
+	const rows = values.map((v) => (typeof v === 'boolean' ? (v ? 'true' : 'false') : String(v ?? '')));
+	if (!multiple && rows.length === 0) {
+		return [''];
+	}
+	return rows;
+}

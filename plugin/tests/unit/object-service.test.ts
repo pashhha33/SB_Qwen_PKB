@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	coerceFormInput,
 	computeVisibleKeys,
+	initialEditRows,
 	normalizeValues,
 	serializeFieldValues,
 	validateFieldValues,
@@ -134,6 +135,28 @@ describe('object-service — serializeFieldValues', () => {
 		expect(serializeFieldValues(makeDef({ key: 'x' }), [' значение '])).toBe('значение');
 		expect(serializeFieldValues(makeDef({ key: 'x', cardinality: '0..N' }), ['a', '', 'b'])).toEqual(['a', 'b']);
 		expect(serializeFieldValues(makeDef({ key: 'n', valueType: 'number' }), [7])).toBe(7);
+	});
+});
+
+describe('object-service — initialEditRows (фикс 0.8.1, DL-270: контрол одиночного поля рисуется всегда)', () => {
+	it('одиночное поле без значения — РОВНО ОДНА пустая строка (иначе контрол не отрисуется)', () => {
+		expect(initialEditRows([], false)).toEqual(['']);
+	});
+
+	it('одиночное поле со значением — одна строка со значением', () => {
+		expect(initialEditRows(['web_novel'], false)).toEqual(['web_novel']);
+		expect(initialEditRows([7], false)).toEqual(['7']);
+		expect(initialEditRows([true], false)).toEqual(['true']);
+		expect(initialEditRows([false], false)).toEqual(['false']);
+	});
+
+	it('множественное поле без значений — ноль строк (кнопка «+ добавить» в компоненте)', () => {
+		expect(initialEditRows([], true)).toEqual([]);
+	});
+
+	it('множественное поле со значениями — строки по значениям', () => {
+		expect(initialEditRows(['a', 'b'], true)).toEqual(['a', 'b']);
+		expect(initialEditRows([true, 7], true)).toEqual(['true', '7']);
 	});
 });
 

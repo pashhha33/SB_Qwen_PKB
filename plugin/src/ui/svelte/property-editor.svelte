@@ -16,7 +16,7 @@
 	 */
 	import { untrack } from 'svelte';
 	import { renderNumberDisplay } from '../../core/display-renderer';
-	import { coerceFormInput, validateFieldValues, type FormModel, type FormValues } from '../../core/object-service';
+	import { coerceFormInput, initialEditRows, validateFieldValues, type FormModel, type FormValues } from '../../core/object-service';
 
 	interface Props {
 		model: FormModel;
@@ -35,13 +35,13 @@
 	let saveError = $state<string | null>(null);
 
 	// Весь ввод держим строками (единое состояние контролов); булевы — 'true'/'false'.
+	// initialEditRows (фикс 0.8.1, DL-270): одиночное поле всегда получает одну строку —
+	// пустую, если значения нет; иначе контрол не отрисуется ({#each []} рисует ничего).
 	let edits = $state<Record<string, string[]>>(
 		untrack(() => {
 			const initial: Record<string, string[]> = {};
 			for (const field of model.fields) {
-				initial[field.def.key] = field.values.map((v) =>
-					typeof v === 'boolean' ? (v ? 'true' : 'false') : String(v ?? ''),
-				);
+				initial[field.def.key] = initialEditRows(field.values, field.multiple);
 			}
 			return initial;
 		}),
@@ -178,7 +178,7 @@
 						<span>да</span>
 					</label>
 				{:else}
-					{#each edits[field.def.key] ?? [] as row, index}
+					{#each edits[field.def.key]?.length ? edits[field.def.key] : field.multiple ? [] : [''] as row, index}
 						<div class="sb-row">
 							{#if field.def.allowedValues.length > 0}
 								<select value={row} onchange={(e) => updateRow(field.def.key, index, e.currentTarget.value)}>
