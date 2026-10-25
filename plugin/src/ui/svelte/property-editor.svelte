@@ -155,6 +155,26 @@
 		if (link !== null) {
 			updateRow(key, index, link);
 		}
+		focusRow(key, index);
+	}
+
+	// Возврат фокуса (дефект 0.9.0, DL-274): Obsidian НЕ восстанавливает фокус после
+	// закрытия SuggestModal — он остаётся на <body>, и ввод текста идёт «мимо» поля
+	// (выглядит как «мёртвое поле»). Держим ссылки на инпуты строк (bind:this) и
+	// возвращаем фокус после подборщика (выбор ИЛИ отказ) и быстрых кнопок дат.
+	let rowInputs = $state<Record<string, HTMLInputElement | null | undefined>>({});
+
+	function rowInputKey(key: string, index: number): string {
+		return `${key}#${index}`;
+	}
+
+	function focusRow(key: string, index: number): void {
+		rowInputs[rowInputKey(key, index)]?.focus();
+	}
+
+	function setRowAndFocus(key: string, index: number, value: string): void {
+		updateRow(key, index, value);
+		focusRow(key, index);
 	}
 
 	function quickDate(kind: 'today' | 'unknown'): string {
@@ -250,6 +270,7 @@
 									type={field.def.valueType === 'number' ? 'number' : 'text'}
 									step="any"
 									placeholder={placeholderFor(field.def.valueType)}
+									bind:this={rowInputs[rowInputKey(field.def.key, index)]}
 									value={row}
 									oninput={(e) => updateRow(field.def.key, index, e.currentTarget.value)}
 								/>
@@ -257,12 +278,12 @@
 									<button type="button" class="sb-pick" title="Найти объект хранилища и вставить каноническую ссылку" onclick={() => pickInto(field.def.key, index, field.def)}>Выбрать…</button>
 								{/if}
 								{#if field.def.valueType === 'date'}
-									<button type="button" class="sb-pick" title="Текущая дата (локальное время, ADR-006)" onclick={() => updateRow(field.def.key, index, quickDate('today'))}>Сегодня</button>
+									<button type="button" class="sb-pick" title="Текущая дата (локальное время, ADR-006)" onclick={() => setRowAndFocus(field.def.key, index, quickDate('today'))}>Сегодня</button>
 									{#if !field.def.required}
-										<button type="button" class="sb-pick" title="Дата неизвестна целиком — допустимо в необязательном поле (П2)" onclick={() => updateRow(field.def.key, index, quickDate('unknown'))}>Неизвестна</button>
+										<button type="button" class="sb-pick" title="Дата неизвестна целиком — допустимо в необязательном поле (П2)" onclick={() => setRowAndFocus(field.def.key, index, quickDate('unknown'))}>Неизвестна</button>
 									{/if}
 								{:else if field.def.valueType === 'datetime'}
-									<button type="button" class="sb-pick" title="Текущие дата и время (точность до минут)" onclick={() => updateRow(field.def.key, index, nowStamp())}>Сейчас</button>
+									<button type="button" class="sb-pick" title="Текущие дата и время (точность до минут)" onclick={() => setRowAndFocus(field.def.key, index, nowStamp())}>Сейчас</button>
 								{/if}
 							{/if}
 							{#if field.multiple}

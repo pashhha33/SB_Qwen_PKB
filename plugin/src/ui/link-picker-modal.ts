@@ -10,6 +10,10 @@
  * Индекс хранилища с типами и заголовками строится ОДИН раз на открытие окна
  * (лениво, до загрузки список пуст — SuggestModal.updateSuggestions() обновляет
  * его после построения). Псевдонимы в поиске не участвуют — alias-index это B2.
+ *
+ * Порядок вызовов Obsidian (урок DL-274, дефект 0.9.0): selectSuggestion()
+ * вызывает close() РАНЬШЕ onChooseSuggestion() — onClose срабатывает до передачи
+ * выбора, поэтому «отказ» (null) фиксируется отложенно (см. onClose).
  */
 
 import { SuggestModal } from 'obsidian';
@@ -65,14 +69,23 @@ export class LinkPickerModal extends SuggestModal<ReferenceCandidate> {
 
 	onChooseSuggestion(candidate: ReferenceCandidate): void {
 		this.settled = true;
+		this.context.logger.log('info', 'edit', `Подбор ссылки: выбрана цель «${candidate.title}» (${candidate.path}) — в поле вставлена ${candidate.canonicalLink}`);
 		this.onPick(candidate.canonicalLink);
 	}
 
 	onClose(): void {
-		// Esc / клик мимо — отказ: поле останется с текущим значением.
-		if (!this.settled) {
-			this.settled = true;
-			this.onPick(null);
-		}
+		// ДЕФЕКТ 0.9.0 (DL-274): Obsidian в selectSuggestion() вызывает close() РАНЬШЕ
+		// onChooseSuggestion() — этот onClose срабатывает ДО передачи выбора. Немедленный
+		// onPick(null) фиксировал «отказ» раньше выбора, и клик по кандидату «съедался»
+		// (поле формы оставалось пустым). Поэтому отказ (Esc / клик мимо) фиксируем
+		// ОТЛОЖЕННО, макротаском: выбор, если он был, регистрируется синхронно раньше,
+		// и фикс не зависит от порядка вызовов. Поле при отказе сохраняет текущее значение.
+		setTimeout(() => {
+			if (!this.settled) {
+				this.settled = true;
+				this.context.logger.log('info', 'edit', 'Подбор ссылки: окно закрыто без выбора (Esc/клик мимо) — поле не изменено');
+				this.onPick(null);
+			}
+		}, 0);
 	}
 }
