@@ -45,6 +45,7 @@ function makeDef(appliesWhen: PropertyDef['appliesWhen']): PropertyDef {
 		createFromLink: null,
 		appliesWhen,
 		service: false,
+		display: null,
 	};
 }
 

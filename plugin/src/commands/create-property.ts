@@ -68,6 +68,9 @@ class CreatePropertyModal extends Modal {
 	private triggerProperty = '';
 	private triggerOperation = '';
 	private triggerValues = '';
+	private displayRenderer = '';
+	private displayScaleMax = '';
+	private displayUnit = '';
 	private definition = '';
 
 	constructor(private readonly context: PluginContext) {
@@ -177,6 +180,27 @@ class CreatePropertyModal extends Modal {
 			}),
 		);
 
+		new Setting(this.contentEl).setName('Показ числа (display.renderer)').setDesc('Только для number: звёзды или прогресс (04-attributes §12); в данных хранится число, символы рисует форма (DL-117)').addDropdown((dropdown) => {
+			dropdown.addOption('', '— plain (число как есть) —');
+			dropdown.addOption('stars', 'stars — звёзды (рейтинг)');
+			dropdown.addOption('progress', 'progress — шкала прогресса');
+			dropdown.onChange((value) => {
+				this.displayRenderer = value;
+			});
+		});
+
+		new Setting(this.contentEl).setName('Предел шкалы (display.scale_max)').setDesc('Число больше 0; по умолчанию 10').addText((text) =>
+			text.onChange((value) => {
+				this.displayScaleMax = value.trim();
+			}),
+		);
+
+		new Setting(this.contentEl).setName('Единица измерения (display.unit)').setDesc('Например: стр., мин., ₽').addText((text) =>
+			text.onChange((value) => {
+				this.displayUnit = value;
+			}),
+		);
+
 		new Setting(this.contentEl).setName('Пояснение (definition)').setDesc('Смысл свойства, примеры значений').addTextArea((area) =>
 			area.onChange((value) => {
 				this.definition = value;
@@ -210,6 +234,14 @@ class CreatePropertyModal extends Modal {
 												property: this.triggerProperty,
 												operation: this.triggerOperation,
 												value: splitList(this.triggerValues),
+											},
+								display:
+									this.displayRenderer === ''
+										? null
+										: {
+												renderer: this.displayRenderer,
+												scaleMax: this.displayScaleMax === '' ? null : Number(this.displayScaleMax.replace(',', '.')),
+												unit: this.displayUnit.trim() === '' ? null : this.displayUnit.trim(),
 											},
 								definition: this.definition,
 							},

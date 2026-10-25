@@ -10,6 +10,8 @@
 //   Это «вариант Б» dev-настройки (без junction); подробности — docs/plugin/dev-setup.md.
 
 import esbuild from 'esbuild';
+import esbuildSvelte from 'esbuild-svelte';
+import sveltePreprocess from 'svelte-preprocess';
 import process from 'node:process';
 import path from 'node:path';
 
@@ -57,6 +59,16 @@ const context = await esbuild.context({
 	treeShaking: true,
 	minify: production,
 	outfile,
+	// Svelte 5 (B1-2 = А, DL-261): компоненты компилируются в обычный JS и
+	// упаковываются в тот же main.js (runtime-зависимостей ноль; стили —
+	// css: 'injected', отдельный файл стилей не нужен).
+	plugins: [
+		esbuildSvelte({
+			preprocess: sveltePreprocess(),
+			compilerOptions: { css: 'injected' },
+		}),
+	],
+	resolveExtensions: ['.svelte', '.ts', '.mjs', '.js', '.json'],
 });
 
 if (production) {

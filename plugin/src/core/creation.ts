@@ -16,6 +16,7 @@ import { SbError } from './errors';
 import { buildFileName, isValidTypePrefix } from './identity';
 import { SYSTEM_KEYS } from './model';
 import { METAMODEL_SUBFOLDERS, SYSTEM_TYPE_PREFIXES, TypeRegistry, type PropertyDef } from './registry';
+import { DISPLAY_RENDERERS } from './display-renderer';
 import {
 	APPLIES_OPERATIONS,
 	CARDINALITIES,
@@ -255,6 +256,8 @@ export interface CreatePropertyInput {
 	allowedValues?: string[];
 	/** Условие показа (04-attributes §11, М1–М7) или null. */
 	appliesWhen?: { property: string; operation: string; value: string[] } | null;
+	/** Настройки показа числа (04-attributes §12, DL-123): renderer/scaleMax/unit. */
+	display?: { renderer: string; scaleMax?: number | null; unit?: string | null } | null;
 	/** Пояснение (поле definition схемы property). */
 	definition?: string;
 }
@@ -415,6 +418,32 @@ export async function createPropertyDefinition(
 		appliesWhen = { property: trigger, operation, value: values };
 	}
 
+	// --- display.* (04-attributes §12; только для number, перечисление §3.18 закрыто) ---
+	let display: { renderer: string; scale_max?: number; unit?: string } | null = null;
+	if (input.display !== null && input.display !== undefined) {
+		if (!(DISPLAY_RENDERERS as readonly string[]).includes(input.display.renderer)) {
+			throw new SbError('not_supported', `Способ показа «${input.display.renderer}» вне закрытого набора (05-enumerations §3.18): ${DISPLAY_RENDERERS.join(', ')}`);
+		}
+		if (input.valueType !== 'number' && input.display.renderer !== 'plain') {
+			throw new SbError('not_supported', 'display.renderer stars/progress имеет смысл только у свойств типа number (04-attributes §12)');
+		}
+		const scaleMax = input.display.scaleMax ?? null;
+		if (scaleMax !== null && (typeof scaleMax !== 'number' || !Number.isFinite(scaleMax) || scaleMax <= 0)) {
+			throw new SbError('not_supported', `Предел шкалы (display.scale_max) должен быть числом больше 0, получено: ${String(scaleMax)}`);
+		}
+		const unit = input.display.unit ?? null;
+		if (unit !== null && (typeof unit !== 'string' || unit.trim() === '')) {
+			throw new SbError('not_supported', 'Единица измерения (display.unit) — непустой текст');
+		}
+		display = { renderer: input.display.renderer };
+		if (scaleMax !== null) {
+			display.scale_max = scaleMax;
+		}
+		if (unit !== null) {
+			display.unit = unit.trim();
+		}
+	}
+
 	// --- запись (ADR-001: PROPERTY-{ULID}.md; И4: aliases[0] == title) ---
 	const id = generateUlid();
 	const fileName = assembleFileName(SYSTEM_TYPE_PREFIXES.property, id);
@@ -466,6 +495,9 @@ export async function createPropertyDefinition(
 			// одно значение — строка, несколько — список (defs.json#$defs.applies_when)
 			value: appliesWhen.value.length === 1 ? appliesWhen.value[0] : appliesWhen.value,
 		};
+	}
+	if (display !== null) {
+		frontmatter.display = display;
 	}
 	if (input.definition && input.definition.trim() !== '') {
 		frontmatter.definition = input.definition.trim();

@@ -11,7 +11,10 @@
 import { Modal, Notice, Setting, SuggestModal, TFile } from 'obsidian';
 import { SbError } from '../core/errors';
 import { createObjectInstance } from '../core/creation';
+import { parseNote } from '../core/markdown-parser';
+import { buildFormModel } from '../core/object-service';
 import type { TypeDef } from '../core/registry';
+import { PropertyEditorModal } from '../ui/property-editor-modal';
 import type { PluginContext } from './context';
 
 class ChooseTypeModal extends SuggestModal<TypeDef> {
@@ -75,6 +78,18 @@ class TitleModal extends Modal {
 						const file = this.app.vault.getAbstractFileByPath(result.path);
 						if (file instanceof TFile) {
 							await this.app.workspace.getLeaf().openFile(file);
+						}
+						// object-service (B1.2): сразу предложить форму свойств.
+						// Сбой формы не отменяет создание (объект уже записан).
+						try {
+							const content = await this.context.adapter.read(result.path);
+							const note = parseNote({ path: result.path, content }, this.context.adapter);
+							const model = buildFormModel(this.context.registry, this.context.labels, note);
+							if (model !== null) {
+								new PropertyEditorModal(this.context, model, note).open();
+							}
+						} catch (error) {
+							this.context.logger.log('warning', 'edit', `Форма после создания не открылась (объект создан): ${String(error)}`);
 						}
 					} catch (error) {
 						const message = error instanceof SbError ? error.message : `Не удалось создать объект: ${String(error)}`;

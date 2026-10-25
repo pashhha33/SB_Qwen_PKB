@@ -26,8 +26,11 @@ const OBSIDIAN_IMPORT_ALLOWED = new Set(
 		path.join('commands', 'create-property.ts'),
 		path.join('commands', 'validate-object.ts'),
 		path.join('commands', 'validate-vault.ts'),
+		path.join('commands', 'edit-object.ts'),
+		path.join('commands', 'toggle-label-mode.ts'),
 		path.join('commands', 'show-log.ts'),
 		path.join('commands', 'copy-log.ts'),
+		path.join('ui', 'property-editor-modal.ts'),
 		path.join('ui', 'settings-tab.ts'),
 	].map((p) => path.join(SRC_ROOT, p)),
 );

@@ -2,7 +2,7 @@
 doc_type: changelog
 title: Changelog — история изменений
 status: draft
-version: 0.39.0
+version: 0.40.0
 created: 2026-10-22
 updated: 2026-10-25
 semver_policy: docs/README.md#версионирование
@@ -20,6 +20,34 @@ semver_policy: docs/README.md#версионирование
 > - **PATCH** (0.1.0 → 0.1.1): исправление опечаток, уточнение формулировок, правки в примерах.
 
 Каждая запись обязана содержать: версию, дату, что изменилось, **почему**, нужна ли миграция, ссылку на ADR/решение.
+
+---
+
+## [1.3.1] — 2026-10-25
+
+**Плагин 0.8.0: B1.2 часть 1 — формы свойств на Svelte 5 (DL-268); команда `edit-object` — 21-я в реестре MVP (DL-269, ожидает подтверждения).**
+Учётная запись репозитория: **нормы метамодели не менялись (остаётся 1.3.0)** — формы реализуют уже утверждённые ADR-003/011, DL-117/123/175/183; правки документов — счётчики и реестр команд (mvp-scope v0.15.0). **Миграция не нужна.** При переносе обязателен `npm ci` (+3 dev-зависимости: svelte, esbuild-svelte, svelte-preprocess).
+
+### Добавлено
+
+- **Первое включение Svelte** (B1-2 = А, DL-261): `property-editor.svelte` (Svelte 5 runes) внутри оболочки Modal (DL-175); esbuild + `esbuild-svelte` (css: 'injected' — тот же `main.js`, runtime-зависимостей ноль); сборка без предупреждений.
+- **`object-service`** (ядро): модель формы (`buildFormModel` — service/archived исключены), живой пересчёт видимости условных полей (`computeVisibleKeys` — движок applies-when, М1), проверка уровня 1 (`validateFieldValues` — некорректное значение блокирует сохранение; отсутствие обязательного не блокирует — DL-183), запись (`saveObjectForm`: title + И4, `updated_at`, неизвестные поля сохраняются, значения скрытых условных свойств сохраняются — М2).
+- **`display-renderer`** (ядро): plain/stars/progress по `display.*` (DL-123); звёзды ★/☆ (U+2605/U+2606 — не эмодзи, DL-117); в данных символы не хранятся; живой предпросмотр в форме.
+- **Команды**: `edit-object` (форма активной заметки), `toggle-label-mode` (view/source — ADR-003); `create-object` открывает форму после создания; `create-property` поддерживает `display.*` (renderer/scale_max/unit — граница B1.1-9 сужена). Реализовано **9 команд**.
+- Реестр: PropertyDef + `display`; тесты **263 → 299** (+36), матрица TZ ×5.
+
+### Изменено
+
+- Реестр команд MVP: **20 → 21** (`edit-object` — mvp-scope v0.15.0; DL-269 **ожидает подтверждения**); долг учёта счётчиков «19» исправлен (mvp-scope §2.3, 00-overview).
+- `tsconfig.json`: `verbatimModuleSyntax: true` (требование svelte-preprocess) + shim `*.svelte` для tsc; `esbuild.config.mjs`: svelte-плагин, `resolveExtensions`.
+
+### Границы части 1 (честно, M6 — architecture.md §5, B1.2-1…5)
+
+Контрол ссылки — текстовое поле (suggest-подбор цели — часть 2); TypeScript внутри `.svelte` не проверяется tsc (логика вынесена в ядро — прецедент M4/модалок); `categories`/`tags` в форме не редактируются (categories — B1.3, tags — штатная панель); `display_template.*` перенесены на этап D (view-validator); поля `lifecycle`/`superseded_by` форма не предлагает (правка определений — не данных).
+
+### Связи
+
+DL-267 (перенос части 2, `7a3267a`), DL-268 (поставка), DL-269 (edit-object — предложено); B1-2 = А (DL-261); ADR-003/011; DL-117/123/175/183.
 
 ---
 

@@ -113,6 +113,23 @@ export interface PropertyDef {
 	 * плагин, в формы не предлагается. В MVP одно — `sb_issues` (сеется бутстрапом).
 	 */
 	service: boolean;
+	/**
+	 * Настройки показа числовых значений `display.*` (04-attributes §12, DL-123;
+	 * перечисление `display.renderer` — 05-enumerations §3.18): только отображение,
+	 * никогда хранение (М1/DL-117 — символы звёзд и шкал в данных не хранятся).
+	 * null — настройки не объявлены (renderer по умолчанию — plain).
+	 */
+	display: PropertyDisplay | null;
+}
+
+/** Настройки показа `display.*` (04-attributes §12). */
+export interface PropertyDisplay {
+	/** `plain` | `stars` | `progress` (закрытое перечисление 05-enumerations §3.18). */
+	renderer: string;
+	/** Предел шкалы (> 0); по умолчанию 10. */
+	scaleMax: number;
+	/** Единица измерения (`стр.`, `мин.`, …) или null. */
+	unit: string | null;
 }
 
 export type RegistryIssueCode =
@@ -180,6 +197,20 @@ export function linkIdList(value: unknown): string[] {
 	}
 	const linkId = extractLinkId(value);
 	return linkId === null ? [] : [linkId];
+}
+
+/** Настройки `display.*` из определения свойства (04-attributes §12) или null. */
+function parseDisplay(value: unknown): PropertyDisplay | null {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+		return null;
+	}
+	const record = value as Record<string, unknown>;
+	const renderer = asString(record.renderer);
+	if (renderer === null) {
+		return null; // renderer — главная настройка; без неё блок не имеет смысла
+	}
+	const scaleMax = typeof record.scale_max === 'number' && Number.isFinite(record.scale_max) && record.scale_max > 0 ? record.scale_max : 10;
+	return { renderer, scaleMax, unit: asString(record.unit) };
 }
 
 /** Условие `applies_when` (04-attributes §11): property + operation + value (строка или список). */
@@ -339,6 +370,7 @@ export class TypeRegistry {
 			createFromLink: asString(note.properties.create_from_link),
 			appliesWhen: parseAppliesWhen(note.properties.applies_when),
 			service: note.properties.service === true,
+			display: parseDisplay(note.properties.display),
 		});
 	}
 

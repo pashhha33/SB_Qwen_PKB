@@ -14,8 +14,17 @@
  *     (B1-4 = А: фиксированные ULID, байт-стабильность, идемпотентность);
  *   - журнал .sb/logs/plugin-log.jsonl + настройки .sb/settings.json (ADR-002);
  *   - команды: create-object-type, create-object, create-property, validate-object,
- *     validate-vault, show-log, copy-log (тонкие обёртки над ядром — DL-244/9.5).
- * Дальше — B1.2 «формы и контролы»: первое включение Svelte (B1-2 = А, DL-261).
+ *     validate-vault, edit-object, toggle-label-mode, show-log, copy-log
+ *     (тонкие обёртки над ядром — DL-244/9.5; 9 из 20 команд реестра MVP).
+ * Этап B, под-батч B1.2 «формы и контролы», часть 1 (0.8.0, DL-268): ПЕРВОЕ
+ * ВКЛЮЧЕНИЕ SVELTE (B1-2 = А: Svelte 5 + esbuild-svelte в текущей конфигурации,
+ * компоненты внутри оболочки Modal — DL-175): property-editor (форма свойств с
+ * русскими подписями и условными полями — живая видимость applies_when, М1–М7),
+ * object-service (модель формы, уровень 1 контроля, запись с И4 и updated_at),
+ * display-renderer (звёзды/прогресс display.* — только показ, DL-123);
+ * команды edit-object и toggle-label-mode; create-object открывает форму после
+ * создания. Дальше — B1.2 часть 2 (контрол ссылки с поиском, partial-даты,
+ * шаблоны вывода) и B1.3 (классификация + библиотека book/person).
  *
  * Архитектура: 'obsidian' импортируют только main.ts, adapter/obsidian-adapter.ts,
  * commands/* и ui/* (слои 4–5); ядро (core/**) — среда-независимо (правило М2,
@@ -29,7 +38,9 @@ import { registerCreateObjectCommand } from './commands/create-object';
 import { registerCreateObjectTypeCommand } from './commands/create-object-type';
 import { registerCreatePropertyCommand } from './commands/create-property';
 import type { PluginContext } from './commands/context';
+import { registerEditObjectCommand } from './commands/edit-object';
 import { registerShowLogCommand } from './commands/show-log';
+import { registerToggleLabelModeCommand } from './commands/toggle-label-mode';
 import { registerValidateObjectCommand } from './commands/validate-object';
 import { registerValidateVaultCommand } from './commands/validate-vault';
 import { ActivityLog } from './core/activity-log';
@@ -102,6 +113,8 @@ export default class SecondBrainPlugin extends Plugin implements PluginContext, 
 		registerCreatePropertyCommand(this, (cmd) => this.addCommand(cmd));
 		registerValidateObjectCommand(this, (cmd) => this.addCommand(cmd));
 		registerValidateVaultCommand(this, (cmd) => this.addCommand(cmd));
+		registerEditObjectCommand(this, (cmd) => this.addCommand(cmd));
+		registerToggleLabelModeCommand(this, (cmd) => this.addCommand(cmd));
 		registerShowLogCommand(this, (cmd) => this.addCommand(cmd));
 		registerCopyLogCommand(this, (cmd) => this.addCommand(cmd));
 
