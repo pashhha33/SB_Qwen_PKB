@@ -29,6 +29,18 @@ export class LabelResolver {
 		this.mode = mode;
 	}
 
+	/**
+	 * Переподключить резолвер к новому снимку реестра (фикс 0.8.2, DL-271).
+	 * reloadRegistry() создаёт НОВЫЙ экземпляр TypeRegistry; без переподключения
+	 * резолвер искал бы подписи в устаревшем реестре и для определений, созданных
+	 * в текущей сессии (create-object-type / create-property), возвращал ключ
+	 * вместо label — в обоих режимах (дефект: toggle-label-mode «ничего не менял»,
+	 * формы показывали ключи вместо русских подписей). Режим сохраняется.
+	 */
+	setRegistry(registry: TypeRegistry): void {
+		this.registry = registry;
+	}
+
 	toggle(): LabelMode {
 		this.mode = this.mode === 'view' ? 'source' : 'view';
 		return this.mode;

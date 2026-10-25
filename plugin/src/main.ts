@@ -156,6 +156,10 @@ export default class SecondBrainPlugin extends Plugin implements PluginContext, 
 	async reloadRegistry(): Promise<TypeRegistry> {
 		const registry = await TypeRegistry.load(this.adapter);
 		this.registry = registry;
+		// Фикс 0.8.2 (DL-271): LabelResolver живёт дольше реестра — переподключаем
+		// к новому снимку, иначе подписи созданных в сессии определений деградируют
+		// до ключей (в обоих режимах). На первой загрузке labels ещё нет — optional.
+		this.labels?.setRegistry(registry);
 		try {
 			await registry.saveCache(this.adapter, new Date().toISOString());
 			this.logger?.log('debug', 'registry', 'Реестр перечитан из Metamodel/, кэш сохранён', {
