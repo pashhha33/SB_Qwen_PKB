@@ -6,9 +6,9 @@ type_key: facet
 type_prefix: FACET
 aliases: [Фасеты, facet]
 status: actual
-metamodel_version: 0.23.0
+metamodel_version: 1.4.0
 created: 2026-10-23
-updated: 2026-10-23
+updated: 2026-10-26
 classification: core
 group: Системные (метамодель)
 abstract: false
@@ -46,6 +46,7 @@ tags: [metamodel, entity, core, system]
 
 | Поле | Смысл |
 |---|---|
+| `label` | отображаемое название на русском (`0..1`, текст): слой подписей ADR-003 — `title` технический, `label` свободный. Объявлен схемой `facet.schema.json` (**B1.3-6 = А**, DL-278); PROPERTY-сид базовой библиотеки — `facet.label` |
 | `taxonomy` | ссылка на `taxonomy`, **`0..1`** — таксономия необязательна (ADR-007) |
 | `allowed_object_types` | область применения; пусто = наследуется от таксономии, иначе ограничений нет; семантика потомков и абстрактных типов — `07-hierarchy` §5, §7 (DL-208/209) |
 | `hierarchy_mode` | `strict` (дерево; **по умолчанию**) / `polyhierarchical` (сеть) — перечисление §3.5 `05-enumerations` |
@@ -101,4 +102,5 @@ Markdown-заметка в `Metamodel/**` (ADR-002). Создание — **то
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-26 | 1.4.0 | **B1.3-6 = А**: поле `label` объявлено в `schema/metamodel/facet.schema.json` (необязательное, `minLength: 1`) и добавлено в состав полей карточки; PROPERTY-сид `facet.label` — в базовой библиотеке. Пример `01-classification` §2.2 и сиды больше не расходятся со схемой | Ответ пользователя (DL-278); ADR-003 — слой подписей | DL-278; `architecture.md` §5 B1.3-6 |
 | 2026-10-23 | 0.23.0 | Сокращённая карточка создана: систематизация норм ADR-005/ADR-007, `01-classification` §2.2, §6; новых норм не вводит | Третья партия карточек ядра (DL-213/217) — **15 из 15**, A2/A3 закрыты | [[../01-classification]], [[../02-entities]] |

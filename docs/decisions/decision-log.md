@@ -2,7 +2,7 @@
 doc_type: decision_log
 title: Decision log — журнал договорённостей
 status: draft
-version: 1.56.1
+version: 1.59.0
 created: 2026-10-22
 updated: 2026-10-26
 ---
@@ -814,6 +814,191 @@ decision-log — 4). **Происхождение проверено по дер
 | ID | Дата | Решение | Кто | Статус | Версия | ADR | Где зафиксировано |
 |---|---|---|---|---|---|---|---|
 | DL-277 | 2026-10-26 | **B1.3 часть 1 «библиотека» доставлена — плагин 0.10.0 (MINOR: новая функциональность); нормы не менялись (метамодель 1.3.0).** Состав (135 семенных заметок): OBJECT_TYPE `book` (BOOK, parent `work`) и `person` (PERSON) + **структурные** `work` (абстрактный, без свойств — DL-214) и `media` (цель ссылок media_reference); FACET `Genre` (1..N, root_requirement_min 1, allowed [book] — по tested-примеру valid-01-genre), `Literary form`, `Country`, `Language`, `Sport` — **без категорий** (Ч3-3 = Б); PROPERTY-сиды: системные **62** (object_type 8, property 24, relation_type 13, taxonomy 7, facet 7, category 3 — долг F5-10 = Б закрыт), `book` **22** (12 базовых + 10 условных по `format`), `person` **42** (15 базовых + 27 условных `includes_any` по `role`, М7). Команда **`install-base-types`** (22-я реестра, DL-276): без модалки — Notice-отчёт + сводная запись журнала (info/creation) + перечитывание реестра; **идемпотентность — пропуск по ключу**: существующие типы (реестр), свойства (ключ + покрытие, вкл. universal/family-предки) и фасеты (скан title/label) не дублируются, ссылки сидов разрешаются в ULID существующих определений (тест на «живом» хранилище с пользовательскими book/rating/фасетом «Жанр»); отказоустойчивость как у бутстрапа. **Архитектурные решения (границы architecture §5)**: (1) `media` — структурная заметка с фиксированным ULID рецепта `system-type/media` — иначе `target_types` свойств cover/file_path/portrait висячие (`value.reference.exists`, error); **этап D обязан использовать тот же ULID** (B1.3-5); (2) PROPERTY-сиды `relation` не создавались — JSONL-экземпляры, определения востребуются этапом C, subject/object с открытым составом целей (B1.3-1); (3) поля `display`/`applies_when` типа `property` без PROPERTY-определений — составные структуры вне 7 типов значений (B1.3-2); (4) не-snake enum-ы схемы (cardinality, assignment_cardinality, subject_to_object/object_to_subject) НЕ объявлены allowed_values — правило `enum.value.format` (05-enum §5); тест согласованности: не-snake enum ⇒ allowed_values отсутствует (B1.3-3); (5) `person.writing_genres` — includes_any 4 роли по ЯВНОМУ списку карточки против 7 группы 05-enum §3.17.5 — расхождение зарегистрировано, вопрос разрешения выносится в части 2 (B1.3-4); (6) `label` у FACET-сидов — по примеру 01-classification §2.2 (схема не объявляет, additionalProperties не задан) — решение «схема + label либо сиды − label» в части 2 (B1.3-6). Исключения сидов (по этапам): book.publisher (organization — этап 2), related_to (C), cover_file/portrait_file (теневые — D), chapter_count (вычисляемое — DL-118), categories/tags (системные И6). **Тесты 327 → 368** (+41: seed-ulids — рецепт/уникальность/свежесть; seed-consistency — «сиды == schema/**» (состав полей, enum-ы, required⟺cardinality, applies_when⊆enum триггера, ссылки); install-base-types — установка/идемпотентность/пропуск по ключу/отказоустойчивость/конвенции (LF, BOM, Templater, И4)/байт-стабильность; library-integration — **143 заметки Metamodel/ проходят validate-object с 0 ошибок**, критерий B1 на модели формы (web_novel → 4 условных, file → 2; М2 — «погасшее» значение остаётся; role [author, physician] → две группы + known_for; other_occupation → 0 условных; подписи русские; service не в форме)); матрица TZ ×6 — 368/368; typecheck/build 0 предупреждений; корень 74 OK; check:docs 0 разрывов. Версии: manifest/package/versions 0.10.0. **Windows-фиксы при переносе (2026-10-26, урок DL-259; патч `b1-3-part1-fix-windows.patch` — единый коммит с частью 1)**: в среде пользователя (autocrlf, медленный диск) покраснели 2 теста из 368, данные не затронуты — (1) свежесть `seed-ulids`: `--check` генератора сравнивал LF-эталон с CRLF-чекаутом (в точности дефект DL-259) — фикс: нормализация CRLF→LF; (2) валидационный тест 143 заметок — таймаут 20 с: каждый validate-object строил собственный индекс хранилища (143 скана) — фикс: общий `buildVaultIndex` на прогон + таймаут 120 с | ассистент (поставка по организации DL-276) | принято (ожидает коммита и ручной проверки части 1) | 1.3.0 (нормы не менялись) | ADR-004 | plugin: `src/core/seed-library.ts`, `src/core/seeds/library-specs.ts`, `src/core/seeds/seed-ulids.ts`, `src/commands/install-base-types.ts`, `scripts/generate-seed-ulids.mjs`, main.ts (+регистрация), tests ×4 (+41), layering-whitelist; architecture v0.13.0 (§2 +seed-library, §5 B1.3-1…6), dev-setup v0.6.0 (§7), phases v0.17.0 (B1.3 часть 1 ✅), PROJECT_MAP v1.48.0, glossary v1.32.0 (+Гонка, +Базовая библиотека — 288 активных), plugin/README, CHANGELOG [1.3.8] (v0.47.0), CHECKPOINT v60.0.0 (§6.77, §8.31), handoff `2026-10-26-b1-3-part1-library.md` |
+
+### 2026-10-26 · Ответы пользователя: ручная проверка 0.10.0 пройдена; B1.3-4 = Б; B1.3-6 = А; часть 2 — две поставки (DL-278)
+
+Ответы на четыре вопроса, вынесенных в начале сессии-продолжения (контрольная точка v60.1.0):
+
+- **Ручная проверка 0.10.0 — ПРОЙДЕНА без замечаний**: пункт (2) `next_step` закрыт
+  (сценарий handoff `2026-10-26-b1-3-part1-library.md`, шаг 4: установка базовой
+  библиотеки, идемпотентность, категории, формы книги/человека, validate-object/
+  validate-vault, copy-log). Пункт (1) выполнен ранее: part1 + Windows-фиксы в `main`
+  **единым коммитом `bd7fef7`** (учётные — `a7e285d` DL-275, `c8a84dc` DL-276).
+  **Наблюдение (не блокирует)**: сообщение коммита `bd7fef7` содержит только абзац
+  Windows-фиксов — первая строка part1 (`feat(plugin): 0.10.0 — B1.3 часть 1 …») в
+  историю не попала; содержимое дерева полное, учёт в CHANGELOG [1.3.8]/DL-277 на месте.
+  **Решение**: запушенную историю не переписывать, факт зафиксирован этой записью.
+- **B1.3-4 = Б — `person.writing_genres` на всей группе «Литература и текст» (7 ролей)**:
+  М7 (свойство объявляется один раз на группу) и согласованность с `writing_languages`/
+  `published_works` (те же 7 ролей) важнее явного перечня карточки; карточка `person`
+  §4.2 приведена к группе, сид расширен (ULID не изменился — рецепт по ключу).
+  Вариант А (4 роли + сноска в `05-enumerations`) отклонён: оставлял асимметрию в форме
+  (у переводчика «Языки работ» есть, «Жанры работ» — нет).
+- **B1.3-6 = А — `label` объявлен в схемах классификационной тройки**: `facet`,
+  `category` и (заодно — пример `01-classification` §2.1 его тоже содержал) `taxonomy`
+  получили необязательное `label` (`string`, `minLength: 1`) → метамодель **1.4.0**
+  (MINOR: добавлено поле; миграция не нужна). Следствие: PROPERTY-сиды `label` у тройки
+  (+3 сида, 135 → **138**) — поле предлагается формой и проверяется; необязательность
+  сохраняет корректность существующих примеров без `label`. Вариант Б (снять `label`
+  с сидов) отклонён: терялся бы слой русских подписей (ADR-003) у категорий.
+- **Гранулярность части 2 = Б — две поставки**: **2a «ядро и правила»**
+  (`classification-service`, снимок/кэш, `in_category` с предками, 15 правил группы E,
+  `facet.genre.*`, закрытие B1.3-4/B1.3-6) → **2b «assign-category + UX-проверка B3»**.
+  Основание: прецедент B1.1/B1.2/B1.3-части 1 — каждая поставка имеет свой сценарий
+  ручной проверки и свой откат; вариант А (одна поставка) отклонён как тяжёлый для
+  проверки, В (три) — как избыточный по учёту.
+- **Архитектурное предложение принято молчанием (граница B1.3-7)**: снимок классификации —
+  отдельная структура и отдельный кэш `.sb/cache/classification.json`, `RegistrySnapshot`
+  не расширяется (иначе `format: 1 → 2` и миграция кэша; у классификации своя область
+  чтения и свой жизненный цикл).
+
+| ID | Дата | Решение | Кто | Статус | Версия | ADR | Где зафиксировано |
+|---|---|---|---|---|---|---|---|
+| DL-278 | 2026-10-26 | **Ответы пользователя: ручная проверка 0.10.0 пройдена (пункт 2 next_step закрыт); B1.3-4 = Б (`writing_genres` — 7 ролей группы «Литература и текст», карточка person §4.2 приведена к группе); B1.3-6 = А (`label` — необязательное поле схем `facet`/`category`/`taxonomy`, метамодель 1.4.0 MINOR, PROPERTY-сиды +3 → 138); гранулярность B1.3 части 2 = Б (две поставки: 2a «ядро и правила» → 2b «assign-category + UX-проверка B3»).** Отмечено: part1 + Windows-фиксы в main единым коммитом `bd7fef7` (сообщение — только абзац фиксов; история не переписывается); архитектурное предложение B1.3-7 (отдельный снимок и кэш классификации) принято | пользователь (ответы на 4 вопроса) | **принято** | 1.4.0 | ADR-003, ADR-005, ADR-007 | CHANGELOG [1.4.0], `entities/person.md`, `entities/facet.md`, `entities/category.md`, `entities/taxonomy.md`, `schema/metamodel/{facet,category,taxonomy}.schema.json`, `architecture.md` §5 (B1.3-4/6 закрыты, +B1.3-7), CHECKPOINT v61.0.0 |
+
+### 2026-10-26 · B1.3 ЧАСТЬ 2a «КЛАССИФИКАЦИЯ» ДОСТАВЛЕНА — плагин 0.11.0: classification-service + 15 правил группы E (DL-279)
+
+Поставка по организации DL-276 (часть 2 из двух, первая половина — решение DL-278 «гранулярность = Б»).
+
+- **`classification-service`** (`src/core/classification.ts`, модуль реестра `09-modules`
+  слой 3): снимок таксономий/фасетов/категорий; область чтения — `Metamodel/{Taxonomies,
+  Facets,Categories}` + канонические имена `TAXONOMY-`/`FACET-`/`CATEGORY-` где угодно;
+  наследование умолчаний «фасет → таксономия → таблица `01-classification` §2.2»
+  (`hierarchy_mode`, `assignment_cardinality`, `root_requirement_min/max`,
+  `allowed_object_types`); **предки категории** — транзитивное замыкание по `parent`
+  (защита от цикла); `findSystemFacet` (семенной ULID рецепта `system-facet/{key}`,
+  резерв — `title`/`label`: пользовательский «Жанр» узнаётся, конвенция DL-277);
+  `assignmentsByFacet`; кэш `.sb/cache/classification.json` (ADR-002 — производные
+  данные; пишет `validate-vault`, сбой записи не ломает проверку).
+- **Правила группы E — 15 из 19** (`src/core/classification-engine.ts`): определения —
+  `category.facet.required` (error, 2), `category.facet.single` (error, 4),
+  `category.parent.exists` (error, 3), `category.parent.same_facet` (error, 4),
+  `category.parent.no_cycle` (error, 3), `category.parent.strict_mode` (error, 4),
+  `category.taxonomy_direct.forbidden` (error, 4 — П8), `facet.taxonomy.exists`
+  (error, 3), `facet.allowed_types.conflict` (warning, 4), `facet.root_requirement`
+  (warning, 4), `taxonomy.facets.min_one` (error, 2); назначения —
+  `assignment.type_allowed` (error, 4; потомки включаются, DL-208/209),
+  `assignment.cardinality` (error при `1`/`1..N`, warning при превышении `0..1`),
+  **`facet.genre.required_for_book`** (error, 4 — приоритетнее общего),
+  **`facet.genre.not_form`** (warning, 4 — граница DL-126 «жанр ≠ форма» по совпадению
+  названия в двух фасетах). Существование цели в системном поле `categories` —
+  `value.reference.exists` (свойством не объявляется, И6).
+- **Приоритет специальных правил** (rules.md «Перекрывающиеся правила»): таблица
+  `CLASSIFICATION_SPECIALIZED_RULES` подавляет общие правила на полях классификации
+  (`category.facet` — `value.cardinality`; `category.parent` — `value.reference.exists`/
+  `target_type`; `facet.taxonomy` — `value.reference.exists`; `taxonomy.facets` —
+  `value.cardinality`); подавление действует только когда снимок построен (иначе
+  нарушение не сообщил бы никто). Строки добавлены в rules.md **v0.15.0**.
+- **`in_category` с предками** (граница **B1.1-4 закрыта**): `isPropertyVisible(def, note,
+  classification?)` раскрывает назначенные категории предками; снимок передают
+  validation-runner и форма (`computeVisibleKeys(model, values, categories, classification?)`;
+  строят `edit-object`/`create-object`) — расхождения «форма ↔ проверка» нет
+  (урок DL-271). Без снимка — прямое назначение (безопасный отказ: свойство скрыто).
+- **Производительность (урок DL-255/259)**: снимок строится ОДИН на прогон
+  (`validate-vault` передаёт его каждой проверке через `options.classification`);
+  для одиночной проверки снимок строится только если нужен (`needsClassification`:
+  тип-определение классификации, наличие `categories`, тип `book`/потомок, свойства
+  с `in_category`) — повторных сканов хранилища в цикле нет.
+- **Нормы (метамодель 1.3.0 → 1.4.0, MINOR)**: `label` в схемах `facet`/`category`/
+  `taxonomy` + карточки тройки (B1.3-6 = А); карточка `person` §4.2 и PROPERTY-сид
+  `writing_genres` — 7 ролей группы (B1.3-4 = Б); PROPERTY-сиды `label` у тройки
+  (+3 → **138** сидов, системные **65**); TS-типы перегенерированы
+  (`src/generated/{facet,category,taxonomy}.ts`, тест свежести). Прогон примеров —
+  **74 OK** (схемы и примеры совместимы: `label` необязателен).
+- **Тесты 368 → 399** (+31): `classification.test.ts` (11), `classification-engine.test.ts`
+  (20); матрица TZ ×6 — 399/399; typecheck/build без предупреждений; `check:docs` — 0 разрывов.
+- **Границы части 2a** (architecture §5): **B1.3-7** — отдельный снимок и кэш
+  классификации (реестр не расширялся); **B1.3-8** — `root_requirement_min` трактован по
+  rules.md как требование к СОСТАВУ фасета (корневые категории), а не к назначению
+  (пример `valid-01-genre` читает иначе) → **вопрос Ч4-1** части 2b; **B1.3-9** —
+  согласованность `taxonomy.facets` ↔ `facet.taxonomy` не проверяется: правила в реестре
+  нет (упомянуто разборами примеров и `$comment` схемы) → **вопрос Ч4-2** части 2b.
+  Команда `assign-category`, UX-проверка B3 и контрол `categories` в форме — часть 2b
+  (граница B1.2-3 сужена).
+
+| ID | Дата | Решение | Кто | Статус | Версия | ADR | Где зафиксировано |
+|---|---|---|---|---|---|---|---|
+| DL-279 | 2026-10-26 | **B1.3 часть 2a «классификация» доставлена — плагин 0.11.0 (MINOR: новая функциональность); метамодель 1.4.0** (по решениям DL-278). `classification-service` (снимок, наследование умолчаний, предки категорий, `findSystemFacet`, кэш `.sb/cache/classification.json`) + `classification-engine` — **15 правил группы E** (`category.*` — 7, `facet.taxonomy.exists`, `facet.allowed_types.conflict`, `facet.root_requirement`, `taxonomy.facets.min_one`, `assignment.type_allowed`, `assignment.cardinality`, `facet.genre.required_for_book`, `facet.genre.not_form`); `in_category` с предками (B1.1-4 закрыта — валидация и форма); приоритет специальных правил над общими (`CLASSIFICATION_SPECIALIZED_RULES`, rules.md v0.15.0); `label` в схемах facet/category/taxonomy + PROPERTY-сиды (135 → **138**); `writing_genres` — 7 ролей. Тесты **399/399** (матрица TZ ×6), прогон **74 OK**. Границы: B1.3-7 (снимок/кэш), B1.3-8 (трактовка `root_requirement` — вопрос Ч4-1), B1.3-9 (нет правила согласованности таксономии и фасета — вопрос Ч4-2). Дальше — часть 2b: `assign-category`, UX-проверка B3 | ассистент (поставка по организации DL-276/278) | принято (ожидает применения патча, коммита и ручной проверки 0.11.0) | 1.4.0 | ADR-003, ADR-005, ADR-007, ADR-011 | plugin: `src/core/classification.ts`, `src/core/classification-engine.ts`, `src/core/applies-when.ts`, `src/core/schema-engine.ts`, `src/core/validation.ts`, `src/core/object-service.ts`, `src/ui/property-editor-modal.ts`, `src/commands/{edit-object,create-object}.ts`, `src/core/seeds/library-specs.ts`, `scripts/generate-seed-ulids.mjs`, `src/generated/{facet,category,taxonomy}.ts`, tests ×2 (+31); нормы: `schema/metamodel/{facet,category,taxonomy}.schema.json`, `entities/{person,facet,category,taxonomy}.md`, `rules.md` v0.15.0, `00-overview` v0.10.0; учёт: architecture v0.14.0, dev-setup v0.6.1, phases v0.18.0, mvp-scope v0.16.1, PROJECT_MAP v1.49.0, glossary v1.33.0, CHANGELOG [1.4.0] (v0.48.0), CHECKPOINT v61.0.0, handoff `2026-10-26-b1-3-part2a-classification.md` |
+
+### 2026-10-26 · Ответы Ч4-1 = А и Ч4-2 = А: трактовка `root_requirement_min` и правило согласованности таксономии с фасетом (DL-280)
+
+Вопросы вынесены границами части 2a (architecture §5 B1.3-8/B1.3-9) и в handoff
+`2026-10-26-b1-3-part2a-classification.md`; ответы получены в той же сессии.
+
+- **Ч4-1 = А — `root_requirement_min` остаётся требованием к СОСТАВУ фасета**:
+  «в фасете минимум N корневых категорий» (`facet.root_requirement`, warning, уровень 4) —
+  как реализовано в части 2a. Основания: формулировка `rules.md` («Число корневых
+  категорий соответствует…»), ADR-005 П5 и глоссарий («в измерении классификации»);
+  при трактовке Б назначение потомка («Космическая опера» при корне «Научная фантастика»)
+  давало бы ошибку — строгость без выигрыша, поскольку обязательность жанра уже покрыта
+  `facet.genre.required_for_book` и `assignment.cardinality`. **Нормы не меняются**;
+  в части 2b уточняется ПОЯСНЕНИЕ примера `examples/instances/facet/valid-01-genre.md`
+  (оно читает `root_requirement_min` как требование к назначению) — PATCH-правка текста,
+  данные примера не меняются (прогон `npm run check` — 74 OK). Граница **B1.3-8 закрыта**.
+- **Ч4-2 = А — регистрируется правило `taxonomy.facets.consistent`** (warning, уровень 4):
+  «фасеты, объявленные в `taxonomy.facets`, ссылаются на эту таксономию в `facet.taxonomy`,
+  и наоборот». Основание: согласованность упомянута разбором примера
+  `examples/instances/taxonomy/invalid-01.md` и `$comment` схемы `taxonomy.schema.json`,
+  но правила в реестре не было — выдумывать id в коде нельзя (реестр — источник).
+  Реализация — **в части 2b** вместе с регистрацией: `rules.md` **171 → 172 правила**
+  (v0.16.0), метамодель **1.4.0 → 1.5.0** (новое правило-warning = MINOR по
+  `10-migration-rules` §3; прецедент — DL-265/правило П2). Вариант В (error) отклонён:
+  расхождение не делает определение неприменимым (ADR-002), оно лишь рассинхронизирует
+  два способа объявления принадлежности. Граница **B1.3-9 закрывается в части 2b**.
+- **Порядок переноса**: `b1-3-part2a-classification.patch` (код + нормы 1.4.0) →
+  `b1-3-answers-2.patch` (docs-only, учёт DL-280). Часть 2b поставляется после применения
+  и ручной проверки 0.11.0 (прецедент: ручные проверки ловили дефекты 0.8.0, 0.9.0 и
+  Windows-инцидент части 1).
+
+| ID | Дата | Решение | Кто | Статус | Версия | ADR | Где зафиксировано |
+|---|---|---|---|---|---|---|---|
+| DL-280 | 2026-10-26 | **Ответы пользователя: Ч4-1 = А, Ч4-2 = А.** **Ч4-1 = А** — `root_requirement_min` трактуется как требование к СОСТАВУ фасета (`facet.root_requirement`, warning/4 — как реализовано в 0.11.0); нормы не меняются, в части 2b уточняется пояснение примера `valid-01-genre` (PATCH); граница **B1.3-8 закрыта**. Вариант Б (требование к назначению: объекту нужна корневая категория) отклонён — строгость без выигрыша: обязательность жанра покрыта `facet.genre.required_for_book` и `assignment.cardinality`. **Ч4-2 = А** — зарегистрировать и реализовать в части 2b правило **`taxonomy.facets.consistent`** (warning, уровень 4): согласованность `taxonomy.facets` ↔ `facet.taxonomy`; `rules.md` **171 → 172** (v0.16.0), метамодель **1.5.0** (новое правило-warning = MINOR, `10-migration-rules` §3, прецедент DL-265); граница **B1.3-9** закрывается в части 2b. Вариант В (error) отклонён — расхождение не делает определение неприменимым (ADR-002) | пользователь (ответы Ч4-1 = А, Ч4-2 = А) | **принято** | 1.4.0 (нормы не менялись; 1.5.0 — в части 2b) | ADR-002, ADR-005, ADR-007 | `architecture.md` v0.14.1 (§5: B1.3-8 закрыта, B1.3-9 — решено), `phases.md` v0.18.1 (состав части 2b), PROJECT_MAP v1.49.1, CHECKPOINT v61.1.0 (§6.79, §8.34), handoff `2026-10-26-b1-3-answers-2.md`; реализация — часть 2b (`rules.md` v0.16.0, метамодель 1.5.0) |
+
+### 2026-10-26 · Инцидент переноса части 2a: тест `facet.taxonomy.exists` ушёл за лимит 20 с на Windows — дефект области чтения снимка классификации; плагин 0.11.1 (DL-281)
+
+Пользователь применил `b1-3-part2a-classification.patch` к `bd7fef7` и прогнал `npm test`
+ДО коммита: **1 красный из 399** — `classification-engine.test.ts > facet.taxonomy.exists`
+«Test timed out in 20000ms». Прочие 398 зелёные, включая все проверки правил группы E,
+сиды и согласованность со схемами. Прогон файла — 147 с, всего — 325 с.
+
+**Диагноз (по коду, подтверждён замером).** Дефект не в правиле и не в данных, а в
+**области чтения** нового сервиса: `loadClassification` фильтровала пути как
+`path.startsWith('Metamodel/') || isClassificationPath(path)`, то есть читала ВСЕ
+определения метамодели (~146 заметок после установки базовой библиотеки) вместо ~5 заметок
+классификации. Отсюда две составляющие таймаута: (1) каждый из 20 тестов файла заново
+ставил базовую библиотеку (bootstrap + 138 сидов + два перечитывания реестра) — на Windows
+это 9–15 с на тест; (2) каждая проверка определения классификации тянула ещё 146 чтений.
+Регрессионный тест замерил: **146 обращений к `adapter.read` на один снимок вместо 5**.
+
+**Это тот же класс дефекта, что DL-255 и DL-259** (полный скан/чтение в цикле проверок +
+особенности Windows-среды: autocrlf, антивирус, медленный диск) — урок повторён в новом
+коде, поэтому кроме фикса вводится конвенция и автоматический сторож.
+
+**Исправлено (плагин 0.11.1, нормы не менялись — метамодель 1.4.0):**
+
+1. `loadClassification` — фильтр сужен до `isClassificationPath` (три подпапки
+   `Metamodel/{Taxonomies,Facets,Categories}` + канонические имена `TAXONOMY-`/`FACET-`/
+   `CATEGORY-` где угодно; та же область, что у `scanExistingFacets` в `seed-library`).
+   Состав диагностик и поведение правил не изменились.
+2. `classification-engine.test.ts` — ОДНО общее хранилище на файл (`beforeAll`, таймаут
+   120 с) вместо 20 установок библиотеки; тесты переписаны независимыми от порядка
+   (у каждого свои ULID; `facet.root_requirement` проверяется на собственном фасете теста,
+   а не на семенном «Жанре», в который другие тесты добавляют категории).
+3. `library-integration.test.ts` — общий снимок классификации на прогон 146 заметок
+   (паттерн `validate-vault`) + зафиксировано ожидание нормы Ч3-3 = Б: семенной «Жанр»
+   даёт **warning** `facet.root_requirement` при нуле ошибок.
+4. **Регрессионный тест** считает обращения к `adapter.read` при построении снимка
+   (со старым фильтром — красный: `expected 146 to be 5`); добавлен тест
+   `facet.root_requirement` на превышение `root_requirement_max`.
+5. **Конвенция** (`architecture.md` §4): «область чтения сервисного снимка — минимальная:
+   только свои заметки; полный скан папки определений в цикле проверок запрещён».
+
+Тесты **399 → 401**, матрица TZ ×6 — 401/401; typecheck/build чистые; прогон **74 OK**;
+`check:docs` — 202 файла. Версии: manifest/package/versions **0.11.1**.
+
+| ID | Дата | Решение | Кто | Статус | Версия | ADR | Где зафиксировано |
+|---|---|---|---|---|---|---|---|
+| DL-281 | 2026-10-26 | **Инцидент переноса части 2a диагностирован и исправлен — плагин 0.11.1 (нормы не менялись, метамодель 1.4.0).** В среде пользователя (Windows) тест `facet.taxonomy.exists` ушёл за лимит 20 с (1 красный из 399; данные и правила не затронуты). Причина: `loadClassification` читала ВСЮ `Metamodel/` (~146 заметок) вместо заметок классификации (~5) — замер регрессионным тестом: 146 обращений к `adapter.read` на снимок; плюс 20 повторных установок базовой библиотеки в тестах файла. **Это тот же класс дефекта, что DL-255/DL-259** (чтение/скан в цикле + Windows-среда). Фикс: (1) фильтр сужен до `isClassificationPath`; (2) тесты группы E — одно общее хранилище на файл (`beforeAll`, 120 с), независимость от порядка; (3) `library-integration` — общий снимок на прогон + ожидание warning `facet.root_requirement` у семенного «Жанра» (норма Ч3-3 = Б); (4) регрессионный тест на число чтений + тест на `root_requirement_max`; (5) конвенция architecture §4 «минимальная область чтения сервисного снимка». Тесты **401/401** (матрица TZ ×6), прогон 74 OK | ассистент (диагноз по коду и замеру) + пользователь (отчёт из среды Windows) | **принято** | 1.4.0 (нормы не менялись) | ADR-002 | plugin: `src/core/classification.ts`, `tests/unit/{classification,classification-engine,library-integration}.test.ts`, manifest/package/versions 0.11.1; architecture v0.14.2 (§4 + конвенция), phases v0.18.2, dev-setup v0.6.2, PROJECT_MAP v1.49.2, CHANGELOG [1.4.1] (v0.48.1), plugin/README, CHECKPOINT v62.0.0, handoff `2026-10-26-b1-3-part2a-fix-classification-perf.md` + примечание в handoff части 2a |
 
 ## Отменённые и пересмотренные решения
 

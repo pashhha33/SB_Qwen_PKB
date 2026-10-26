@@ -6,9 +6,9 @@ type_key: person
 type_prefix: PERSON
 aliases: [Люди, person]
 status: actual
-metamodel_version: 0.25.0
+metamodel_version: 1.4.0
 created: 2026-10-22
-updated: 2026-10-23
+updated: 2026-10-26
 classification: core
 group: Контекст
 abstract: false
@@ -118,7 +118,7 @@ tags: [metamodel/entity]
 
 | Поле | Подпись | Тип | Группа (значения `role`) |
 |---|---|---|---|
-| `writing_genres` | Жанры работ | `object_reference` → `category` фасета `genre`, `0..N` | Литература: `author`, `novelist`, `poet`, `screenwriter` |
+| `writing_genres` | Жанры работ | `object_reference` → `category` фасета `genre`, `0..N` | **Литература и текст — все 7**: `author`, `novelist`, `poet`, `screenwriter`, `translator`, `editor`, `blogger` (**B1.3-4 = Б**, DL-278: свойство объявляется один раз на группу — М7, как `writing_languages` и `published_works`; прежний явный перечень из 4 ролей сужал группу) |
 | `writing_languages` | Языки работ | `object_reference` → `category` фасета «Язык», `0..N` | Литература |
 | `published_works` | Основные работы | `text` `0..N` | Литература + Изобразительное искусство |
 | `art_movement` | Художественное направление | `text` `0..N` | Изобразительное искусство |
@@ -370,6 +370,7 @@ sort_name: Светлана
 
 | Дата | Версия метамодели | Что изменилось | Причина | Ссылка |
 |---|---|---|---|---|
+| 2026-10-26 | 1.4.0 | **B1.3-4 = Б**: `writing_genres` объявлен на всей группе «Литература и текст» (7 ролей вместо явного перечня из 4) — расхождение с `05-enumerations` §3.17.5 снято в пользу группы; PROPERTY-сид базовой библиотеки приведён к карточке (`includes_any` 7 значений) | Ответ пользователя (DL-278); М7 — свойство объявляется один раз на группу | DL-278; `05-enumerations` §3.17.5; `architecture.md` §5 B1.3-4 |
 | 2026-10-23 | 0.25.0 | Батч 2 шага 9: создана схема `schema/entities/person.schema.json` (40 значений `person_role` зашиты — DL-224); подсчёт значений исправлен 34 → **40** (DL-228, состав не менялся); §8 пример приведён к DL-224 (`web_designer` — error `person.role.enum`; даты в кавычках — конвенция YAML); вопрос **9.6 закрыт** (DL-226: `gender` — закрытое перечисление, §3.17.10); плашка статуса обновлена (9.1–9.3 закрыты) | Ответы пользователя А/А/А/А на вопросы 9-4…9-7 | DL-224, DL-226, DL-228; `schema/entities/person.schema.json` |
 | 2026-10-22 | 0.9.0 | Решения пользователя закрыты (ответы C и A, DL-156, DL-157): `role` **обязателен** (`cardinality: 1..N`, правило `person.role.required`), ключ `role` сохранён, состав `person_role` подтверждён и дополнен значением `other_occupation` → **34 значения**. Вопросы 9.1–9.3 закрыты | Ответы пользователя от 2026-10-22 |
 | 2026-10-22 | 0.8.0 | Карточка переработана: `roles` (категории фасета) заменены на `role` — перечисление `person_role` с мультивыбором (33 значения, 9 групп) и триггер 27 условных свойств; добавлены `birth_name`, `original_name`, `pen_name`, `also_known_as`, `sort_name`, `gender`, `nationality`, `country_of_residence`, `languages_spoken`; добавлено 7 правил валидации; фасет «Род занятий» не вводится | Требования пользователя от 2026-10-22 | DL-137, DL-138, DL-139; [[../research/person-role-properties\|исследование]] |

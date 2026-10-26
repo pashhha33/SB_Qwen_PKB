@@ -2,10 +2,10 @@
 doc_type: validation_registry
 title: "Единый реестр правил валидации"
 status: actual
-version: 0.14.0
+version: 0.15.0
 created: 2026-10-22
 updated: 2026-10-25
-metamodel_version: 1.3.0
+metamodel_version: 1.4.0
 governing_documents:
   - docs/metamodel/01-classification.md
   - docs/metamodel/04-attributes.md
@@ -372,7 +372,8 @@ tags: [validation, registry]
 | `period.order` | `relation.period.order`, `object.period.order` |
 | `value.allowed_values` | `person.role.enum`, `project.status.enum`, `media.kind.enum`, `media.roles.enum`, `media.creation_method.enum`, `media.origin.enum`, `book.format.enum` |
 | `value.media.file_exists` | `media.file.exists` (проверяет саму обёртку, а не значение чужого свойства) |
-| `value.cardinality` | не применяется к скрытым условным свойствам (правило М6) |
+| `value.cardinality` | `category.facet.required`, `category.facet.single`, `taxonomy.facets.min_one`; не применяется к скрытым условным свойствам (правило М6) |
+| `value.reference.exists` (системное поле `categories`) | назначение несуществующей категории проверяется вместе с `assignment.*` (classification-service): системное поле определениями свойств не объявляется (И6) |
 
 ## Правила, которых пока нет (появятся позже)
 
@@ -389,6 +390,7 @@ tags: [validation, registry]
 
 | Дата | Версия | Что изменилось | Ссылка |
 |---|---|---|---|
+| 2026-10-26 | 0.15.0 | Реализация группы E в плагине (B1.3 часть 2, DL-278): 15 правил классификации (`category.*` — 7, `facet.taxonomy.exists`, `facet.allowed_types.conflict`, `facet.root_requirement`, `taxonomy.facets.min_one`, `assignment.type_allowed`, `assignment.cardinality`, `facet.genre.required_for_book`, `facet.genre.not_form`) — модуль `classification-service`; в таблицу «Перекрывающиеся правила» добавлены строки `value.cardinality` → `category.facet.required`/`category.facet.single`/`taxonomy.facets.min_one` и `value.reference.exists` для системного поля `categories`. Состав правил не менялся — **171 правило** | DL-278 |
 | 2026-10-25 | 0.14.0 | **Ч2-3 = А (DL-265)**: закрыт пробел правила П2 (`06-time-and-intervals` §2) — группа H **+1 правило** `date.all_unknown.optional_only` (warning, 2): дата, неизвестная целиком (`0000-00-00`), допустима только в необязательном поле. Поведение утверждено ранее (ADR-011), добавлен отсутствовавший id (architecture.md §5, B1.1-2 — закрыт); новое правило-warning → MINOR метамодели (**1.3.0**, классификация `10-migration-rules` §3). Реализация — плагин 0.7.0 (date-engine + schema-engine, DL-266). Итого **171 правило** в 14 группах | Ответ пользователя Ч2-3 = А (2026-10-25); DL-265/DL-266; [[../metamodel/06-time-and-intervals\|06-time-and-intervals]] §2 |
 | 2026-10-24 | 0.13.0 | **F5-7 = А (DL-253/254)**: `TYPE_PREFIX` — легализованы подчёркивание и длина 3–20 (схема `defs#type_prefix`, ADR-001 ревизия 0.2.0, `02-entities` §6); группа A **+1 правило** — `object.frontmatter.broken` (error, 2): постоянная регистрация id, который в плагине 0.2.0–0.3.0 был временным. Итого **170 правил** в 14 группах |
 | 2026-10-24 | 0.12.0 | **F5-8 = А (DL-250/252)**: группа B +2 правила — `property.object_types.scope_consistency` (error, 4) и `property.object_types.exists` (error, 3); поле `object_types` введено в `property.schema` и `04-attributes` §4.1. Итого **169 правил** в 14 группах |

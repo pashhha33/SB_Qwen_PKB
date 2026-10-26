@@ -2,10 +2,10 @@
 doc_type: roadmap
 title: "Границы MVP: что входит и что точно не входит"
 status: accepted
-version: 0.16.0
+version: 0.16.1
 created: 2026-10-22
 updated: 2026-10-26
-metamodel_version: 1.3.0
+metamodel_version: 1.4.0
 step: "8a"
 governing_documents:
   - docs/adr/ADR-004-first-pass-scope-and-command-driven-authoring.md
