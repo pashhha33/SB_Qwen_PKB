@@ -21,11 +21,13 @@
  */
 
 import type { VaultAdapter } from '../adapter/vault-adapter';
+import type { LogFn } from './activity-log';
 import { nowStamp } from './datetime';
+import { SbError } from './errors';
 import { parseFileName } from './identity';
 import { parseNote } from './markdown-parser';
 import type { SbNote } from './model';
-import { linkIdList } from './registry';
+import { linkIdList, type TypeRegistry } from './registry';
 import { SEED_ULIDS } from './seeds/seed-ulids';
 
 /** Путь кэша снимка классификации (ADR-002: `.sb/` — технические данные). */
@@ -152,7 +154,7 @@ function asNumber(value: unknown): number | null {
 }
 
 /** ULID категории из значения системного поля `categories` (wikilink или голый ULID). */
-function categoryIdOf(entry: unknown): string | null {
+export function categoryIdOf(entry: unknown): string | null {
 	if (typeof entry !== 'string') {
 		return null;
 	}
@@ -513,4 +515,233 @@ export async function loadClassificationCache(adapter: VaultAdapter): Promise<Cl
 	} catch {
 		return null;
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Назначение категорий (команда assign-category, mvp-scope §2.3 — этап B)
+// ---------------------------------------------------------------------------
+
+/** Тип покрыт областью применения фасета (сам тип или его предок — DL-208/209). */
+export function isTypeAllowedForFacet(registry: TypeRegistry, settings: EffectiveFacetSettings, typeKey: string): boolean {
+	if (settings.allowedObjectTypeIds.length === 0) {
+		return true; // пусто = ограничений нет
+	}
+	const self = registry.getType(typeKey);
+	if (self === null) {
+		return true; // тип не зарегистрирован — об этом сообщил object.type.exists
+	}
+	const ids = new Set<string>([self.id, ...registry.ancestorsOf(typeKey).map((t) => t.id)]);
+	return settings.allowedObjectTypeIds.some((id) => ids.has(id));
+}
+
+/** Фасеты, применимые к типу объекта (для списка выбора в команде assign-category). */
+export function facetsForType(snapshot: ClassificationSnapshot, registry: TypeRegistry, typeKey: string): FacetInfo[] {
+	return snapshot.facets.filter((facet) => isTypeAllowedForFacet(registry, effectiveSettings(snapshot, facet), typeKey));
+}
+
+/**
+ * ПРЕВЫШЕНИЕ кардинальности назначения (отказ уровня 1 — ADR-011): столько категорий
+ * фасет хранить не может. Аналог проверки формы `validateFieldValues` («свойство
+ * допускает одно значение»). null — превышения нет.
+ */
+export function cardinalityOverflow(cardinality: string, count: number): string | null {
+	switch (cardinality) {
+		case '1':
+			return count > 1 ? `фасет допускает ровно одну категорию, выбрано ${count}` : null;
+		case '0..1':
+			return count > 1 ? `фасет рассчитан на одну категорию (0..1), выбрано ${count}` : null;
+		default:
+			return null; // 0..N и 1..N — верхняя граница не задана
+	}
+}
+
+/**
+ * НЕДОБОР относительно требуемого минимума (не отказ, а предупреждение): сохранить
+ * неполное назначение разрешено — норма DL-183 («сначала объект, потом поля»;
+ *сохранение неполного объекта разрешено, недостающее покажет validate-object), то же
+ * поведение, что у формы свойств (обязательность на уровне 1 не проверяется).
+ * Ошибку выдаст проверка уровня 4: `assignment.cardinality` / `facet.genre.required_for_book`.
+ */
+export function cardinalityShortfall(cardinality: string, count: number): string | null {
+	switch (cardinality) {
+		case '1':
+			return count === 0 ? 'фасет требует ровно одну категорию, не выбрано ни одной — проверка объекта выдаст ошибку (assignment.cardinality)' : null;
+		case '1..N':
+			return count === 0 ? 'фасет требует минимум одну категорию, не выбрано ни одной — проверка объекта выдаст ошибку (assignment.cardinality)' : null;
+		default:
+			return null;
+	}
+}
+
+/**
+ * Нарушение кардинальности назначения при `count` выбранных категориях
+ * (норма — `assignment.cardinality`, rules.md §E): превышение ИЛИ недобор.
+ * Используется для ЖИВОЙ ПОДСКАЗКИ в окне назначения; отказом уровня 1 является
+ * только превышение (`cardinalityOverflow`).
+ */
+export function cardinalityViolation(cardinality: string, count: number): string | null {
+	return cardinalityOverflow(cardinality, count) ?? cardinalityShortfall(cardinality, count);
+}
+
+/** Категории фасета в порядке «сверху вниз» (корни, затем потомки) с глубиной. */
+export function categoriesInHierarchy(snapshot: ClassificationSnapshot, facetId: string): { category: CategoryInfo; depth: number }[] {
+	const all = categoriesOfFacet(snapshot, facetId);
+	const byId = new Map(all.map((c) => [c.id, c]));
+	const childrenOf = (id: string) => all.filter((c) => c.parentIds.includes(id));
+	const roots = all.filter((c) => c.parentIds.length === 0 || !c.parentIds.some((p) => byId.has(p)));
+	const out: { category: CategoryInfo; depth: number }[] = [];
+	const seen = new Set<string>();
+	const walk = (category: CategoryInfo, depth: number): void => {
+		if (seen.has(category.id)) {
+			return; // защита от цикла в данных (о нём сообщает category.parent.no_cycle)
+		}
+		seen.add(category.id);
+		out.push({ category, depth });
+		for (const child of childrenOf(category.id)) {
+			walk(child, depth + 1);
+		}
+	};
+	for (const root of roots) {
+		walk(root, 0);
+	}
+	for (const category of all) {
+		walk(category, 0); // хвост: категории, не попавшие в обход (цикл в родителях)
+	}
+	return out;
+}
+
+export interface AssignCategoriesInput {
+	facetId: string;
+	/** Итоговый набор категорий ЭТОГО фасета (пусто — снять назначения фасета). */
+	categoryIds: string[];
+}
+
+export interface AssignCategoriesReport {
+	path: string;
+	facetId: string;
+	facetName: string;
+	added: string[];
+	removed: string[];
+	/**
+	 * Предупреждение о недоборе категорий (не отказ — DL-183): назначение сохранено,
+	 * но проверка объекта выдаст ошибку `assignment.cardinality`/`facet.genre.*`.
+	 */
+	warning: string | null;
+	/** Записи других фасетов и нераспознанные записи — сохранены как были (DL-184). */
+	kept: string[];
+	/** Итоговое содержимое поля `categories` (канонические ссылки и сохранённые записи). */
+	categories: string[];
+}
+
+/**
+ * Назначает категории одного фасета объекту (системное поле `categories`,
+ * `04-attributes` §2; назначение всегда прямое — `01-classification` §2.4).
+ *
+ * Проверки уровня 1 (ADR-011): некорректное назначение НЕ записывается —
+ * отказ исключением `SbError` с внятным сообщением и записью в журнал (урок DL-264).
+ * Проверяются: существование фасета, принадлежность категорий этому фасету,
+ * область применения (`assignment.type_allowed`) и кардинальность
+ * (`assignment.cardinality`) — те же правила, что выдаёт проверка уровня 4.
+ *
+ * Записи ДРУГИХ фасетов и нераспознанные записи сохраняются как были: команда
+ * отвечает только за свой фасет (и не переписывает авторский отображаемый текст
+ * ссылок — DL-184).
+ */
+export async function assignCategories(
+	adapter: VaultAdapter,
+	note: SbNote,
+	typeKey: string | null,
+	snapshot: ClassificationSnapshot,
+	registry: TypeRegistry,
+	input: AssignCategoriesInput,
+	log?: LogFn,
+): Promise<AssignCategoriesReport> {
+	const facet = snapshot.facetById.get(input.facetId);
+	if (facet === undefined) {
+		throw new SbError('not_supported', 'Фасет не найден среди определений классификации — выберите другой');
+	}
+	const facetName = classificationName(facet);
+	const settings = effectiveSettings(snapshot, facet);
+
+	if (typeKey !== null && !isTypeAllowedForFacet(registry, settings, typeKey)) {
+		const allowed = settings.allowedObjectTypeIds
+			.map((id) => registry.getTypeById(id)?.label ?? id)
+			.join(', ');
+		throw new SbError(
+			'not_supported',
+			`Фасет «${facetName}» не применяется к типу «${typeKey}» (допустимые типы: ${allowed}) — assignment.type_allowed`,
+		);
+	}
+
+	// дедупликация с сохранением порядка
+	const selected: string[] = [];
+	for (const id of input.categoryIds) {
+		if (!selected.includes(id)) {
+			selected.push(id);
+		}
+	}
+	for (const id of selected) {
+		const category = snapshot.categoryById.get(id);
+		if (category === undefined) {
+			throw new SbError('not_supported', `Категория ${id} не найдена среди определений классификации`);
+		}
+		if (category.facetIds[0] !== facet.id) {
+			throw new SbError(
+				'not_supported',
+				`Категория «${classificationName(category)}» принадлежит другому фасету — назначение возможно только в фасет «${facetName}»`,
+			);
+		}
+	}
+	// Отказ уровня 1 (ADR-011) — только ПРЕВЫШЕНИЕ кардинальности: такие данные фасет
+	// хранить не может. Недобор (0 категорий при 1..N) сохраняется: неполный объект
+	// допустим (DL-183), ошибку покажет validate-object (`facet.genre.required_for_book`).
+	const overflow = cardinalityOverflow(settings.assignmentCardinality, selected.length);
+	if (overflow !== null) {
+		throw new SbError(
+			'not_supported',
+			`Назначение не сохранено: ${overflow} (кардинальность фасета «${facetName}» — ${settings.assignmentCardinality}) — assignment.cardinality`,
+		);
+	}
+	const warning = cardinalityShortfall(settings.assignmentCardinality, selected.length);
+
+	// разбор существующих записей: свои (этого фасета) заменяем, чужие и нераспознанные — сохраняем
+	const kept: string[] = [];
+	const removed: string[] = [];
+	for (const entry of note.system.categories ?? []) {
+		const id = typeof entry === 'string' ? categoryIdOf(entry) : null;
+		const category = id === null ? undefined : snapshot.categoryById.get(id);
+		if (category !== undefined && category.facetIds[0] === facet.id) {
+			if (!selected.includes(category.id)) {
+				removed.push(category.id);
+			}
+			continue; // запись этого фасета — пересобирается ниже
+		}
+		if (typeof entry === 'string') {
+			kept.push(entry);
+		}
+	}
+	const added = selected.filter((id) => !removed.includes(id) && !(note.system.categories ?? []).some((e) => categoryIdOf(e) === id));
+	const links = selected.map((id) => {
+		const category = snapshot.categoryById.get(id) as CategoryInfo;
+		return `[[CATEGORY-${category.id}.md|${category.title}]]`;
+	});
+	const categories = [...kept, ...links];
+
+	await adapter.processFrontMatter(note.path, (frontmatter) => {
+		if (categories.length === 0) {
+			delete frontmatter.categories;
+		} else {
+			frontmatter.categories = categories;
+		}
+		// И5: назначение категорий — изменение данных пользователя
+		frontmatter.updated_at = nowStamp();
+	});
+
+	log?.(
+		warning === null ? 'info' : 'warning',
+		'classification',
+		`Назначены категории фасета «${facetName}»: добавлено ${added.length}, снято ${removed.length} (${note.path})${warning === null ? '' : `; ${warning}`}`,
+		{ object_path: note.path, facet: facet.id, added, removed },
+	);
+	return { path: note.path, facetId: facet.id, facetName, added, removed, kept, categories, warning };
 }

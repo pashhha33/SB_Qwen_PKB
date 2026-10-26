@@ -25,6 +25,18 @@ export interface NoteSpec {
 	fields?: Record<string, string | string[] | number | boolean | null>;
 }
 
+/**
+ * YAML-литерал для строки: wikilink-и и прочие «особые» значения кавычатся
+ (иначе `[[…]]` разобрался бы как вложенный flow-список), уже кавыченные
+ * значения (`link()`) не трогаем.
+ */
+function yamlScalar(item: string): string {
+	if (item.startsWith('"')) {
+		return item;
+	}
+	return /^[\[{]|\[\[|:\s|\s#/.test(item) ? JSON.stringify(item) : item;
+}
+
 /** Пишет корректную заметку-объект и возвращает её путь. */
 export async function putNote(vault: FakeVault, spec: NoteSpec): Promise<string> {
 	const lines = [
@@ -47,7 +59,7 @@ export async function putNote(vault: FakeVault, spec: NoteSpec): Promise<string>
 			if (value.length === 0) {
 				lines.push(`${key}: []`);
 			} else {
-				lines.push(`${key}:`, ...value.map((item) => `  - ${item}`));
+				lines.push(`${key}:`, ...value.map((item) => `  - ${yamlScalar(item)}`));
 			}
 		} else if (typeof value === 'string') {
 			lines.push(`${key}: ${value.startsWith('"') ? value : JSON.stringify(value)}`);

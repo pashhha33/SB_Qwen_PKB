@@ -27,7 +27,9 @@
  *   - «корневая» категория в назначении жанра (пример valid-01-genre трактует
  *     `root_requirement_min` как требование к назначению) — реестр правил трактует
  *     его как требование к составу фасета (B1.3-8);
- *   - запись назначений — команда `assign-category` (часть 2b).
+ *   - запись назначений — команда `assign-category` (доставлена в 0.12.0 вместе с
+ *     этим движком правил: правило уровня error обязано поставляться вместе с
+ *     инструментом его устранения — конвенция architecture §4, урок DL-282).
  */
 
 import { diagnostic, type SbDiagnostic } from './diagnostics';
@@ -37,6 +39,7 @@ import type { TypeRegistry } from './registry';
 import {
 	assignedCategoryIds,
 	classificationName,
+	isTypeAllowedForFacet,
 	effectiveSettings,
 	findSystemFacet,
 	rootCategoriesOfFacet,
@@ -327,19 +330,6 @@ function checkTaxonomy(note: SbNote, ctx: ClassificationContext, push: PushFn): 
 // Назначения категорий объекту (уровень 4)
 // ---------------------------------------------------------------------------
 
-/** Тип покрыт областью применения (сам тип или его предок — DL-208/209). */
-function typeAllowed(registry: TypeRegistry, allowedIds: string[], typeKey: string): boolean {
-	if (allowedIds.length === 0) {
-		return true; // пусто = ограничений нет
-	}
-	const self = registry.getType(typeKey);
-	if (self === null) {
-		return true; // тип не зарегистрирован — об этом сообщил object.type.exists
-	}
-	const ids = new Set([self.id, ...registry.ancestorsOf(typeKey).map((t) => t.id)]);
-	return allowedIds.some((id) => ids.has(id));
-}
-
 /**
  * Проверяет назначения категорий объекту: `assignment.*` и специальные правила
  * фасета жанра (`facet.genre.required_for_book`, `facet.genre.not_form`).
@@ -367,7 +357,7 @@ export function validateClassificationAssignments(note: SbNote, typeKey: string,
 				property_key: 'categories',
 				actual_value: id,
 				message: 'Назначенная категория не найдена среди определений классификации',
-				hint: 'Проверьте ссылку в поле categories: цель — CATEGORY-{ULID}.md; назначение обновите командой «Назначить категорию»',
+				hint: 'Проверьте ссылку в поле categories: цель — CATEGORY-{ULID}.md; назначение обновите командой «Назначить категорию (assign-category)»',
 			});
 			continue;
 		}
@@ -392,7 +382,7 @@ export function validateClassificationAssignments(note: SbNote, typeKey: string,
 			level: 4,
 			property_key: 'categories',
 			message: `У книги не назначен жанр (фасет «${classificationName(genreFacet)}»)`,
-			hint: 'Назначьте хотя бы одну категорию жанра командой «Назначить категорию» (assign-category); если категорий жанра ещё нет — создайте их командой «Создать объект» (тип — Категория)',
+			hint: 'Откройте книгу и выполните команду «Назначить категорию (assign-category)» — она предложит фасет «Жанр» и его категории; если категорий жанра ещё нет, создайте их командой «Создать объект» (тип — Категория)',
 		});
 		genreRuleFired = true;
 	}
@@ -405,7 +395,7 @@ export function validateClassificationAssignments(note: SbNote, typeKey: string,
 		}
 		const settings = effectiveSettings(snapshot, facet);
 		const facetName = classificationName(facet);
-		if (!typeAllowed(registry, settings.allowedObjectTypeIds, typeKey)) {
+		if (!isTypeAllowedForFacet(registry, settings, typeKey)) {
 			const allowedNames = settings.allowedObjectTypeIds
 				.map((id) => registry.getTypeById(id)?.label ?? id)
 				.join(', ');
@@ -416,7 +406,7 @@ export function validateClassificationAssignments(note: SbNote, typeKey: string,
 				property_key: 'categories',
 				actual_value: facetName,
 				message: `Фасет «${facetName}» не применяется к типу «${labels.forTypeKey(typeKey)}» (допустимые типы: ${allowedNames})`,
-				hint: 'Снимите назначение или расширьте allowed_object_types фасета (ссылка на предка включает потомков — DL-208/209)',
+				hint: 'Снимите назначение командой «Назначить категорию (assign-category)» или расширьте allowed_object_types фасета (ссылка на предка включает потомков — DL-208/209)',
 			});
 		}
 		const cardinality = settings.assignmentCardinality;
@@ -432,7 +422,7 @@ export function validateClassificationAssignments(note: SbNote, typeKey: string,
 					property_key: 'categories',
 					actual_value: count,
 					message: `Фасет «${facetName}» требует минимум одну категорию (кардинальность ${cardinality})`,
-					hint: 'Назначьте категорию командой «Назначить категорию» (assign-category)',
+					hint: 'Выполните команду «Назначить категорию (assign-category)» и выберите категорию этого фасета',
 				});
 			} else if (cardinality === '1' && count > 1) {
 				push({
@@ -442,7 +432,7 @@ export function validateClassificationAssignments(note: SbNote, typeKey: string,
 					property_key: 'categories',
 					actual_value: count,
 					message: `Фасет «${facetName}» допускает ровно одну категорию, назначено ${count}`,
-					hint: 'Оставьте одну категорию фасета или измените assignment_cardinality фасета на 1..N/0..N',
+					hint: 'Командой «Назначить категорию (assign-category)» оставьте одну категорию фасета или измените assignment_cardinality фасета на 1..N/0..N',
 				});
 			} else if (cardinality === '0..1' && count > 1) {
 				push({
@@ -452,7 +442,7 @@ export function validateClassificationAssignments(note: SbNote, typeKey: string,
 					property_key: 'categories',
 					actual_value: count,
 					message: `Фасет «${facetName}» рассчитан на одну категорию (0..1), назначено ${count}`,
-					hint: 'Оставьте основную категорию или измените assignment_cardinality фасета',
+					hint: 'Командой «Назначить категорию (assign-category)» оставьте основную категорию или измените assignment_cardinality фасета',
 				});
 			}
 		}

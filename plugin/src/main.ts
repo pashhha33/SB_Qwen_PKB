@@ -39,6 +39,7 @@
 
 import { Notice, Plugin, type App } from 'obsidian';
 import { ObsidianVaultAdapter } from './adapter/obsidian-adapter';
+import { registerAssignCategoryCommand } from './commands/assign-category';
 import { registerCopyLogCommand } from './commands/copy-log';
 import { registerCreateObjectCommand } from './commands/create-object';
 import { registerCreateObjectTypeCommand } from './commands/create-object-type';
@@ -122,6 +123,7 @@ export default class SecondBrainPlugin extends Plugin implements PluginContext, 
 		registerValidateVaultCommand(this, (cmd) => this.addCommand(cmd));
 		registerEditObjectCommand(this, (cmd) => this.addCommand(cmd));
 		registerInstallBaseTypesCommand(this, (cmd) => this.addCommand(cmd));
+		registerAssignCategoryCommand(this, (cmd) => this.addCommand(cmd));
 		registerToggleLabelModeCommand(this, (cmd) => this.addCommand(cmd));
 		registerShowLogCommand(this, (cmd) => this.addCommand(cmd));
 		registerCopyLogCommand(this, (cmd) => this.addCommand(cmd));
