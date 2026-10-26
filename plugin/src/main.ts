@@ -45,6 +45,7 @@ import { registerCreateObjectTypeCommand } from './commands/create-object-type';
 import { registerCreatePropertyCommand } from './commands/create-property';
 import type { PluginContext } from './commands/context';
 import { registerEditObjectCommand } from './commands/edit-object';
+import { registerInstallBaseTypesCommand } from './commands/install-base-types';
 import { registerShowLogCommand } from './commands/show-log';
 import { registerToggleLabelModeCommand } from './commands/toggle-label-mode';
 import { registerValidateObjectCommand } from './commands/validate-object';
@@ -120,6 +121,7 @@ export default class SecondBrainPlugin extends Plugin implements PluginContext, 
 		registerValidateObjectCommand(this, (cmd) => this.addCommand(cmd));
 		registerValidateVaultCommand(this, (cmd) => this.addCommand(cmd));
 		registerEditObjectCommand(this, (cmd) => this.addCommand(cmd));
+		registerInstallBaseTypesCommand(this, (cmd) => this.addCommand(cmd));
 		registerToggleLabelModeCommand(this, (cmd) => this.addCommand(cmd));
 		registerShowLogCommand(this, (cmd) => this.addCommand(cmd));
 		registerCopyLogCommand(this, (cmd) => this.addCommand(cmd));

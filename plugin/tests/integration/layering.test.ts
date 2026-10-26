@@ -24,6 +24,7 @@ const OBSIDIAN_IMPORT_ALLOWED = new Set(
 		path.join('commands', 'create-object-type.ts'),
 		path.join('commands', 'create-object.ts'),
 		path.join('commands', 'create-property.ts'),
+		path.join('commands', 'install-base-types.ts'),
 		path.join('commands', 'validate-object.ts'),
 		path.join('commands', 'validate-vault.ts'),
 		path.join('commands', 'edit-object.ts'),
