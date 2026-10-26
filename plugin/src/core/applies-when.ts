@@ -10,7 +10,7 @@
  *   - М1: условие влияет только на ПОКАЗ и на ПРОВЕРКУ ОБЯЗАТЕЛЬНОСТИ, никогда —
  *     на хранение. Движок ничего не удаляет и не переписывает: он лишь сообщает,
  *     видно ли свойство (формы — B1.2 — скрывают невидимые поля).
- *   - М2: значения «погасших» свойств сохраняются; проверка качества данных
+ *   - М2: значения «погашенных» свойств сохраняются; проверка качества данных
  *     (тип значения, перечисление, ссылка) выполняется и для скрытых свойств —
  *     не выполняется только проверка обязательности/количества (М6).
  *   - М3: цепочки условий запрещены — за этим следит группа B
@@ -38,15 +38,20 @@
  *   - `value` условия пусто (группа B уже пожаловалась: value_present);
  *   - операция вне закрытого набора (группа B: operation_closed, М4).
  *
- * Граница (честно, M6 — architecture.md §5, B1.1-4): `in_category` проверяет
- * только ПРЯМОЕ назначение категории из `categories`; вычисление предков
- * категории (назначен потомок — условие по предку истинно) появится с
- * classification-service в B1.3.
+ * `in_category` и предки категории (B1.3 часть 2 — граница B1.1-4 СНЯТА):
+ * если передан снимок классификации, назначенные категории раскрываются своими
+ * предками — назначен потомок («Космическая опера»), условие по предку
+ * («Научная фантастика») истинно (01-classification §2.3: предки вычисляются).
+ * Без снимка (вызывающий его не построил) движок проверяет только прямое
+ * назначение — прежнее поведение, безопасный отказ: свойство скрыто.
  */
 
-import { parseFileName } from './identity';
+import { assignedCategoryIds, expandWithAncestors, type ClassificationSnapshot } from './classification';
 import type { SbNote } from './model';
 import type { PropertyDef } from './registry';
+
+/** ULID категорий из системного поля `categories` (переехало в classification-service). */
+export { assignedCategoryIds };
 
 /** Строковые значения свойства-триггера из frontmatter (нестроки отбрасываются). */
 export function triggerValues(note: SbNote, triggerKey: string): string[] {
@@ -59,39 +64,14 @@ export function triggerValues(note: SbNote, triggerKey: string): string[] {
 }
 
 /**
- * ULID категорий, назначенных объекту (системный атрибут `categories`).
- * Принимаются канонические wikilink-и [[CATEGORY-{ULID}.md|…]] и голые ULID;
- * прочее (произвольные имена заметок) не разрешается — разрешение неканонических
- * ссылок по псевдонимам/именам — B2 (alias-index), как и в schema-engine.
- */
-export function assignedCategoryIds(note: SbNote): string[] {
-	const ids: string[] = [];
-	const categories = note.system.categories ?? [];
-	for (const entry of categories) {
-		if (typeof entry !== 'string') {
-			continue;
-		}
-		const wiki = /\[\[([^\]|#^]+)/.exec(entry);
-		const target = (wiki ? wiki[1] : entry).trim();
-		if (target === '') {
-			continue;
-		}
-		const fileName = target.slice(target.lastIndexOf('/') + 1);
-		const identity = parseFileName(fileName.endsWith('.md') ? fileName : `${fileName}.md`);
-		if (identity !== null) {
-			ids.push(identity.ulid);
-		} else if (/^[0-9A-HJKMNP-TV-Z]{26}$/.test(target)) {
-			ids.push(target); // голый ULID категории
-		}
-	}
-	return ids;
-}
-
-/**
  * Видно ли свойство на экземпляре (М1: видимость — для показа и проверки
  * обязательности). Свойство без `applies_when` видимо всегда.
+ *
+ * @param classification снимок классификации — нужен только для `in_category`
+ *        (раскрытие назначенных категорий предками); null/undefined — проверка
+ *        по прямому назначению.
  */
-export function isPropertyVisible(def: PropertyDef, note: SbNote): boolean {
+export function isPropertyVisible(def: PropertyDef, note: SbNote, classification?: ClassificationSnapshot | null): boolean {
 	const condition = def.appliesWhen;
 	if (condition === null) {
 		return true;
@@ -107,7 +87,8 @@ export function isPropertyVisible(def: PropertyDef, note: SbNote): boolean {
 		}
 		case 'in_category': {
 			const categories = assignedCategoryIds(note);
-			return categories.some((id) => condition.value.includes(id));
+			const effective = classification === undefined || classification === null ? categories : expandWithAncestors(classification, categories);
+			return effective.some((id) => condition.value.includes(id));
 		}
 		default:
 			return false; // операция вне закрытого набора (М4) — группа B уже сообщила

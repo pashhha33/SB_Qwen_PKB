@@ -7,6 +7,7 @@
  */
 
 import { Notice } from 'obsidian';
+import { loadClassification } from '../core/classification';
 import { parseNote } from '../core/markdown-parser';
 import { buildFormModel } from '../core/object-service';
 import { PropertyEditorModal } from '../ui/property-editor-modal';
@@ -46,7 +47,11 @@ export function registerEditObjectCommand(context: PluginContext, addCommand: (c
 						}
 						return;
 					}
-					new PropertyEditorModal(context, model, note).open();
+					// Снимок классификации — для условных полей `in_category` с предками
+					// (B1.3 часть 2). Сбой не мешает форме: без снимка условие
+					// проверяется по прямому назначению.
+					const classification = await loadClassification(context.adapter).catch(() => null);
+					new PropertyEditorModal(context, model, note, classification).open();
 				} catch (error) {
 					context.logger.log('error', 'edit', `Не удалось открыть форму: ${String(error)}`);
 					new Notice(`Не удалось открыть форму: ${String(error)}`);

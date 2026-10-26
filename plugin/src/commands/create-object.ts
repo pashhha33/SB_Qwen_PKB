@@ -11,6 +11,7 @@
 import { Modal, Notice, Setting, SuggestModal, TFile } from 'obsidian';
 import { SbError } from '../core/errors';
 import { createObjectInstance } from '../core/creation';
+import { loadClassification } from '../core/classification';
 import { parseNote } from '../core/markdown-parser';
 import { buildFormModel } from '../core/object-service';
 import type { TypeDef } from '../core/registry';
@@ -86,7 +87,8 @@ class TitleModal extends Modal {
 							const note = parseNote({ path: result.path, content }, this.context.adapter);
 							const model = buildFormModel(this.context.registry, this.context.labels, note);
 							if (model !== null) {
-								new PropertyEditorModal(this.context, model, note).open();
+								const classification = await loadClassification(this.context.adapter).catch(() => null);
+								new PropertyEditorModal(this.context, model, note, classification).open();
 							}
 						} catch (error) {
 							this.context.logger.log('warning', 'edit', `Форма после создания не открылась (объект создан): ${String(error)}`);

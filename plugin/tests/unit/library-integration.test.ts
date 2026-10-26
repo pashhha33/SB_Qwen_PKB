@@ -14,6 +14,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { bootstrapMetamodel } from '../../src/core/bootstrap';
+import { loadClassification } from '../../src/core/classification';
 import { createObjectInstance } from '../../src/core/creation';
 import { LabelResolver } from '../../src/core/label-resolver';
 import { parseNote } from '../../src/core/markdown-parser';
@@ -21,6 +22,7 @@ import { buildFormModel, computeVisibleKeys, type FormValues } from '../../src/c
 import { METAMODEL_SUBFOLDERS, TypeRegistry } from '../../src/core/registry';
 import { buildVaultIndex } from '../../src/core/schema-engine';
 import { installBaseLibrary } from '../../src/core/seed-library';
+import { SEED_ULIDS } from '../../src/core/seeds/seed-ulids';
 import { validateObject } from '../../src/core/validation';
 import { FakeVault } from '../support/fake-vault';
 
@@ -46,19 +48,31 @@ afterEach(async () => {
 });
 
 describe('библиотека — валидационная чистота сидов', () => {
-	it('каждая заметка Metamodel/ (бутстрап + 135 сидов) проходит validate-object без ошибок', async () => {
+	it('каждая заметка Metamodel/ (бутстрап + 138 сидов) проходит validate-object без ошибок', async () => {
 		const { vault, registry, labels, allPaths } = await installedVault();
-		expect(allPaths.length).toBe(8 + 135); // 7 типов + sb_issues + библиотека
-		// ОДИН общий индекс на прогон (как validate-vault): без него каждая из 143 проверок
+		expect(allPaths.length).toBe(8 + 138); // 7 типов + sb_issues + библиотека
+		// ОДИН общий индекс на прогон (как validate-vault): без него каждая из 146 проверок
 		// сканировала бы всё хранилище заново — на медленных дисках (Windows + антивирус)
 		// это вылетало за лимит 20 с (инцидент переноса 2026-10-26, урок DL-255/259).
 		const sharedIndex = await buildVaultIndex(vault, { readTypes: true });
+		// ОДИН общий снимок классификации на прогон — как в validate-vault (иначе каждая
+		// проверка определений классификации перечитывала бы их заново; урок DL-255/259/281).
+		const classification = await loadClassification(vault);
+		const genrePath = `${METAMODEL_SUBFOLDERS.facets}/FACET-${SEED_ULIDS['system-facet/genre']}.md`;
+		let genreRootWarning = false;
 		for (const path of allPaths) {
-			const result = await validateObject(vault, registry, labels, path, undefined, false, sharedIndex);
+			const result = await validateObject(vault, registry, labels, path, undefined, false, sharedIndex, { classification });
 			const errors = result.diagnostics.filter((d) => d.severity === 'error');
 			expect(errors, `${path}: ${JSON.stringify(errors.slice(0, 3))}`).toEqual([]);
 			expect(result.unparsable, path).toBe(false);
+			if (path === genrePath) {
+				genreRootWarning = result.diagnostics.some((d) => d.rule_id === 'facet.root_requirement' && d.severity === 'warning');
+			}
 		}
+		// Норма Ч3-3 = Б: категории создаёт пользователь, поэтому семенной фасет «Жанр»
+		// (root_requirement_min: 1, DL-126) до первой корневой категории даёт warning —
+		// не ошибку. Ожидание зафиксировано здесь, чтобы его не потеряли (DL-279/280).
+		expect(genreRootWarning, `у ${genrePath} ожидался warning facet.root_requirement`).toBe(true);
 	}, 120_000);
 });
 

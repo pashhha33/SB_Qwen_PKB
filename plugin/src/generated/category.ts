@@ -16,6 +16,7 @@ export type CategoryNote = SystemCore & {
   type?: 'category';
   facet: string | [string];
   parent?: string[];
+  label?: string;
   description?: string;
   [k: string]: unknown;
 };

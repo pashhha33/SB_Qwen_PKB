@@ -173,9 +173,9 @@ describe('seed-consistency — системные типы (сиды == schema/m
 	it('object_type: 8 полей', () => expectConsistent('object_type', 'schema/metamodel/object_type.schema.json', []));
 	it('property: 24 поля (display/applies_when — граница B1.3-2)', () => expectConsistent('property', 'schema/metamodel/property.schema.json', ['display', 'applies_when']));
 	it('relation_type: 13 полей', () => expectConsistent('relation_type', 'schema/metamodel/relation_type.schema.json', []));
-	it('taxonomy: 7 полей', () => expectConsistent('taxonomy', 'schema/metamodel/taxonomy.schema.json', []));
-	it('facet: 7 полей', () => expectConsistent('facet', 'schema/metamodel/facet.schema.json', []));
-	it('category: 3 поля', () => expectConsistent('category', 'schema/metamodel/category.schema.json', []));
+	it('taxonomy: 8 полей (label — B1.3-6 = А)', () => expectConsistent('taxonomy', 'schema/metamodel/taxonomy.schema.json', []));
+	it('facet: 8 полей (label — B1.3-6 = А)', () => expectConsistent('facet', 'schema/metamodel/facet.schema.json', []));
+	it('category: 4 поля (label — B1.3-6 = А)', () => expectConsistent('category', 'schema/metamodel/category.schema.json', []));
 	it('relation: PROPERTY-сидов нет (этап C — граница B1.3-1)', () => {
 		expect(seedsOf('relation')).toEqual([]);
 	});

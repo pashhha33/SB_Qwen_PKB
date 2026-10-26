@@ -222,9 +222,10 @@ export const FACET_SEED_SPECS: readonly FacetSeedSpec[] = [
 
 // ---------------------------------------------------------------------------
 // Группы значений person_role (05-enumerations §3.17.5, 40 значений; М7 — свойство
-// объявляется один раз на группу). Расхождение с карточкой person §4.2 (writing_genres:
-// 4 значения против 7 группы «Литература и текст») — по явному перечню карточки;
-// зарегистрировано в architecture §5 (B1.3-4).
+// объявляется один раз на группу). Расхождение карточки person §4.2 (writing_genres:
+// 4 значения) с группой «Литература и текст» (7) закрыто решением B1.3-4 = Б (DL-278):
+// группа важнее — все свойства группы объявляются на её полном составе, карточка
+// person §4.2 приведена к группе.
 // ---------------------------------------------------------------------------
 
 const ROLES_LITERATURE = ['author', 'novelist', 'poet', 'screenwriter', 'translator', 'editor', 'blogger'] as const;
@@ -255,7 +256,8 @@ const VALUE_TYPE_VALUES = ['text', 'number', 'date', 'datetime', 'boolean', 'obj
 const SCOPE_VALUES = ['universal', 'family', 'specific'] as const;
 
 // ---------------------------------------------------------------------------
-// PROPERTY-сиды системных типов (62; долг F5-10 = Б; relation — этап C, граница B1.3-1)
+// PROPERTY-сиды системных типов (65; долг F5-10 = Б; relation — этап C, граница B1.3-1;
+// +label у taxonomy/facet/category — B1.3-6 = А, DL-278)
 // ---------------------------------------------------------------------------
 
 type SpecExtra = Omit<Partial<PropertySeedSpec>, 'recipe' | 'owner' | 'key' | 'label'>;
@@ -316,7 +318,8 @@ const SYSTEM_PROPERTY_SEEDS: readonly PropertySeedSpec[] = [
 	sys('relation_type', 'suggested_object_types', 'Рекомендуемые типы объектов', 'object_reference', '0..N', 'Подсказки в формах (не ограничение, ADR-009).', { targetTypes: ['object_type'], linkMode: 'direct' }),
 	sys('relation_type', 'definition', 'Описание', 'text', '0..1', 'Семантика отношения и правила заполнения.'),
 
-	// --- taxonomy (7) ---
+	// --- taxonomy (8) ---
+	sys('taxonomy', 'label', 'Подпись', 'text', '0..1', 'Русское название таксономии для интерфейса (ADR-003: title — технический слой, label — подписи). Необязательно: title может быть русским.'),
 	sys('taxonomy', 'facets', 'Фасеты', 'object_reference', '1..N', 'Фасеты, входящие в таксономию (минимум один — taxonomy.facets.min_one); фасет принадлежит максимум одной таксономии (ADR-007).', { targetTypes: ['facet'], linkMode: 'direct' }),
 	sys('taxonomy', 'allowed_object_types', 'Допустимые типы объектов', 'object_reference', '0..N', 'Область применения; пусто — без ограничений; служит значением по умолчанию для входящих фасетов; потомки включаются (DL-208/209).', { targetTypes: ['object_type'], linkMode: 'direct' }),
 	sys('taxonomy', 'hierarchy_mode', 'Режим иерархии', 'text', '0..1', 'Значение по умолчанию для фасетов: strict — дерево, polyhierarchical — сеть (01-classification §2.1, 05-enumerations §3.5).', { allowedValues: ['strict', 'polyhierarchical'] }),
@@ -325,16 +328,18 @@ const SYSTEM_PROPERTY_SEEDS: readonly PropertySeedSpec[] = [
 	sys('taxonomy', 'root_requirement_max', 'Максимум корней', 'number', '0..1', 'Сколько максимум корневых категорий можно назначить; пусто/null — без ограничения.'),
 	sys('taxonomy', 'description', 'Описание', 'text', '0..1', 'Назначение классификации.'),
 
-	// --- facet (7) ---
+	// --- facet (8) ---
+	sys('facet', 'label', 'Подпись', 'text', '0..1', 'Русское название фасета для интерфейса (ADR-003); например title: Genre, label: Жанр. Необязательно.'),
 	sys('facet', 'taxonomy', 'Таксономия', 'object_reference', '0..1', 'Принадлежность таксономии (ADR-007): максимум одна; независимый фасет — пустой список (01-classification §2.2).', { targetTypes: ['taxonomy'], linkMode: 'direct' }),
 	sys('facet', 'allowed_object_types', 'Допустимые типы объектов', 'object_reference', '0..N', 'Область применения фасета; пусто — наследуется от таксономии, иначе без ограничений (assignment.type_allowed, DL-208/209).', { targetTypes: ['object_type'], linkMode: 'direct' }),
 	sys('facet', 'hierarchy_mode', 'Режим иерархии', 'text', '0..1', 'strict (по умолчанию) — у категории один родитель; polyhierarchical — несколько (01-classification §2.2).', { allowedValues: ['strict', 'polyhierarchical'] }),
 	sys('facet', 'assignment_cardinality', 'Кардинальность назначения', 'text', '0..1', 'Сколько категорий фасета можно назначить объекту: закрытый набор 0..1, 1, 0..N, 1..N; по умолчанию 0..N; 1..N — минимум одна (жанр у книги, DL-126). Схема defs#cardinality, не перечисление 05-enumerations.'),
-	sys('facet', 'root_requirement_min', 'Минимум корней', 'number', '0..1', 'Минимум КОРНЕВЫХ категорий при назначении (по умолчанию 0; жанр у книги — 1, DL-126).'),
+	sys('facet', 'root_requirement_min', 'Минимум корней', 'number', '0..1', 'Минимум КОРНЕВЫХ категорий в фасете (по умолчанию 0; у жанра — 1, DL-126). Проверка — facet.root_requirement (warning, уровень 4): считается состав фасета, а не назначения объекта.'),
 	sys('facet', 'root_requirement_max', 'Максимум корней', 'number', '0..1', 'Максимум корневых категорий; пусто/null — без ограничения.'),
 	sys('facet', 'description', 'Описание', 'text', '0..1', 'Что классифицирует фасет.'),
 
-	// --- category (3) ---
+	// --- category (4) ---
+	sys('category', 'label', 'Подпись', 'text', '0..1', 'Русское название категории для интерфейса (ADR-003); например title: Science fiction, label: Научная фантастика. Необязательно.'),
 	sys('category', 'facet', 'Фасет', 'object_reference', '1', 'Категория принадлежит ровно одному фасету (category.facet.required, category.facet.single; правило П8, ADR-007).', { targetTypes: ['facet'], linkMode: 'direct' }),
 	sys('category', 'parent', 'Родительские категории', 'object_reference', '0..N', 'Непосредственные родители ТОГО ЖЕ фасета; корень — пустой список; в strict-фасете родитель максимум один (01-classification §2.3).', { targetTypes: ['category'], linkMode: 'direct' }),
 	sys('category', 'description', 'Описание', 'text', '0..1', 'Смысл категории.'),
@@ -412,7 +417,7 @@ const PERSON_PROPERTY_SEEDS: readonly PropertySeedSpec[] = [
 	personIf('field_of_work', 'Область деятельности', 'text', '0..N', ['scientist', 'academic', 'engineer', 'inventor', 'teacher', 'jurist', 'data_scientist'], 'Профессиональная область (сквозное свойство, карточка person §4.2).'),
 	personIf('active_years', 'Годы активности', 'text', '0..1', ['actor', 'director', 'musician', 'composer', 'singer', 'dancer', 'athlete', 'coach', 'esport_player', 'voice_actor'], 'Период активной карьеры, текст вида «1995–2020» (дедупликация years_active/serviceyears — DL-152).'),
 	// Литература и текст
-	personIf('writing_genres', 'Жанры работ', 'object_reference', '0..N', ['author', 'novelist', 'poet', 'screenwriter'], 'Категории фасета «Жанр», в которых пишет автор (явный перечень карточки person §4.2 — расхождение с группой §3.17.5 зарегистрировано, architecture §5 B1.3-4).', { targetTypes: ['category'], targetFacet: 'genre', linkMode: 'direct' }),
+	personIf('writing_genres', 'Жанры работ', 'object_reference', '0..N', ROLES_LITERATURE, 'Категории фасета «Жанр», в которых пишет/переводит/редактирует автор — все 7 ролей группы «Литература и текст» (05-enumerations §3.17.5; М7 — свойство объявляется один раз на группу; B1.3-4 = Б, DL-278).', { targetTypes: ['category'], targetFacet: 'genre', linkMode: 'direct' }),
 	personIf('writing_languages', 'Языки работ', 'object_reference', '0..N', ROLES_LITERATURE, 'Категории фасета «Язык», на которых пишет автор (группа «Литература и текст»).', { targetTypes: ['category'], targetFacet: 'language', linkMode: 'direct' }),
 	personIf('published_works', 'Основные работы', 'text', '0..N', [...ROLES_LITERATURE, ...ROLES_ART], 'Главные произведения; перевод на object_reference — этап 2 (вопрос 9.4: типа work-экземпляры).'),
 	// Изобразительное искусство
@@ -446,7 +451,7 @@ const PERSON_PROPERTY_SEEDS: readonly PropertySeedSpec[] = [
 	personIf('conflicts', 'Участие в конфликтах', 'text', '0..N', ROLES_SERVICE, 'Войны и кампании.'),
 ];
 
-/** Все PROPERTY-сиды библиотеки: системные (62) + book (22) + person (42) = 126. */
+/** Все PROPERTY-сиды библиотеки: системные (65) + book (22) + person (42) = 129. */
 export const PROPERTY_SEED_SPECS: readonly PropertySeedSpec[] = [
 	...SYSTEM_PROPERTY_SEEDS,
 	...BOOK_PROPERTY_SEEDS,

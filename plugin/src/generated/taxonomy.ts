@@ -23,6 +23,7 @@ export type TaxonomyNote = SystemCore & {
   assignment_cardinality?: '0..1' | '1' | '0..N' | '1..N';
   root_requirement_min?: number;
   root_requirement_max?: number | null;
+  label?: string;
   description?: string;
   [k: string]: unknown;
 };

@@ -6,7 +6,8 @@
  *   - OBJECT_TYPE `book` и `person` (основные типы) + структурные `work` (родитель
  *     book, 07-hierarchy) и `media` (цель ссылок media_reference — без неё
  *     target_types cover/file_path/portrait были бы висячими, value.reference.exists);
- *   - PROPERTY-сиды системных типов (62; долг F5-10 = Б) и типов book (22) / person (42);
+ *   - PROPERTY-сиды системных типов (65; долг F5-10 = Б; +label у классификационной
+ *     тройки — B1.3-6 = А) и типов book (22) / person (42);
  *   - FACET `genre`, `literary_form`, `country`, `language`, `sport` — системные
  *     определения, на которые ссылаются словарные свойства (04-attributes §5).
  *     КАТЕГОРИИ НЕ СЕЮТСЯ (Ч3-3 = Б, DL-276): содержимое хранилища создаёт пользователь.

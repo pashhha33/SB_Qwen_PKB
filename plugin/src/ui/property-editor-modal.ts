@@ -9,6 +9,7 @@
 
 import { Modal, Notice } from 'obsidian';
 import { mount, unmount } from 'svelte';
+import type { ClassificationSnapshot } from '../core/classification';
 import type { SbNote } from '../core/model';
 import type { PropertyDef } from '../core/registry';
 import { computeVisibleKeys, saveObjectForm, type FormModel, type FormValues } from '../core/object-service';
@@ -23,6 +24,8 @@ export class PropertyEditorModal extends Modal {
 		private readonly context: PluginContext,
 		private readonly model: FormModel,
 		private readonly note: SbNote,
+		/** Снимок классификации для условий `in_category` (строит команда). */
+		private readonly classification: ClassificationSnapshot | null = null,
 	) {
 		super(context.app);
 	}
@@ -37,7 +40,7 @@ export class PropertyEditorModal extends Modal {
 				model: this.model,
 				categories,
 				labelMode: this.context.settings.labelMode,
-				computeVisibility: (values: FormValues) => computeVisibleKeys(this.model, values, categories),
+				computeVisibility: (values: FormValues) => computeVisibleKeys(this.model, values, categories, this.classification),
 				// Подбор цели ссылки (B1.2 часть 2): окно SuggestModal, результат —
 				// каноническая ссылка; null — отказ (Esc), поле остаётся как было.
 				pickReference: (def: PropertyDef) =>

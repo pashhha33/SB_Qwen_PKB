@@ -25,10 +25,13 @@
 
 import type { VaultAdapter } from '../adapter/vault-adapter';
 import type { LogFn } from './activity-log';
+import { loadClassification, saveClassificationCache, type ClassificationSnapshot } from './classification';
+import { validateClassificationAssignments, validateClassificationDefinition } from './classification-engine';
 import { diagnostic, type SbDiagnostic } from './diagnostics';
 import { findDuplicateIds, fileNameMatchesId, parseFileName, repairFileNameById } from './identity';
 import type { LabelResolver } from './label-resolver';
 import { parseNote } from './markdown-parser';
+import type { SbNote } from './model';
 import { METAMODEL_SUBFOLDERS, type TypeRegistry } from './registry';
 import {
 	buildVaultIndex,
@@ -73,6 +76,34 @@ export interface ValidateObjectOptions {
 	 * делается один раз на прогон (vault-уровень), а не на каждой заметке.
 	 */
 	checkServiceDeclaration?: boolean;
+	/**
+	 * Общий снимок классификации (B1.3 часть 2). validate-vault строит один на
+	 * прогон; без него каждая проверка читала бы определения классификации заново
+	 * (урок DL-255/259 — никаких повторных сканов в цикле). `null` — проверки
+	 * группы E пропущены (вызывающий снимок не построил).
+	 */
+	classification?: ClassificationSnapshot | null;
+}
+
+/**
+ * Нужны ли этой заметке проверки классификации (группа E) и снимок для движка
+ * `applies_when` (`in_category` с предками). Проверка дешёвая: снимок строится
+ * только там, где он действительно нужен.
+ */
+function needsClassification(typeKey: string | null, note: SbNote, registry: TypeRegistry): boolean {
+	if (typeKey === 'category' || typeKey === 'facet' || typeKey === 'taxonomy') {
+		return true; // определения классификации
+	}
+	if ((note.system.categories ?? []).length > 0) {
+		return true; // назначения: assignment.*, facet.genre.*
+	}
+	if (typeKey === null) {
+		return false;
+	}
+	if (typeKey === 'book' || registry.ancestorsOf(typeKey).some((t) => t.typeKey === 'book')) {
+		return true; // facet.genre.required_for_book срабатывает и при пустых назначениях
+	}
+	return registry.getPropertiesForType(typeKey).some((p) => p.appliesWhen?.operation === 'in_category');
 }
 
 /** Сравнивает метки 'YYYY-MM-DDTHH:mm[:ss]' лексически по минутам. */
@@ -343,6 +374,11 @@ export async function validateObject(
 		);
 	}
 
+	// ---- B1.3 часть 2: снимок классификации (один на проверку; validate-vault передаёт общий) ----
+	const classification: ClassificationSnapshot | null = needsClassification(typeKey, note, registry)
+		? (options?.classification !== undefined ? options.classification : await loadClassification(adapter))
+		: null;
+
 	// ---- B1.1: schema-engine — группы B (определения свойств), E (определения типов),
 	// C/G (значения), H (даты) ----
 	// Определение проверяется как определение, даже если соответствующий метатип
@@ -356,7 +392,7 @@ export async function validateObject(
 		const needsValueCheck = typeDefForValues !== null && !typeDefForValues.abstract;
 		if (needsPropertyDefinitionCheck || needsObjectTypeDefinitionCheck || needsValueCheck) {
 			const index = sharedIndex !== undefined ? sharedIndex : await buildVaultIndex(adapter);
-			const ctx = { registry, labels, index };
+			const ctx = { registry, labels, index, classification };
 			if (needsPropertyDefinitionCheck) {
 				// Группа B — определение свойства (включая И6: property.key.no_system_conflict).
 				diagnostics.push(...validatePropertyDefinition(note, ctx));
@@ -370,6 +406,16 @@ export async function validateObject(
 				// с движком applies-when: М1–М7, часть 2).
 				diagnostics.push(...validateInstanceValues(note, typeKey, ctx));
 			}
+		}
+	}
+
+	// ---- B1.3 часть 2: группа E — определения классификации и назначения категорий ----
+	if (classification !== null) {
+		const classificationCtx = { registry, labels, snapshot: classification };
+		diagnostics.push(...validateClassificationDefinition(note, classificationCtx));
+		const typeDefForAssignments = typeKey === null ? null : registry.getType(typeKey);
+		if (typeDefForAssignments !== null && !typeDefForAssignments.abstract && typeKey !== null) {
+			diagnostics.push(...validateClassificationAssignments(note, typeKey, classificationCtx));
 		}
 	}
 
@@ -470,6 +516,9 @@ export async function validateVault(
 	options?: { logPerNote?: boolean },
 ): Promise<VaultValidationSummary> {
 	const index = await buildVaultIndex(adapter, { readTypes: true });
+	// Снимок классификации — ОДИН на прогон (как индекс хранилища); после прогона
+	// пишется кэш `.sb/cache/classification.json` (производные данные, ADR-002).
+	const classification = await loadClassification(adapter);
 	const vaultDiagnostics: SbDiagnostic[] = [];
 
 	// diagnostics.service_property.declared — один раз на прогон (уровень хранилища).
@@ -501,6 +550,7 @@ export async function validateVault(
 		const result = await validateObject(adapter, registry, labels, path, log, options?.logPerNote ?? false, index, {
 			applyServiceFlags: true,
 			checkServiceDeclaration: false,
+			classification,
 		});
 		checked += 1;
 		errors += result.errors;
@@ -528,6 +578,18 @@ export async function validateVault(
 		}
 	}
 	worst.sort((a, b) => b.errors - a.errors || b.warnings - a.warnings || a.path.localeCompare(b.path));
+
+	try {
+		await saveClassificationCache(adapter, classification);
+		log?.('debug', 'classification', 'Кэш снимка классификации сохранён', {
+			taxonomies: classification.taxonomies.length,
+			facets: classification.facets.length,
+			categories: classification.categories.length,
+		});
+	} catch (error) {
+		// Кэш — не источник истины (ADR-002): сбой записи не ломает проверку.
+		log?.('warning', 'cache', `Не удалось сохранить кэш классификации: ${String(error)}`);
+	}
 
 	log?.(
 		errors > 0 ? 'error' : warnings > 0 ? 'warning' : 'info',

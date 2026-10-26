@@ -31,6 +31,8 @@
 
 import type { VaultAdapter } from '../adapter/vault-adapter';
 import { isPropertyVisible } from './applies-when';
+import type { ClassificationSnapshot } from './classification';
+import { suppressedRulesFor } from './classification-engine';
 import { isFullyUnknownDate, validateDateTimeValue, validateDateValue } from './date-engine';
 import { diagnostic, type SbDiagnostic } from './diagnostics';
 import { parseFileName } from './identity';
@@ -164,11 +166,17 @@ function extractLinkTarget(value: unknown): string | null {
 // Группа B: определения свойств (16 правил)
 // ---------------------------------------------------------------------------
 
-interface DefinitionContext {
+export interface DefinitionContext {
 	registry: TypeRegistry;
 	labels: LabelResolver;
 	/** null — структурные проверки (уровень 3) пропускаются. */
 	index: VaultIndex | null;
+	/**
+	 * Снимок классификации (B1.3 часть 2): нужен движку applies-when для
+	 * `in_category` с предками. null — условные свойства по категориям
+	 * проверяются только по прямому назначению (прежнее поведение).
+	 */
+	classification?: ClassificationSnapshot | null;
 }
 
 /**
@@ -724,7 +732,18 @@ export function validateInstanceValues(
 		out.push(diagnostic({ ...base, ...input }));
 
 	for (const def of registry.getPropertiesForType(typeKey)) {
-		const visible = isPropertyVisible(def, note);
+		const visible = isPropertyVisible(def, note, ctx.classification ?? null);
+		// rules.md «Перекрывающиеся правила»: на полях определений классификации
+		// общие правила подавляются специальными (группа E — classification-engine).
+		// Подавление действует, только если снимок классификации построен: иначе
+		// нарушение не сообщил бы никто.
+		const suppressed = ctx.classification === undefined || ctx.classification === null ? new Set<string>() : new Set(suppressedRulesFor(typeKey, def.key));
+		const pushRule: PushFn = (input) => {
+			if (suppressed.has(input.rule_id)) {
+				return;
+			}
+			push(input);
+		};
 		const rawValue = note.properties[def.key];
 		const multiple = def.cardinality === '0..N' || def.cardinality === '1..N';
 		const present = rawValue !== undefined && rawValue !== null && !(Array.isArray(rawValue) && rawValue.length === 0);
@@ -735,7 +754,7 @@ export function validateInstanceValues(
 		// М6: к скрытым условным свойствам правило не применяется.
 		if (visible) {
 			if (def.required && items.length === 0) {
-				push({
+				pushRule({
 					rule_id: 'value.cardinality',
 					severity: 'error',
 					level: 4,
@@ -746,7 +765,7 @@ export function validateInstanceValues(
 				continue;
 			}
 			if (!multiple && items.length > 1) {
-				push({
+				pushRule({
 					rule_id: 'value.cardinality',
 					severity: 'error',
 					level: 4,
@@ -759,7 +778,7 @@ export function validateInstanceValues(
 		}
 
 		for (const item of items) {
-			checkValueItem(item, def, propertyLabel, push, ctx, visible);
+			checkValueItem(item, def, propertyLabel, pushRule, ctx, visible);
 		}
 	}
 	return out;

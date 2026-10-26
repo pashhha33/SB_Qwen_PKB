@@ -31,6 +31,7 @@
 import type { VaultAdapter } from '../adapter/vault-adapter';
 import type { LogFn } from './activity-log';
 import { isPropertyVisible } from './applies-when';
+import type { ClassificationSnapshot } from './classification';
 import { validateDateTimeValue, validateDateValue } from './date-engine';
 import { nowStamp } from './datetime';
 import { parseFileName } from './identity';
@@ -120,15 +121,25 @@ export function buildFormModel(registry: TypeRegistry, labels: LabelResolver, no
  * Пересчитывает видимость условных полей по ТЕКУЩИМ значениям формы (М1 —
  * условие влияет только на показ). Использует тот же движок applies-when,
  * что и валидация: псевдо-заметка из значений формы + `categories` заметки.
+ *
+ * @param classification снимок классификации — для условий `in_category`
+ *        (назначенный потомок раскрывается предками, 01-classification §2.3).
+ *        Без снимка форма проверяет только прямое назначение — как валидация:
+ *        расхождение «форма ↔ проверка» исключено (урок DL-271).
  */
-export function computeVisibleKeys(model: FormModel, values: FormValues, categories: string[]): Set<string> {
+export function computeVisibleKeys(
+	model: FormModel,
+	values: FormValues,
+	categories: string[],
+	classification?: ClassificationSnapshot | null,
+): Set<string> {
 	const pseudoNote = {
 		system: { categories },
 		properties: values,
 	} as unknown as SbNote;
 	const visible = new Set<string>();
 	for (const field of model.fields) {
-		if (isPropertyVisible(field.def, pseudoNote)) {
+		if (isPropertyVisible(field.def, pseudoNote, classification ?? null)) {
 			visible.add(field.def.key);
 		}
 	}

@@ -36,8 +36,8 @@ const ALL_SPECS = [
 ];
 
 describe('seed-ulids — рецепт B1-4 = А (фиксированные ULID библиотеки)', () => {
-	it('состав карты совпадает со спецификациями (135 рецептов: 4 типа + 5 фасетов + 126 свойств)', () => {
-		expect(ALL_SPECS.length).toBe(135);
+	it('состав карты совпадает со спецификациями (138 рецептов: 4 типа + 5 фасетов + 129 свойств)', () => {
+		expect(ALL_SPECS.length).toBe(138);
 		expect(new Set(ALL_SPECS).size).toBe(ALL_SPECS.length);
 		expect(Object.keys(SEED_ULIDS).sort()).toEqual([...ALL_SPECS].sort());
 	});

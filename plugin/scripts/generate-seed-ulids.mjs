@@ -72,9 +72,12 @@ const PROPERTY_KEYS = {
 		'uniqueness_rule', 'allowed_subject_types', 'allowed_object_types', 'suggested_subject_types',
 		'suggested_object_types', 'definition',
 	],
-	taxonomy: ['facets', 'allowed_object_types', 'hierarchy_mode', 'assignment_cardinality', 'root_requirement_min', 'root_requirement_max', 'description'],
-	facet: ['taxonomy', 'allowed_object_types', 'hierarchy_mode', 'assignment_cardinality', 'root_requirement_min', 'root_requirement_max', 'description'],
-	category: ['facet', 'parent', 'description'],
+	// label у классификационной тройки — B1.3-6 = А (DL-278): подписи объявлены схемами
+	// facet/category/taxonomy, поэтому сеются и PROPERTY-определения (иначе поле не
+	// показывалось бы формой и не проверялось).
+	taxonomy: ['label', 'facets', 'allowed_object_types', 'hierarchy_mode', 'assignment_cardinality', 'root_requirement_min', 'root_requirement_max', 'description'],
+	facet: ['label', 'taxonomy', 'allowed_object_types', 'hierarchy_mode', 'assignment_cardinality', 'root_requirement_min', 'root_requirement_max', 'description'],
+	category: ['label', 'facet', 'parent', 'description'],
 	book: [
 		'author', 'publication_year', 'first_published_on', 'isbn', 'pages', 'original_language', 'cover',
 		'read_status', 'rating', 'format', 'finished_on', 'description',

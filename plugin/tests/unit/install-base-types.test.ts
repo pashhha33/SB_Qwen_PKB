@@ -2,7 +2,7 @@
  * Тесты команды install-base-types / core/seed-library (B1.3 часть 1, DL-276/277).
  *
  * Что закрепляют:
- *   1. установка в чистое хранилище: 4 OBJECT_TYPE + 5 FACET + 126 PROPERTY = 135 заметок,
+ *   1. установка в чистое хранилище: 4 OBJECT_TYPE + 5 FACET + 129 PROPERTY = 138 заметок,
  *      содержание — по нормам (parent_type book → work, target_facet, display, applies_when);
  *   2. идемпотентность — пропуск ПО КЛЮЧУ (DL-276): повторный запуск не создаёт ничего;
  *      существующие пользовательские book/person/фасет (другие ULID) не дублируются,
@@ -57,14 +57,14 @@ afterEach(async () => {
 });
 
 describe('install-base-types — установка в чистое хранилище', () => {
-	it('создаёт 135 определений: типов 4, фасетов 5, свойств 126; без пропусков и ошибок', async () => {
+	it('создаёт 138 определений: типов 4, фасетов 5, свойств 129; без пропусков и ошибок', async () => {
 		const { vault, registry } = await setup();
 		const report = await installBaseLibrary(vault, registry);
 		expect(report.failed).toEqual([]);
 		expect(report.skipped).toEqual([]);
-		expect(report.counts).toEqual({ objectTypes: 4, facets: 5, properties: 126 });
-		expect(report.created.length).toBe(135);
-		expect(TYPE_SEED_SPECS.length + FACET_SEED_SPECS.length + PROPERTY_SEED_SPECS.length).toBe(135);
+		expect(report.counts).toEqual({ objectTypes: 4, facets: 5, properties: 129 });
+		expect(report.created.length).toBe(138);
+		expect(TYPE_SEED_SPECS.length + FACET_SEED_SPECS.length + PROPERTY_SEED_SPECS.length).toBe(138);
 		for (const spec of TYPE_SEED_SPECS) {
 			expect(await vault.exists(typePath(spec.recipe)), spec.typeKey).toBe(true);
 		}
@@ -122,7 +122,7 @@ describe('install-base-types — установка в чистое хранил
 		expect(reloaded.getType('media')).not.toBeNull();
 		expect(reloaded.properties.filter((p) => p.scope === 'specific' && p.objectTypes.includes(reloaded.getType('book')!.id)).length).toBe(22);
 		expect(reloaded.properties.filter((p) => p.scope === 'specific' && p.objectTypes.includes(reloaded.getType('person')!.id)).length).toBe(42);
-		for (const [owner, count] of [['object_type', 8], ['property', 24], ['relation_type', 13], ['taxonomy', 7], ['facet', 7], ['category', 3]] as const) {
+		for (const [owner, count] of [['object_type', 8], ['property', 24], ['relation_type', 13], ['taxonomy', 8], ['facet', 8], ['category', 4]] as const) {
 			const ownerDef = reloaded.getType(owner)!;
 			expect(reloaded.properties.filter((p) => p.scope === 'specific' && p.objectTypes.includes(ownerDef.id)).length, `свойств у ${owner}`).toBe(count);
 		}
@@ -143,20 +143,20 @@ describe('install-base-types — установка в чистое хранил
 		await installBaseLibrary(vault, registry, log.fn);
 		const info = log.entries.filter((e) => e.level === 'info' && e.area === 'creation');
 		expect(info.length).toBe(1);
-		expect(info[0].message).toContain('135');
+		expect(info[0].message).toContain('138');
 		expect(log.entries.filter((e) => e.level === 'error')).toEqual([]);
 	});
 });
 
 describe('install-base-types — идемпотентность (пропуск по ключу, DL-276)', () => {
-	it('повторный запуск: создано 0, пропущено 135', async () => {
+	it('повторный запуск: создано 0, пропущено 138', async () => {
 		const { vault, registry } = await setup();
 		await installBaseLibrary(vault, registry);
 		const reloaded = await TypeRegistry.load(vault);
 		const second: InstallLibraryReport = await installBaseLibrary(vault, reloaded);
 		expect(second.created).toEqual([]);
 		expect(second.failed).toEqual([]);
-		expect(second.skipped.length).toBe(135);
+		expect(second.skipped.length).toBe(138);
 		expect(second.counts).toEqual({ objectTypes: 0, facets: 0, properties: 0 });
 	});
 
@@ -213,7 +213,7 @@ describe('install-base-types — идемпотентность (пропуск 
 		expect(report.skipped.find((s) => s.key === 'book')!.reason).toBe('existing-definition');
 		expect(report.created.some((c) => c.key === 'book.rating')).toBe(false);
 		expect(report.counts.objectTypes).toBe(3); // work, person, media
-		expect(report.counts.properties).toBe(125); // 126 − rating
+		expect(report.counts.properties).toBe(128); // 129 − rating
 		expect(await vault.exists(typePath('system-type/book'))).toBe(false);
 		expect(await vault.exists(propertyPath('system-property/book.rating'))).toBe(false);
 
@@ -271,14 +271,14 @@ describe('install-base-types — отказоустойчивость и кон�
 		const report = await installBaseLibrary(vault, registry, log.fn);
 		expect(report.failed.length).toBe(1);
 		expect(report.failed[0].path).toBe(conflictsPath);
-		expect(report.created.length).toBe(134);
+		expect(report.created.length).toBe(137); // 138 − 1 отказавшее
 		expect(log.entries.some((e) => e.level === 'error' && e.message.includes('conflicts'))).toBe(true);
 	});
 
-	it('все 135 заметок: LF, без BOM, без токенов Templater (DL-190), И4 — aliases[0] == title', async () => {
+	it('все 138 заметок: LF, без BOM, без токенов Templater (DL-190), И4 — aliases[0] == title', async () => {
 		const { vault, registry } = await setup();
 		const report = await installBaseLibrary(vault, registry);
-		expect(report.created.length).toBe(135);
+		expect(report.created.length).toBe(138);
 		for (const entry of report.created) {
 			const content = await vault.read(entry.path);
 			expect(content.includes('\r'), `${entry.path}: только LF`).toBe(false);

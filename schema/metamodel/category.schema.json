@@ -24,6 +24,11 @@
       "uniqueItems": true,
       "$comment": "Непосредственные родители того же фасета; предки вычисляются; корень — пустой список. Несколько родителей допустимы только в polyhierarchical-фасете (правило runner'а category.parent.strict_mode)."
     },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "$comment": "Отображаемое название на русском (ADR-003: key/title — технический слой, label — подписи). Необязательно: title может сам быть русским; B1.3-6 = А (DL-278)."
+    },
     "description": { "type": "string" }
   },
   "required": ["facet"],
